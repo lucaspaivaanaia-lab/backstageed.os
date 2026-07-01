@@ -9,14 +9,17 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Authentication & Access (AUTH)
 
-- [ ] **AUTH-01**: User can sign up (as PM or Client) with email and password
-- [ ] **AUTH-02**: New signup requires admin approval before gaining access to the platform
-- [ ] **AUTH-03**: Admin can view, approve, or reject pending signups
-- [ ] **AUTH-04**: Admin can assign a role (PM, Client, Admin) to an approved user
+- [ ] **AUTH-01**: PM can sign up with email and password
+- [ ] **AUTH-02**: New PM signup requires admin approval before gaining access to the platform
+- [ ] **AUTH-03**: Admin can view, approve, or reject pending PM signups (rejected accounts are marked rejected, not deleted)
+- [ ] **AUTH-04**: Admin can assign a role (PM or Admin) to an approved PM signup
 - [ ] **AUTH-05**: User session persists across browser refresh
 - [ ] **AUTH-06**: PM can only access clients they are assigned to (enforced via Supabase RLS)
 - [ ] **AUTH-07**: Client can only access their own content (enforced via Supabase RLS)
 - [ ] **AUTH-08**: Admin can access all clients, PMs, and content
+- [ ] **AUTH-09**: PM can create a Client login (email + provisional password) linked to an existing client record — no self-signup or approval queue for Clients
+- [ ] **AUTH-10**: Client is forced to change their provisional password on first login
+- [ ] **AUTH-11**: PM (or Admin) can deactivate a Client's access
 
 ### Client Management (CLI)
 
@@ -108,6 +111,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AUTH-06 | Phase 1 | Pending |
 | AUTH-07 | Phase 1 | Pending |
 | AUTH-08 | Phase 1 | Pending |
+| AUTH-09 | Phase 1 | Pending |
+| AUTH-10 | Phase 1 | Pending |
+| AUTH-11 | Phase 1 | Pending |
 | CLI-01 | Phase 2 | Pending |
 | CLI-02 | Phase 2 | Pending |
 | CLI-03 | Phase 2 | Pending |
@@ -137,10 +143,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SCH-02 | Phase 5 | Pending |
 
 **Coverage:**
-- v1 requirements: 35 total
-- Mapped to phases: 35
+- v1 requirements: 38 total
+- Mapped to phases: 38
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-07-01*
-*Last updated: 2026-07-01 after initial definition*
+*Last updated: 2026-07-01 after Phase 1 discussion (AUTH-01..03 reworded, AUTH-09..11 added — Client accounts are PM-issued, not self-signup)*

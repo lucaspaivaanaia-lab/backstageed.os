@@ -29,7 +29,7 @@ Um PM consegue produzir conteúdo para um cliente específico com IA que só con
 - [ ] Pedido de ajuste do cliente fica registrado e conectado ao card original, e o card volta para a etapa de produção (passando de novo pela revisão interna antes de retornar ao cliente)
 - [ ] Ao ser aprovado, o card registra a data/hora combinada de publicação e fica marcado como "pronto para publicar" (PM ainda posta manualmente no Mlabs — sem integração de publicação automática na v1)
 - [ ] Juliano tem uma visão macro: todos os clientes, todos os PMs, status consolidado de cada card
-- [ ] Acesso à plataforma via self-signup com aprovação do admin (PM e cliente se cadastram, Juliano aprova)
+- [ ] PM acessa a plataforma via self-signup com aprovação do admin. Cliente NÃO se auto-cadastra: o PM cria o login do cliente diretamente (email + senha provisória, vinculado a um registro de cliente já existente), e o cliente troca a senha no primeiro acesso
 - [ ] Multi-tenancy via RLS no Supabase: PM só acessa clientes que gerencia, cliente só acessa os próprios conteúdos, admin acessa tudo
 
 ### Out of Scope
@@ -38,7 +38,9 @@ Um PM consegue produzir conteúdo para um cliente específico com IA que só con
 - Canal de WhatsApp por PM para alimentar contexto — integração futura
 - Publicação automática via API de redes sociais — v1 registra data/hora de agendamento, mas a publicação em si continua manual via Mlabs
 - Notificações por email — v1 é só in-app; PM e cliente veem mudanças de status ao acessar a plataforma
-- Self-signup sem aprovação — todo cadastro (PM ou cliente) passa por aprovação do admin antes de ter acesso
+- Self-signup sem aprovação (PM) — cadastro de PM sempre passa por aprovação do admin antes de ter acesso
+- Self-signup de Cliente — decidido na discussão da Phase 1 que Cliente não se auto-cadastra; PM cria o login do cliente diretamente
+- Múltiplos logins por cliente — v1 é 1 login por empresa-cliente; mais de uma pessoa por cliente fica para v2
 
 ## Context
 
@@ -66,8 +68,9 @@ Um PM consegue produzir conteúdo para um cliente específico com IA que só con
 | Claude API com prompt montado no servidor (Tropicalia só recupera contexto) | Controle total de tom, instrução de sistema e personalização por cliente, fora da camada de RAG | — Pending |
 | Card pode representar pacote de conteúdo, não só post único | Reflete como PMs realmente trabalham (campanhas com múltiplas peças relacionadas avançando juntas) | — Pending |
 | Agendamento v1 = registro de data/hora + status "pronto para publicar", sem integração de publicação | Publicação automática via API de redes sociais é integração futura mapeada, não bloqueia o processo central | — Pending |
-| Self-signup com aprovação do admin | Evita que Juliano precise criar manualmente cada conta de PM/cliente, mas mantém controle de quem entra | — Pending |
+| Self-signup com aprovação do admin (PM apenas) | Evita que Juliano precise criar manualmente cada conta de PM, mas mantém controle de quem entra | — Pending |
 | Sem notificações por email na v1 | Reduz escopo/dependências da v1; in-app é suficiente para o volume inicial pequeno | — Pending |
+| Cliente não se auto-cadastra — PM cria o login do cliente (email + senha provisória, troca obrigatória no 1º acesso) vinculado a um registro de cliente existente | Revisado na discussão da Phase 1: o cliente é uma conta "provisionada" pela agência, não um usuário que decide se cadastrar sozinho — reflete como PMs onboardam clientes na prática | — Pending |
 
 ## Evolution
 
