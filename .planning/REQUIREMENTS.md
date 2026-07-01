@@ -100,46 +100,46 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | TBD | Pending |
-| AUTH-02 | TBD | Pending |
-| AUTH-03 | TBD | Pending |
-| AUTH-04 | TBD | Pending |
-| AUTH-05 | TBD | Pending |
-| AUTH-06 | TBD | Pending |
-| AUTH-07 | TBD | Pending |
-| AUTH-08 | TBD | Pending |
-| CLI-01 | TBD | Pending |
-| CLI-02 | TBD | Pending |
-| CLI-03 | TBD | Pending |
-| CLI-04 | TBD | Pending |
-| CTX-01 | TBD | Pending |
-| CTX-02 | TBD | Pending |
-| CTX-03 | TBD | Pending |
-| CTX-04 | TBD | Pending |
-| CTX-05 | TBD | Pending |
-| KAN-01 | TBD | Pending |
-| KAN-02 | TBD | Pending |
-| KAN-03 | TBD | Pending |
-| KAN-04 | TBD | Pending |
-| KAN-05 | TBD | Pending |
-| CHK-01 | TBD | Pending |
-| CHK-02 | TBD | Pending |
-| CHK-03 | TBD | Pending |
-| CHK-04 | TBD | Pending |
-| APR-01 | TBD | Pending |
-| APR-02 | TBD | Pending |
-| APR-03 | TBD | Pending |
-| APR-04 | TBD | Pending |
-| ADM-01 | TBD | Pending |
-| ADM-02 | TBD | Pending |
-| ADM-03 | TBD | Pending |
-| SCH-01 | TBD | Pending |
-| SCH-02 | TBD | Pending |
+| AUTH-01 | Phase 1 | Pending |
+| AUTH-02 | Phase 1 | Pending |
+| AUTH-03 | Phase 1 | Pending |
+| AUTH-04 | Phase 1 | Pending |
+| AUTH-05 | Phase 1 | Pending |
+| AUTH-06 | Phase 1 | Pending |
+| AUTH-07 | Phase 1 | Pending |
+| AUTH-08 | Phase 1 | Pending |
+| CLI-01 | Phase 2 | Pending |
+| CLI-02 | Phase 2 | Pending |
+| CLI-03 | Phase 2 | Pending |
+| CLI-04 | Phase 2 | Pending |
+| CTX-01 | Phase 3 | Pending |
+| CTX-02 | Phase 3 | Pending |
+| CTX-03 | Phase 3 | Pending |
+| CTX-04 | Phase 3 | Pending |
+| CTX-05 | Phase 3 | Pending |
+| KAN-01 | Phase 4 | Pending |
+| KAN-02 | Phase 4 | Pending |
+| KAN-03 | Phase 4 | Pending |
+| KAN-04 | Phase 5 | Pending |
+| KAN-05 | Phase 4 | Pending |
+| CHK-01 | Phase 4 | Pending |
+| CHK-02 | Phase 4 | Pending |
+| CHK-03 | Phase 4 | Pending |
+| CHK-04 | Phase 4 | Pending |
+| APR-01 | Phase 5 | Pending |
+| APR-02 | Phase 5 | Pending |
+| APR-03 | Phase 5 | Pending |
+| APR-04 | Phase 5 | Pending |
+| ADM-01 | Phase 6 | Pending |
+| ADM-02 | Phase 6 | Pending |
+| ADM-03 | Phase 6 | Pending |
+| SCH-01 | Phase 5 | Pending |
+| SCH-02 | Phase 5 | Pending |
 
 **Coverage:**
-- v1 requirements: 34 total
-- Mapped to phases: 0 (roadmap not yet created)
-- Unmapped: 34 ⚠️ (expected — filled by roadmap creation)
+- v1 requirements: 35 total
+- Mapped to phases: 35
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-07-01*
