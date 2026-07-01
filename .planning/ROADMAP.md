@@ -10,7 +10,7 @@ Um PM consegue produzir conteúdo para um cliente específico com IA que só con
 
 ## Phases
 
-- [ ] **Phase 1: Access & Roles** - User can sign up, get approved by admin, and land in a role-scoped platform where PM/Client/Admin each see only what they're allowed to
+- [ ] **Phase 1: Access & Roles** - PM signs up and gets approved by admin; Client accounts are provisioned by PM (no self-signup); both land in a role-scoped platform where PM/Client/Admin each see only what they're allowed to
 - [ ] **Phase 2: Client Records & Isolated RAG Setup** - PM/Admin can create a client, attach it to an isolated Tropicalia project, and fill its strategic briefing
 - [ ] **Phase 3: Client-Isolated AI Chat** - PM can chat with AI about one client at a time, with zero context bleed, and curate what becomes permanent knowledge
 - [ ] **Phase 4: Content Production Kanban** - PM can create a content card, attach Drive media, and move it through briefing → produção → revisão interna, gated by a per-client checklist
@@ -20,16 +20,17 @@ Um PM consegue produzir conteúdo para um cliente específico com IA que só con
 ## Phase Details
 
 ### Phase 1: Access & Roles
-**Goal**: Any user (PM, Client, or Admin) can sign up, get approved, and access a platform that enforces their role's boundaries end-to-end via Supabase RLS
+**Goal**: A PM can sign up and get approved by admin; a Client account is provisioned directly by a PM (no self-signup); both land in a platform that enforces their role's boundaries end-to-end via Supabase RLS
 **Mode:** mvp
 **Depends on**: Nothing (first phase)
-**Requirements**: AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, AUTH-06, AUTH-07, AUTH-08
+**Requirements**: AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, AUTH-06, AUTH-07, AUTH-08, AUTH-09, AUTH-10, AUTH-11
 **Success Criteria** (what must be TRUE):
-  1. A new user can sign up with email/password as PM or Client and lands in a "pending approval" state with no platform access
-  2. Admin can see pending signups and approve or reject each one
-  3. Admin can assign a role (PM, Client, Admin) to an approved user, and that role determines what the user sees on next login
+  1. A new PM can sign up with email/password and lands in a "pending approval" state with no platform access
+  2. Admin can see pending PM signups and approve or reject each one (rejected accounts are marked rejected, not deleted)
+  3. Admin can assign a role (PM or Admin) to an approved PM signup, and that role determines what the user sees on next login
   4. A logged-in user's session persists across a browser refresh without re-authenticating
-  5. A PM attempting to access a client they are not assigned to is blocked at the data layer (RLS), not just hidden in the UI — same for a Client attempting another client's content
+  5. A PM can create a Client login (email + provisional password) linked to an existing client record, and the Client is forced to change that password on first login — no self-signup or approval queue for Clients
+  6. A PM attempting to access a client they are not assigned to is blocked at the data layer (RLS), not just hidden in the UI — same for a Client attempting another client's content
 **Plans**: TBD
 
 ### Phase 2: Client Records & Isolated RAG Setup
