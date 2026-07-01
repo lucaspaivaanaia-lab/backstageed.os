@@ -510,7 +510,7 @@ export async function deactivateClientAccess(userId: string) {
 
 **If this table is empty:** N/A — assumptions listed above should be confirmed against the live Supabase project dashboard during Wave 0 of planning (project not yet created).
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Has the Supabase project for this app been created yet, and if so, does it default to asymmetric (ECC/RSA) or symmetric (HS256) JWT signing keys?**
    - What we know: New Supabase projects created recently may default to asymmetric signing keys, which is what makes `getClaims()` fast; older/legacy projects use symmetric keys.
