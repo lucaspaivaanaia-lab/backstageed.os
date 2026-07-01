@@ -31,7 +31,12 @@ Um PM consegue produzir conteúdo para um cliente específico com IA que só con
   4. A logged-in user's session persists across a browser refresh without re-authenticating
   5. A PM can create a Client login (email + provisional password) linked to an existing client record, and the Client is forced to change that password on first login — no self-signup or approval queue for Clients
   6. A PM attempting to access a client they are not assigned to is blocked at the data layer (RLS), not just hidden in the UI — same for a Client attempting another client's content
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [ ] 01-01-PLAN.md — Walking Skeleton: Next.js/Supabase scaffold, migrations + RLS foundations, PM signup → pending gate (AUTH-01, AUTH-02)
+- [ ] 01-02-PLAN.md — Login, session persistence, admin approval queue, role assignment, role-scoped landing pages (AUTH-03, AUTH-04, AUTH-05)
+- [ ] 01-03-PLAN.md — pgTAP RLS test suite proving PM/Client scoping and admin-unrestricted enforcement at the data layer (AUTH-06, AUTH-07, AUTH-08)
+- [ ] 01-04-PLAN.md — Client login provisioning, forced first-login password change, and Client-access deactivation (AUTH-09, AUTH-10, AUTH-11)
 
 ### Phase 2: Client Records & Isolated RAG Setup
 **Goal**: Admin/PM can create and configure a client record that is the anchor for everything downstream — assignment, RAG isolation, and strategic context
@@ -101,7 +106,7 @@ Um PM consegue produzir conteúdo para um cliente específico com IA que só con
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Access & Roles | 0/? | Not started | - |
+| 1. Access & Roles | 0/4 | Not started | - |
 | 2. Client Records & Isolated RAG Setup | 0/? | Not started | - |
 | 3. Client-Isolated AI Chat | 0/? | Not started | - |
 | 4. Content Production Kanban | 0/? | Not started | - |
@@ -110,3 +115,4 @@ Um PM consegue produzir conteúdo para um cliente específico com IA que só con
 
 ---
 *Roadmap created: 2026-07-01*
+</content>
