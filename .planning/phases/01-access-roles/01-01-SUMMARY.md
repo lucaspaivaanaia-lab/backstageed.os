@@ -175,3 +175,7 @@ Once both are set, a continuation agent should:
 ---
 *Phase: 01-access-roles*
 *Completed: incomplete — stopped at secrets checkpoint before Task 4*
+
+## Self-Check: PASSED
+
+All files created in Tasks 2-3 confirmed present on disk; all three task commits (`7f83c1b`, `943e637`, `d090d99`) confirmed present in git log.
