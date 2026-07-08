@@ -1,4 +1,4 @@
-# Phase 1: Access & Roles - Research
+# Phase 5: Access & Roles - Research
 
 **Researched:** 2026-07-01
 **Domain:** Supabase Auth + RLS multi-tenancy on Next.js App Router (greenfield)
@@ -9,7 +9,7 @@
 
 ### Locked Decisions
 
-- **D-01:** Clients do NOT self-signup. PM creates the Client's login directly (email + provisional password), and that login is created *linked to* an existing client record (the client record from Phase 2 must already exist before the login is created — one client record can have 0 or 1 logins in v1).
+- **D-01:** Clients do NOT self-signup. PM creates the Client's login directly (email + provisional password), and that login is created *linked to* an existing client record (the client record from Phase 1 must already exist before the login is created — one client record can have 0 or 1 logins in v1).
 - **D-02:** PM (and Admin) can create as many Client logins as needed for the clients they manage, and can deactivate a Client's access later (e.g., end of contract).
 - **D-03:** PM still self-signs up (email/password) and goes into a "pending approval" state until Admin approves.
 - **D-04:** This supersedes the "self-signup with approval for both PM and Client" assumption captured in PROJECT.md/REQUIREMENTS.md during project init — REQUIREMENTS.md AUTH-01/02/03 already reworded (PM signup+approval; Client account is admin/PM-issued, not self-signup).
@@ -157,7 +157,7 @@ public.profiles (trigger-populated on auth.users INSERT)
   role: admin | pm | client
   status: pending | approved | rejected
   must_change_password: boolean
-  client_id: uuid (nullable, FK to clients — Phase 2 table)
+  client_id: uuid (nullable, FK to clients — Phase 1 table)
 ```
 
 ### Recommended Project Structure
@@ -354,7 +354,7 @@ begin
 end;
 $$;
 
--- Example policy on a future "clients" table (Phase 2), shown here to demonstrate the pattern:
+-- Example policy on a future "clients" table (Phase 1), shown here to demonstrate the pattern:
 create policy "pm_sees_assigned_clients_only"
 on public.clients
 for select

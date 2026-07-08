@@ -1,4 +1,4 @@
-# Phase 1: Access & Roles - Discussion Log
+# Phase 5: Access & Roles - Discussion Log
 
 > **Audit trail only.** Do not use as input to planning, research, or execution agents.
 > Decisions are captured in CONTEXT.md — this log preserves the alternatives considered.
@@ -34,7 +34,7 @@
 | Não necessariamente | PM pode criar o login antes do registro existir, vincular depois | |
 
 **User's choice:** Sim, cliente já existe.
-**Notes:** Client record (Phase 2) must exist before a login can be provisioned for it.
+**Notes:** Client record (Phase 1) must exist before a login can be provisioned for it.
 
 | Option | Description | Selected |
 |--------|-------------|----------|

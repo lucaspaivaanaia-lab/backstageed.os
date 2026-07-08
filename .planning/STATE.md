@@ -3,52 +3,52 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 01 UI-SPEC approved
-last_updated: "2026-07-01T19:09:06.749Z"
-last_activity: 2026-07-01 -- Phase 01 planning complete
+stopped_at: Phase reprioritized by stakeholder — Phase 5 (Access & Roles) 05-01 complete, paused; new Phase 1 (Client Records & Isolated RAG Setup) not yet planned
+last_updated: "2026-07-08T00:00:00.000Z"
+last_activity: 2026-07-08 -- Roadmap reordered per Juliano's stakeholder reprioritization; Phase 1 (Access & Roles) renumbered to Phase 5, Phase 2 (Client Records) renumbered to Phase 1
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 4
-  completed_plans: 0
-  percent: 0
+  completed_plans: 1
+  percent: 4
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-01)
+See: .planning/PROJECT.md (updated 2026-07-08)
 
 **Core value:** Um PM consegue produzir conteúdo para um cliente específico com IA que só conhece aquele cliente (RAG isolado, zero vazamento de contexto), levar esse conteúdo do briefing até a aprovação do cliente dentro da própria plataforma, e o Juliano consegue ver o status real de qualquer card, de qualquer cliente, a qualquer momento.
-**Current focus:** Phase 1 — Access & Roles
+**Current focus:** Phase 1 — Client Records & Isolated RAG Setup (deadline 2026-07-11)
 
 ## Current Position
 
-Phase: 1 of 6 (Access & Roles)
+Phase: 1 (client-records-rag) — NOT YET PLANNED (next up)
 Plan: 0 of ? in current phase
-Status: Ready to execute
-Last activity: 2026-07-01 -- Phase 01 planning complete
+Status: Ready to discuss/plan
+Last activity: 2026-07-08 -- Roadmap reordered; Phase 1 is now Client Records & Isolated RAG Setup
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [░░░░░░░░░░] 0% (this phase) — 1/4 plans complete overall (Phase 5's 05-01)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 0
-- Average duration: - min
-- Total execution time: 0 hours
+- Total plans completed: 1 (05-01, formerly 01-01)
+- Average duration: ~2h
+- Total execution time: ~2 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 5. Access & Roles | 1/4 | ~2h | ~2h |
 
 **Recent Trend:**
 
-- Last 5 plans: -
+- Last 5 plans: 05-01 complete
 - Trend: -
 
 *Updated after each plan completion*
@@ -60,18 +60,22 @@ Progress: [░░░░░░░░░░] 0%
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-- RAG isolation is structural (one Tropicalia project per client), not a filter — drives Phase 2 and Phase 3 design.
-- Memory curation is manual (PM selects conversation excerpts to save) — drives Phase 3 scope, no auto-save.
-- Supabase RLS is the multi-tenancy enforcement layer — drives Phase 1 success criteria (must be verified at data layer, not just UI).
-- Scheduling v1 is registration-only (no publish API integration) — keeps Phase 5 scope small.
+- **2026-07-08: Stakeholder reprioritization.** Juliano reordered the roadmap: Client Records & Isolated RAG Setup is now Phase 1 (deadline 2026-07-11), Client-Isolated AI Chat is Phase 2 (2026-07-18), Content Production Kanban is Phase 3 (2026-07-28), Client Approval & Scheduling is Phase 4 (2026-08-07), Access & Roles is now Phase 5 (2026-08-12, was Phase 1), Admin Oversight Dashboard stays Phase 6 (2026-08-15). Directory `.planning/phases/01-access-roles/` renamed to `05-access-roles/` and all internal plan/file references (05-01..05-04) and cross-phase mentions renumbered to match. Access & Roles' 05-01 plan (walking skeleton) remains complete and valid; 05-02/05-03/05-04 (login, approval queue, RLS tests, client provisioning) are paused until Phase 5's slot.
+- **Open risk flagged, not yet resolved:** no login/admin-approval flow exists yet (paused in Phase 5), so no PM can pass the `/pending` gate to use the new Phase 1 in a live browser session. To be resolved via `/gsd:discuss-phase` for Phase 1 — likely a minimal login scoped into Phase 1 rather than pulling forward the full paused approval-queue UI.
+- Juliano wants Phase 1 delivered as sub-phases with partial deliverables to test mid-flight; weekly check-ins Wednesdays 14h. Sub-phase 1A target: client created, PM linked, Tropicalia project auto-provisioned.
+- RAG isolation is structural (one Tropicalia project per client), not a filter — drives Phase 1 and Phase 2 design. Tropicalia base URL `https://api.tropicalia.dev`; key in `.env.local` as `TROPICALIA_API_KEY`. `tropicalia_project_id` is created automatically via `POST /v1/projects` on client creation.
+- Memory curation is manual (PM selects conversation excerpts to save) — drives Phase 2 scope, no auto-save.
+- Supabase RLS is the multi-tenancy enforcement layer — already scaffolded in Phase 5's 05-01 migrations (`is_admin()`, `pm_assigned_clients()`); Phase 1 client-record work builds on the existing `clients`/`pm_clients` schema.
+- Scheduling v1 is registration-only (no publish API integration) — keeps Phase 4 scope small.
 
 ### Pending Todos
 
-None yet.
+- Run `/gsd:discuss-phase` for the new Phase 1 (Client Records & Isolated RAG Setup) — including resolving the login/auth dependency gap noted above.
 
 ### Blockers/Concerns
 
-- Phase 1 decision-coverage gate (`check.decision-coverage-plan`) flagged 9/10 CONTEXT.md decisions (D-01 through D-09) as lacking a literal "D-NN" citation string in the plan text. User chose to proceed anyway: the plan-checker's semantic review (3 rounds) already confirmed all 10 decisions are substantively implemented (e.g., D-06's locked copy is quoted verbatim in 01-01 Task 5; D-05 rejected-not-deleted in 01-02; D-01/D-02/D-09 client-provisioning flow in 01-04). Flagging for `/gsd:verify-work` to re-surface and double-check during Phase 1 verification.
+- **No auth path into the app for a live user.** Phase 5's login (05-02) and admin-approval queue (05-02) are paused; only signup → `/pending` exists. Phase 1 (Client Records) needs someone authenticated as PM/Admin to exercise its UI. Needs resolution during Phase 1 discuss/plan — flagged above and in ROADMAP.md.
+- Historical: Phase 5 (formerly Phase 1) decision-coverage gate (`check.decision-coverage-plan`) flagged 9/10 CONTEXT.md decisions (D-01 through D-09) as lacking a literal "D-NN" citation string in the plan text. User chose to proceed anyway: the plan-checker's semantic review (3 rounds) already confirmed all 10 decisions are substantively implemented. Flagging for `/gsd:verify-work` to re-surface and double-check when Phase 5 resumes.
 
 ## Deferred Items
 
@@ -86,6 +90,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-01T06:48:53.382Z
-Stopped at: Phase 01 UI-SPEC approved
-Resume file: .planning/phases/01-access-roles/01-UI-SPEC.md
+Last session: 2026-07-08
+Stopped at: Roadmap reordered per stakeholder priority; Phase 5 (Access & Roles) 05-01 complete/paused; ready to start `/gsd:discuss-phase` for the new Phase 1 (Client Records & Isolated RAG Setup)
+Resume file: .planning/ROADMAP.md (Phase 1 section)

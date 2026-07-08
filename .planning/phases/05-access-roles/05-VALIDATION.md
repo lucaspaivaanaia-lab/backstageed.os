@@ -7,7 +7,7 @@ wave_0_complete: false
 created: 2026-07-01
 ---
 
-# Phase 01 — Validation Strategy
+# Phase 05 — Validation Strategy
 
 > Per-phase validation contract for feedback sampling during execution.
 
@@ -38,18 +38,18 @@ created: 2026-07-01
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 01-01-01 | 01 | 0 | — | — | Supabase project provisioned, RLS enabled on all tables | manual | N/A — infra provisioning | ❌ W0 | ⬜ pending |
-| 01-0X-0X | TBD | TBD | AUTH-01 | — | PM signup creates pending profile | manual | N/A — manual signup + DB check | ❌ W0 | ⬜ pending |
-| 01-0X-0X | TBD | TBD | AUTH-02 | — | Pending PM cannot access platform | manual | N/A — manual login attempt | ❌ W0 | ⬜ pending |
-| 01-0X-0X | TBD | TBD | AUTH-03 | — | Admin approves/rejects, rejected not deleted | manual | N/A — manual admin action + DB check | ❌ W0 | ⬜ pending |
-| 01-0X-0X | TBD | TBD | AUTH-04 | — | Admin assigns role, takes effect next login | manual | N/A — manual role change + re-login | ❌ W0 | ⬜ pending |
-| 01-0X-0X | TBD | TBD | AUTH-05 | — | Session persists across browser refresh | manual | N/A — manual refresh test | ❌ W0 | ⬜ pending |
-| 01-0X-0X | TBD | TBD | AUTH-06 | T-01-01 | PM blocked from unassigned client at RLS layer | pgTAP | `supabase test db` | ❌ W0 | ⬜ pending |
-| 01-0X-0X | TBD | TBD | AUTH-07 | T-01-02 | Client blocked from other clients' data at RLS layer | pgTAP | `supabase test db` | ❌ W0 | ⬜ pending |
-| 01-0X-0X | TBD | TBD | AUTH-08 | T-01-03 | Admin sees everything, unrestricted by RLS | pgTAP | `supabase test db` | ❌ W0 | ⬜ pending |
-| 01-0X-0X | TBD | TBD | AUTH-09 | — | PM creates Client login linked to client record | manual | N/A — manual provisioning flow | ❌ W0 | ⬜ pending |
-| 01-0X-0X | TBD | TBD | AUTH-10 | — | Client forced to change password on first login | manual | N/A — manual first-login flow | ❌ W0 | ⬜ pending |
-| 01-0X-0X | TBD | TBD | AUTH-11 | — | PM/Admin deactivates Client access | manual | N/A — manual deactivation + login attempt | ❌ W0 | ⬜ pending |
+| 05-01-01 | 01 | 0 | — | — | Supabase project provisioned, RLS enabled on all tables | manual | N/A — infra provisioning | ❌ W0 | ⬜ pending |
+| 05-0X-0X | TBD | TBD | AUTH-01 | — | PM signup creates pending profile | manual | N/A — manual signup + DB check | ❌ W0 | ⬜ pending |
+| 05-0X-0X | TBD | TBD | AUTH-02 | — | Pending PM cannot access platform | manual | N/A — manual login attempt | ❌ W0 | ⬜ pending |
+| 05-0X-0X | TBD | TBD | AUTH-03 | — | Admin approves/rejects, rejected not deleted | manual | N/A — manual admin action + DB check | ❌ W0 | ⬜ pending |
+| 05-0X-0X | TBD | TBD | AUTH-04 | — | Admin assigns role, takes effect next login | manual | N/A — manual role change + re-login | ❌ W0 | ⬜ pending |
+| 05-0X-0X | TBD | TBD | AUTH-05 | — | Session persists across browser refresh | manual | N/A — manual refresh test | ❌ W0 | ⬜ pending |
+| 05-0X-0X | TBD | TBD | AUTH-06 | T-05-01 | PM blocked from unassigned client at RLS layer | pgTAP | `supabase test db` | ❌ W0 | ⬜ pending |
+| 05-0X-0X | TBD | TBD | AUTH-07 | T-05-02 | Client blocked from other clients' data at RLS layer | pgTAP | `supabase test db` | ❌ W0 | ⬜ pending |
+| 05-0X-0X | TBD | TBD | AUTH-08 | T-05-03 | Admin sees everything, unrestricted by RLS | pgTAP | `supabase test db` | ❌ W0 | ⬜ pending |
+| 05-0X-0X | TBD | TBD | AUTH-09 | — | PM creates Client login linked to client record | manual | N/A — manual provisioning flow | ❌ W0 | ⬜ pending |
+| 05-0X-0X | TBD | TBD | AUTH-10 | — | Client forced to change password on first login | manual | N/A — manual first-login flow | ❌ W0 | ⬜ pending |
+| 05-0X-0X | TBD | TBD | AUTH-11 | — | PM/Admin deactivates Client access | manual | N/A — manual deactivation + login attempt | ❌ W0 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 *Task IDs and waves are TBD — planner fills these in once PLAN.md files exist.*

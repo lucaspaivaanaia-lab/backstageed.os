@@ -1,4 +1,4 @@
-# Phase 1: Access & Roles - Context
+# Phase 5: Access & Roles - Context
 
 **Gathered:** 2026-07-01
 **Status:** Ready for planning
@@ -6,7 +6,7 @@
 <domain>
 ## Phase Boundary
 
-Any user (PM or Admin) can get onto the platform with a role-scoped account, and the platform enforces those role boundaries end-to-end via Supabase RLS. This phase covers: PM self-signup with admin approval, admin-issued Client logins (tied to a client record from Phase 2), session persistence, and RLS enforcement — not the client-record CRUD itself (that's Phase 2) or any of the Kanban/chat/checklist features built on top of these roles.
+Any user (PM or Admin) can get onto the platform with a role-scoped account, and the platform enforces those role boundaries end-to-end via Supabase RLS. This phase covers: PM self-signup with admin approval, admin-issued Client logins (tied to a client record from Phase 1), session persistence, and RLS enforcement — not the client-record CRUD itself (that's Phase 1) or any of the Kanban/chat/checklist features built on top of these roles.
 
 </domain>
 
@@ -14,7 +14,7 @@ Any user (PM or Admin) can get onto the platform with a role-scoped account, and
 ## Implementation Decisions
 
 ### Account creation model (deviates from initial project-level assumption)
-- **D-01:** Clients do NOT self-signup. PM creates the Client's login directly (email + provisional password), and that login is created *linked to* an existing client record (the client record from Phase 2 must already exist before the login is created — one client record can have 0 or 1 logins in v1).
+- **D-01:** Clients do NOT self-signup. PM creates the Client's login directly (email + provisional password), and that login is created *linked to* an existing client record (the client record from Phase 1 must already exist before the login is created — one client record can have 0 or 1 logins in v1).
 - **D-02:** PM (and Admin) can create as many Client logins as needed for the clients they manage, and can deactivate a Client's access later (e.g., end of contract).
 - **D-03:** PM still self-signs up (email/password) and goes into a "pending approval" state until Admin approves.
 - **D-04:** This supersedes the "self-signup with approval for both PM and Client" assumption captured in PROJECT.md/REQUIREMENTS.md during project init — REQUIREMENTS.md AUTH-01/02/03 need rewording to reflect this (PM signup+approval; Client account is admin/PM-issued, not self-signup). Flagged for correction after this discussion.
@@ -46,7 +46,7 @@ Any user (PM or Admin) can get onto the platform with a role-scoped account, and
 ### Project-level context
 - `.planning/PROJECT.md` — Core value, requirements, constraints (Supabase RLS multi-tenancy, timeline target 2026-09-30)
 - `.planning/REQUIREMENTS.md` — AUTH-01 through AUTH-08 (note: AUTH-01/02/03 wording needs correction per D-04 above — Client is not self-signup)
-- `.planning/ROADMAP.md` — Phase 1 goal and success criteria (Access & Roles)
+- `.planning/ROADMAP.md` — Phase 5 goal and success criteria (Access & Roles)
 
 No external specs/ADRs — requirements fully captured in decisions above.
 

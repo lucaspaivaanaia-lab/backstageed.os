@@ -1,5 +1,5 @@
 ---
-phase: 01-access-roles
+phase: 05-access-roles
 plan: 01
 subsystem: auth
 tags: [nextjs, supabase, ssr, rls, postgres, zod, shadcn]
@@ -15,7 +15,7 @@ provides:
   - PM self-signup Server Action + /signup page + /pending page
   - middleware.ts: getUser()-based session gate, pending/rejected/deactivated/must-change-password routing, role-scoped redirect table
   - .env.local.example documenting all four required env vars
-affects: [01-02, 01-03, 01-04]
+affects: [05-02, 05-03, 05-04]
 
 # Tech tracking
 tech-stack:
@@ -69,7 +69,7 @@ duration: ~2h (across two sessions, including the secrets checkpoint pause)
 completed: 2026-07-03
 ---
 
-# Phase 1 Plan 1: Walking Skeleton Summary
+# Phase 5 Plan 1: Walking Skeleton Summary
 
 **Next.js 16 + shadcn scaffold, four Supabase client factories, five RLS-enabled SQL migrations pushed to a live Supabase project, and a working PM signup -> pending-approval slice gated by middleware using getUser()-verified sessions.**
 
@@ -198,11 +198,11 @@ None remaining — both required secrets (`SUPABASE_SECRET_KEY`, `SUPABASE_ACCES
 
 - All five tasks complete, committed, and verified against the plan's literal grep-based acceptance criteria and against the live hosted Supabase project.
 - AUTH-01 (PM signup) and AUTH-02 (pending PM has no platform access) are both delivered and manually verified.
-- Ready to proceed to plans 01-02/01-03/01-04, which build on this phase's `profiles`/`clients`/`pm_clients` schema, RLS helpers, Supabase client factories, and middleware gate.
+- Ready to proceed to plans 05-02/05-03/05-04, which build on this phase's `profiles`/`clients`/`pm_clients` schema, RLS helpers, Supabase client factories, and middleware gate.
 - No outstanding blockers.
 
 ---
-*Phase: 01-access-roles*
+*Phase: 05-access-roles*
 *Completed: 2026-07-03*
 
 ## Self-Check: PASSED

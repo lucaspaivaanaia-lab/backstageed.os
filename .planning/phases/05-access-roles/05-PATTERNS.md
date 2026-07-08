@@ -1,4 +1,4 @@
-# Phase 1: Access & Roles - Pattern Map
+# Phase 5: Access & Roles - Pattern Map
 
 **Mapped:** 2026-07-01
 **Files analyzed:** 24 (new — greenfield, 0 modified)
@@ -305,7 +305,7 @@ create trigger on_auth_user_created
 ```
 **Hard rule (Pitfall 2 / CVE-2025-48757):** `alter table ... enable row level security;` MUST be in this same migration file, never a follow-up step — the table is fully public to any `anon`-key holder until this line runs. This migration also needs at least a default-deny or self-select policy added in `0003_rls_policies.sql` immediately after table creation — do not leave a gap between table creation and policy attachment across migration files if they'd run out of order; sequence 0001→0003 must always apply together.
 
-**Note:** `profiles.client_id` references `public.clients(id)` — the `clients` table itself is a Phase 2 deliverable per CONTEXT.md phase boundary. This FK will need `clients` to exist first; confirm migration ordering/dependency with the planner (Phase 1 may need to either stub a minimal `clients` table or defer the FK constraint — flag as an open sequencing question, not resolved by this pattern map).
+**Note:** `profiles.client_id` references `public.clients(id)` — the `clients` table itself is a Phase 1 deliverable per CONTEXT.md phase boundary. This FK will need `clients` to exist first; confirm migration ordering/dependency with the planner (Phase 5 may need to either stub a minimal `clients` table or defer the FK constraint — flag as an open sequencing question, not resolved by this pattern map).
 
 ---
 
@@ -351,7 +351,7 @@ begin
 end;
 $$;
 
--- Example policy on a future "clients" table (Phase 2), shown here to demonstrate the pattern:
+-- Example policy on a future "clients" table (Phase 1), shown here to demonstrate the pattern:
 create policy "pm_sees_assigned_clients_only"
 on public.clients
 for select
@@ -369,7 +369,7 @@ create index idx_profiles_client_id on public.profiles (client_id);
 **Hard rules to enforce in this migration:**
 1. `language plpgsql` (not `language sql`) — Postgres may inline SQL-language functions and lose the `security definer` context (Pitfall 1).
 2. Every cross-table RLS check must route through one of these two helper functions — never inline a subquery against another RLS-enabled table directly inside a policy (Pitfall 1: infinite recursion).
-3. `profiles` itself also needs its own RLS policies in this migration (self-select, self-update restricted to non-role/non-status columns, admin-full-access via `is_admin()`) — RESEARCH.md's `clients`-table example is illustrative of the *pattern*; the planner must additionally write the analogous policies for `profiles` and `pm_clients` themselves in this phase, since those are the two tables Phase 1 actually owns.
+3. `profiles` itself also needs its own RLS policies in this migration (self-select, self-update restricted to non-role/non-status columns, admin-full-access via `is_admin()`) — RESEARCH.md's `clients`-table example is illustrative of the *pattern*; the planner must additionally write the analogous policies for `profiles` and `pm_clients` themselves in this phase, since those are the two tables Phase 5 actually owns.
 
 ---
 
@@ -413,11 +413,11 @@ All 24 files have no in-repo analog (confirmed empty repo). Files needing the mo
 | `app/(auth)/login/actions.ts` | controller | request-response | RESEARCH.md covers signup and admin-createUser flows verbatim but not login; must be derived from the same Server Action shape + standard `signInWithPassword()` API |
 | `app/(auth)/change-password/actions.ts` | controller | CRUD-update | No verbatim example; composed from `updateUser()` + custom `must_change_password` flag clear, per Pattern 1's stated gap ("no native Supabase flag") |
 | `app/admin/approvals/actions.ts` | controller | CRUD-update | AUTH-03/04 described at requirement level only; no code sample in RESEARCH.md — composed pattern shown above, backed by RLS `is_admin()` |
-| `supabase/migrations/0001_profiles.sql` (FK to `clients`) | migration | CRUD-schema | `clients` table is a Phase 2 deliverable — cross-phase dependency/ordering needs explicit resolution by planner (stub table vs deferred FK) |
+| `supabase/migrations/0001_profiles.sql` (FK to `clients`) | migration | CRUD-schema | `clients` table is a Phase 1 deliverable — cross-phase dependency/ordering needs explicit resolution by planner (stub table vs deferred FK) |
 
 ## Metadata
 
 **Analog search scope:** Entire repository (`.` excluding `.git/` and `.planning/`) — confirmed zero source files of any kind (`*.ts`, `*.tsx`, `*.js`, `*.sql`, `package.json`) exist outside planning docs.
 **Files scanned:** Full repo tree (root listing + recursive find for source-file extensions) — 0 matches.
 **Pattern extraction date:** 2026-07-01
-**Extraction source:** 100% from `.planning/phases/01-access-roles/01-RESEARCH.md` (Architecture Patterns, Code Examples sections) and `01-UI-SPEC.md` (Screen Inventory, Copywriting Contract) — no other codebase context was available.
+**Extraction source:** 100% from `.planning/phases/05-access-roles/05-RESEARCH.md` (Architecture Patterns, Code Examples sections) and `05-UI-SPEC.md` (Screen Inventory, Copywriting Contract) — no other codebase context was available.

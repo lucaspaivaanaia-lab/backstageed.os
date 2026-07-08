@@ -103,44 +103,44 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | Phase 1 | Pending |
-| AUTH-02 | Phase 1 | Pending |
-| AUTH-03 | Phase 1 | Pending |
-| AUTH-04 | Phase 1 | Pending |
-| AUTH-05 | Phase 1 | Pending |
-| AUTH-06 | Phase 1 | Pending |
-| AUTH-07 | Phase 1 | Pending |
-| AUTH-08 | Phase 1 | Pending |
-| AUTH-09 | Phase 1 | Pending |
-| AUTH-10 | Phase 1 | Pending |
-| AUTH-11 | Phase 1 | Pending |
-| CLI-01 | Phase 2 | Pending |
-| CLI-02 | Phase 2 | Pending |
-| CLI-03 | Phase 2 | Pending |
-| CLI-04 | Phase 2 | Pending |
-| CTX-01 | Phase 3 | Pending |
-| CTX-02 | Phase 3 | Pending |
-| CTX-03 | Phase 3 | Pending |
-| CTX-04 | Phase 3 | Pending |
-| CTX-05 | Phase 3 | Pending |
-| KAN-01 | Phase 4 | Pending |
-| KAN-02 | Phase 4 | Pending |
-| KAN-03 | Phase 4 | Pending |
-| KAN-04 | Phase 5 | Pending |
-| KAN-05 | Phase 4 | Pending |
-| CHK-01 | Phase 4 | Pending |
-| CHK-02 | Phase 4 | Pending |
-| CHK-03 | Phase 4 | Pending |
-| CHK-04 | Phase 4 | Pending |
-| APR-01 | Phase 5 | Pending |
-| APR-02 | Phase 5 | Pending |
-| APR-03 | Phase 5 | Pending |
-| APR-04 | Phase 5 | Pending |
+| AUTH-01 | Phase 5 | Partially done (05-01) |
+| AUTH-02 | Phase 5 | Partially done (05-01) |
+| AUTH-03 | Phase 5 | Pending (05-02) |
+| AUTH-04 | Phase 5 | Pending (05-02) |
+| AUTH-05 | Phase 5 | Pending (05-02) |
+| AUTH-06 | Phase 5 | Pending (05-03) |
+| AUTH-07 | Phase 5 | Pending (05-03) |
+| AUTH-08 | Phase 5 | Pending (05-03) |
+| AUTH-09 | Phase 5 | Pending (05-04) |
+| AUTH-10 | Phase 5 | Pending (05-04) |
+| AUTH-11 | Phase 5 | Pending (05-04) |
+| CLI-01 | Phase 1 | Pending |
+| CLI-02 | Phase 1 | Pending |
+| CLI-03 | Phase 1 | Pending |
+| CLI-04 | Phase 1 | Pending |
+| CTX-01 | Phase 2 | Pending |
+| CTX-02 | Phase 2 | Pending |
+| CTX-03 | Phase 2 | Pending |
+| CTX-04 | Phase 2 | Pending |
+| CTX-05 | Phase 2 | Pending |
+| KAN-01 | Phase 3 | Pending |
+| KAN-02 | Phase 3 | Pending |
+| KAN-03 | Phase 3 | Pending |
+| KAN-04 | Phase 4 | Pending |
+| KAN-05 | Phase 3 | Pending |
+| CHK-01 | Phase 3 | Pending |
+| CHK-02 | Phase 3 | Pending |
+| CHK-03 | Phase 3 | Pending |
+| CHK-04 | Phase 3 | Pending |
+| APR-01 | Phase 4 | Pending |
+| APR-02 | Phase 4 | Pending |
+| APR-03 | Phase 4 | Pending |
+| APR-04 | Phase 4 | Pending |
 | ADM-01 | Phase 6 | Pending |
 | ADM-02 | Phase 6 | Pending |
 | ADM-03 | Phase 6 | Pending |
-| SCH-01 | Phase 5 | Pending |
-| SCH-02 | Phase 5 | Pending |
+| SCH-01 | Phase 4 | Pending |
+| SCH-02 | Phase 4 | Pending |
 
 **Coverage:**
 - v1 requirements: 38 total
@@ -149,4 +149,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-07-01*
-*Last updated: 2026-07-01 after Phase 1 discussion (AUTH-01..03 reworded, AUTH-09..11 added — Client accounts are PM-issued, not self-signup)*
+*Last updated: 2026-07-08 after stakeholder reprioritization — phase order changed (Access & Roles moved from Phase 1 to Phase 5; Client Records moved from Phase 2 to Phase 1). AUTH-01..03 reworded, AUTH-09..11 added on 2026-07-01 (Client accounts are PM-issued, not self-signup).*

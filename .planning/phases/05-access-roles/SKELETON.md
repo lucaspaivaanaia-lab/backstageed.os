@@ -19,23 +19,23 @@ A social-media PM can sign up on `/signup` with email + password and land on a s
 | Privileged operations | Service-role key confined to `lib/supabase/admin.ts`, imported only from Server Actions; env var `SUPABASE_SECRET_KEY` (never `NEXT_PUBLIC_`) | `auth.admin.createUser()` / `auth.admin.updateUserById()` (AUTH-09/11) need the secret key; leaking it to the browser bundle is Elevation of Privilege (RESEARCH.md Pitfall 4). |
 | Deployment target | Local full-stack dev run against the live hosted Supabase project (`next dev` + `supabase db push`); Vercel deploy deferred to a later slice | Timeline pressure (target 2026-09-30); a live hosted Supabase project is the hard dependency, Vercel hosting is not needed to prove the skeleton. |
 | Directory layout | Route groups: `app/(auth)/*` (signup/login/pending/rejected/change-password), `app/admin/*`, `app/pm/*`, `app/client/*`; shared factories under `lib/supabase/*`; validation under `lib/validation/*` | Route groups keep unauthenticated auth screens outside the middleware role-gate matcher while role roots stay cleanly separated (RESEARCH.md Recommended Project Structure). |
-| UI system | shadcn (`new-york` style, `neutral` base color, CSS variables), Radix primitives, `lucide-react`, system-UI font; neutral palette with red reserved strictly for destructive actions | Internal B2B ops tool tone per CLAUDE.md / 01-UI-SPEC; no brand-color decision this phase has authority to make. |
+| UI system | shadcn (`new-york` style, `neutral` base color, CSS variables), Radix primitives, `lucide-react`, system-UI font; neutral palette with red reserved strictly for destructive actions | Internal B2B ops tool tone per CLAUDE.md / 05-UI-SPEC; no brand-color decision this phase has authority to make. |
 
-## Stack Touched in Phase 1
+## Stack Touched in Phase 5
 
-- [x] Project scaffold (Next.js + TypeScript + Tailwind + ESLint + shadcn + Supabase CLI dev dep) — 01-01
-- [x] Routing — real routes: `/signup`, `/pending`, `/login`, `/admin/approvals`, `/pm`, `/client`, `/admin`, `/change-password`, `/pm/clients/[id]/access` — 01-01 through 01-03
-- [x] Database — real write (PM signup → `profiles` INSERT via trigger) AND real read (middleware `profiles` SELECT; admin approval queue SELECT) — 01-01, 01-02
-- [x] UI — interactive elements wired to the backend (signup form → Server Action; approval queue Aprovar/Rejeitar; create-client-login form; forced password-change form) — 01-01 through 01-03
+- [x] Project scaffold (Next.js + TypeScript + Tailwind + ESLint + shadcn + Supabase CLI dev dep) — 05-01
+- [x] Routing — real routes: `/signup`, `/pending`, `/login`, `/admin/approvals`, `/pm`, `/client`, `/admin`, `/change-password`, `/pm/clients/[id]/access` — 05-01 through 05-03
+- [x] Database — real write (PM signup → `profiles` INSERT via trigger) AND real read (middleware `profiles` SELECT; admin approval queue SELECT) — 05-01, 05-02
+- [x] UI — interactive elements wired to the backend (signup form → Server Action; approval queue Aprovar/Rejeitar; create-client-login form; forced password-change form) — 05-01 through 05-03
 - [x] Deployment — documented local full-stack run: `supabase db push` (migrations to live project) + `next dev` (against live Supabase env vars in `.env.local`)
 
 ## Out of Scope (Deferred to Later Slices)
 
-- Client record CRUD, strategic briefing, and Tropicalia `project_id` — Phase 2 (this phase uses only a minimal seeded `clients` stub for FK + manual AUTH-09/10/11 testing).
+- Client record CRUD, strategic briefing, and Tropicalia `project_id` — Phase 1 (this phase uses only a minimal seeded `clients` stub for FK + manual AUTH-09/10/11 testing).
 - Multiple Client-side users per client company (v1 is 1 login per client) — deferred to v2 (D-10).
 - Active/email notification when a PM signup is approved — v1 relies on the PM retrying login (D-07).
 - Vercel/production deployment and CI — later hardening slice.
-- Playwright e2e / Vitest browser-flow automation — this phase uses pgTAP for RLS (AUTH-06/07/08) and manual click-through for auth/UI flows per 01-VALIDATION.md.
+- Playwright e2e / Vitest browser-flow automation — this phase uses pgTAP for RLS (AUTH-06/07/08) and manual click-through for auth/UI flows per 05-VALIDATION.md.
 - `getClaims()` JWT-local verification optimization — default to `getUser()` this phase until the project's JWT signing-key type is confirmed (RESEARCH.md Open Question 1).
 - Reactivating a deactivated Client / lifting a ban — v1 covers deactivation only (AUTH-11); reactivation is not a phase requirement.
 
@@ -43,8 +43,8 @@ A social-media PM can sign up on `/signup` with email + password and land on a s
 
 Each later phase adds one vertical slice on top of this skeleton without altering its architectural decisions (same `@supabase/ssr` factories, same RLS-helper pattern, same route-group layout):
 
-- Phase 2: Client Records & Isolated RAG Setup — `ALTER` the `clients` stub into a full record (strategic briefing + Tropicalia `project_id`), CRUD, PM↔client assignment UI writing to the existing `pm_clients` table.
-- Phase 3: Client-Isolated AI Chat — per-client scoped chat backed by the Phase 2 `project_id`, reusing `pm_assigned_clients()` RLS scoping.
-- Phase 4: Content Production Kanban — content cards + per-client checklist, all client-scoped through the established RLS helpers.
-- Phase 5: Client Approval & Scheduling — Client-role board (reusing the `role='client'` gating from this phase) for approve/adjust + publish-date registration.
+- Phase 1: Client Records & Isolated RAG Setup — `ALTER` the `clients` stub into a full record (strategic briefing + Tropicalia `project_id`), CRUD, PM↔client assignment UI writing to the existing `pm_clients` table.
+- Phase 2: Client-Isolated AI Chat — per-client scoped chat backed by the Phase 1 `project_id`, reusing `pm_assigned_clients()` RLS scoping.
+- Phase 3: Content Production Kanban — content cards + per-client checklist, all client-scoped through the established RLS helpers.
+- Phase 4: Client Approval & Scheduling — Client-role board (reusing the `role='client'` gating from this phase) for approve/adjust + publish-date registration.
 - Phase 6: Admin Oversight Dashboard — consolidated cross-client status view, reusing `is_admin()` for unrestricted access.

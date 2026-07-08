@@ -39,7 +39,7 @@ Um PM consegue produzir conteúdo para um cliente específico com IA que só con
 - Publicação automática via API de redes sociais — v1 registra data/hora de agendamento, mas a publicação em si continua manual via Mlabs
 - Notificações por email — v1 é só in-app; PM e cliente veem mudanças de status ao acessar a plataforma
 - Self-signup sem aprovação (PM) — cadastro de PM sempre passa por aprovação do admin antes de ter acesso
-- Self-signup de Cliente — decidido na discussão da Phase 1 que Cliente não se auto-cadastra; PM cria o login do cliente diretamente
+- Self-signup de Cliente — decidido na discussão da Phase 5 (Access & Roles, originalmente Phase 1) que Cliente não se auto-cadastra; PM cria o login do cliente diretamente
 - Múltiplos logins por cliente — v1 é 1 login por empresa-cliente; mais de uma pessoa por cliente fica para v2
 
 ## Context
@@ -70,7 +70,8 @@ Um PM consegue produzir conteúdo para um cliente específico com IA que só con
 | Agendamento v1 = registro de data/hora + status "pronto para publicar", sem integração de publicação | Publicação automática via API de redes sociais é integração futura mapeada, não bloqueia o processo central | — Pending |
 | Self-signup com aprovação do admin (PM apenas) | Evita que Juliano precise criar manualmente cada conta de PM, mas mantém controle de quem entra | — Pending |
 | Sem notificações por email na v1 | Reduz escopo/dependências da v1; in-app é suficiente para o volume inicial pequeno | — Pending |
-| Cliente não se auto-cadastra — PM cria o login do cliente (email + senha provisória, troca obrigatória no 1º acesso) vinculado a um registro de cliente existente | Revisado na discussão da Phase 1: o cliente é uma conta "provisionada" pela agência, não um usuário que decide se cadastrar sozinho — reflete como PMs onboardam clientes na prática | — Pending |
+| Cliente não se auto-cadastra — PM cria o login do cliente (email + senha provisória, troca obrigatória no 1º acesso) vinculado a um registro de cliente existente | Revisado na discussão da Phase 5 (Access & Roles, originalmente Phase 1): o cliente é uma conta "provisionada" pela agência, não um usuário que decide se cadastrar sozinho — reflete como PMs onboardam clientes na prática | — Pending |
+| Reordenação de fases: Client Records & RAG Setup vira Phase 1 (era Phase 2); Access & Roles vira Phase 5 (era Phase 1) | Decisão do Juliano em reunião de stakeholder — prioriza validar o cadastro de cliente + RAG isolado antes do fluxo completo de login/aprovação; o scaffold técnico da Phase 5 (05-01) já está pronto e serve de base | 2026-07-08 |
 
 ## Evolution
 
