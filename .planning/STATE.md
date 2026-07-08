@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Phase reprioritized by stakeholder — Phase 5 (Access & Roles) 05-01 complete, paused; new Phase 1 (Client Records & Isolated RAG Setup) not yet planned
-last_updated: "2026-07-08T00:00:00.000Z"
-last_activity: 2026-07-08 -- Roadmap reordered per Juliano's stakeholder reprioritization; Phase 1 (Access & Roles) renumbered to Phase 5, Phase 2 (Client Records) renumbered to Phase 1
+status: Ready to discuss/plan
+stopped_at: Phase 1 context gathered
+last_updated: "2026-07-08T10:42:39.176Z"
+last_activity: 2026-07-08 -- Roadmap reordered; Phase 1 is now Client Records & Isolated RAG Setup
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 4
   completed_plans: 1
-  percent: 4
+  percent: 0
 ---
 
 # Project State
@@ -90,6 +90,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-08
-Stopped at: Roadmap reordered per stakeholder priority; Phase 5 (Access & Roles) 05-01 complete/paused; ready to start `/gsd:discuss-phase` for the new Phase 1 (Client Records & Isolated RAG Setup)
-Resume file: .planning/ROADMAP.md (Phase 1 section)
+Last session: 2026-07-08T10:42:39.166Z
+Stopped at: Phase 1 context gathered
+Resume file: .planning/phases/01-client-records-isolated-rag-setup/01-CONTEXT.md
