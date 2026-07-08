@@ -22,12 +22,22 @@ created: 2026-07-08
 | Component library | Radix UI primitives via `radix-ui` package (shadcn wrapper components in `components/ui/`) |
 | Icon library | lucide (`lucide-react`) |
 | Font | System sans-serif stack only (`--font-sans: ui-sans-serif, system-ui, sans-serif, ...` in `app/globals.css`) — no custom webfont loaded |
+| Global typography default (pre-existing, out of scope) | shadcn's `Label`, `Button`, `Badge`, and `Table` header-cell primitives ship with a built-in 500 (medium) font-weight. This is inherited component-library styling that predates this phase, applies project-wide, and is **not** introduced or overridden by this phase's own design decisions — it is explicitly out of scope for this phase's Typography contract and is not counted against the 2-weight phase budget below. Do not override it. |
 
 **Already installed** (reuse, do not reinstall): `alert-dialog`, `badge`, `button`, `card`, `dialog`, `form`, `input`, `label`, `select`, `separator`, `skeleton`, `sonner`, `table`.
 
 **Needed new for this phase**: `checkbox` (shadcn official registry) — for the PM multi-select picker (D-13) as a Dialog + checkbox list. No third-party registry required; this is a standard shadcn official block.
 
 **Established layout pattern** (from `/signup`, `/pending`): centered `Card` (`max-w-sm`) in a `flex flex-1 items-center justify-center p-4` wrapper — used for single-focus auth forms. This does **not** apply to this phase's data-heavy screens (client list, briefing form): those use a top-aligned content container (`max-w-3xl` or `max-w-4xl`, `mx-auto px-6 py-8`), no sidebar/nav shell exists yet and none should be built in this phase (out of scope — a cross-cutting app shell is not part of Phase 1's success criteria).
+
+---
+
+## Visual Focal Points
+
+| Screen | Focal Point | Rationale |
+|--------|-------------|-----------|
+| Client list | The page-level primary CTA button ("Criar cliente") in the header, top-right — followed immediately by the client-name column (first column, leftmost, in `Heading`-adjacent weight via `TableCell` default) | This is the entry screen for the phase; the two things a PM does here are "start a new client" or "find an existing one," so the eye must land on the create action first, then sweep left-to-right into the name column. Status badges (RAG/briefing) sit in secondary columns to the right and are intentionally lower in visual priority — see Color contract (neutral badge variants, no color-coding). |
+| Briefing form (client detail/edit page) | The page-level `Display` heading ("{client name}") at the top, then directly down into the "Briefing estratégico" `Heading`-level section title and its textarea | The client name anchors "which client am I editing" (critical given the isolated-RAG-per-client requirement — mistaking clients here is the exact failure mode this phase exists to prevent), then attention flows down into the briefing content itself, the primary content this screen exists to capture. PM-assignment and RAG-status sit in a secondary section below/beside the briefing, not competing for first-glance attention. |
 
 ---
 
@@ -45,7 +55,7 @@ Declared values (must be multiples of 4):
 | 2xl | 48px | Space above/below the client list's empty-state illustration/copy block |
 | 3xl | 64px | Page-level top padding (`py-8`+) for list/form pages inside the content container |
 
-Exceptions: Icon-only remove buttons on chips (content-pillar tags, PM-assignment tags) use a 44×44px minimum touch target achieved via padding around a 16px icon glyph — the icon itself stays on-scale; the touch target is an accessibility padding exception, not a break of the 4px-multiple rule.
+Exceptions: Icon-only remove buttons on chips (content-pillar tags, PM-assignment tags) use a 44×44px minimum touch target achieved via padding around a 16px icon glyph — the icon itself stays on-scale; the touch target is an accessibility padding exception, not a break of the 4px-multiple rule. Because these buttons are icon-only with no visible text, each one must declare an explicit `aria-label` as its accessible-name fallback, following the pattern `aria-label="Remover {tag}"` — e.g. `aria-label="Remover João Silva"` for a PM-assignment chip, `aria-label="Remover Marketing de Conteúdo"` for a content-pillar chip. The `{tag}` value is the chip's own visible label text, substituted at render time.
 
 ---
 
@@ -54,15 +64,14 @@ Exceptions: Icon-only remove buttons on chips (content-pillar tags, PM-assignmen
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
 | Body | 14px | 400 (regular) | 1.5 |
-| Label | 14px | 500 (medium) | 1 (leading-none) |
 | Heading | 20px | 600 (semibold) | 1.2 |
 | Display | 28px | 600 (semibold) | 1.2 |
 
-**Phase weight budget: 400 (regular) + 600 (semibold)** — the two weights this phase introduces for new page content (body copy, page/section headings, form section titles). Note: the pre-existing shadcn primitives `Label`, `Button`, `Badge`, and `Table` header cells ship with a built-in 500 (medium) weight — that is inherited component-library styling, not a new choice made by this phase, and is not counted against the 2-weight budget. Do not override it.
+**Phase weight budget: 400 (regular) + 600 (semibold)** — these are the only two font weights this phase introduces or is responsible for across its new page content (body copy, page/section headings, form section titles).
 
 Usage mapping for this phase:
 - **Body (14px/400/1.5)**: table cell text, card descriptions, briefing textarea content, helper/error text
-- **Label (14px/500/1, shadcn default)**: form field labels, table column headers
+- **Label (14px, 1 line-height, shadcn global default weight)**: form field labels, table column headers. This role reuses the pre-existing shadcn `Label` primitive's built-in 500 (medium) weight — see the "Global typography default" row in the Design System section above. It is a pre-existing, project-wide component style this phase inherits as-is, not a weight this phase's own contract introduces; it is not counted in the 2-weight budget above.
 - **Heading (20px/600/1.2)**: section titles inside pages (e.g. "Briefing estratégico", "PMs atribuídos") and `CardTitle` overrides where a page needs a stronger title than the shadcn default
 - **Display (28px/600/1.2)**: page-level `<h1>` — "Clientes" (list page), "Novo cliente" / "{client name}" (detail/edit page)
 
@@ -101,6 +110,7 @@ Accent reserved for: primary CTA buttons (`Criar cliente`, `Salvar briefing`, `A
 | Error — RAG key absent (D-11) | RAG setup pendente. (badge + this short label only — no retry button, no elaboration, per D-11's silent-skip behavior) |
 | Error — form validation | {Campo} inválido. / {Campo} é obrigatório. — reuses the exact pattern already established in `/signup` (e.g. "E-mail inválido.", "A senha deve ter no mínimo 8 caracteres.") |
 | Error — server/network failure on save | Não foi possível salvar as alterações. Verifique sua conexão e tente novamente. |
+| Accessible name — chip remove button | `aria-label="Remover {tag}"` on every icon-only chip-remove button (content-pillar tags, PM-assignment tags) — see Spacing exceptions above for the interaction/touch-target rule this pairs with. |
 | Destructive confirmation | None in this phase's scope. Removing a PM-assignment chip or a content-pillar chip is a reversible list edit (re-addable in one click) — no confirmation dialog, per shadcn's low-friction tag-removal convention. Client *deactivation* (a genuinely destructive, confirmation-worthy action) is explicitly out of scope — deferred to Phase 5 (AUTH-11). |
 
 ---
