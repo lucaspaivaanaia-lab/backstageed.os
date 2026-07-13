@@ -8,7 +8,13 @@ import { z } from "zod";
  */
 export const clientCreateSchema = z.object({
   name: z.string().trim().min(1, { message: "Nome é obrigatório." }),
-  pmIds: z.array(z.string().uuid()).default([]),
+  // No `.default([])` here: keeping this required (rather than optional-
+  // with-default) keeps the zod input/output types identical, which
+  // zodResolver + react-hook-form's typed `useForm<ClientCreateInput>()`
+  // requires. Callers (Server Action `formData.getAll("pmIds")`, the
+  // creation form's default `[currentUserId]`) always supply an array,
+  // empty or not, so no default is needed in practice.
+  pmIds: z.array(z.string().uuid()),
 });
 
 export type ClientCreateInput = z.infer<typeof clientCreateSchema>;
