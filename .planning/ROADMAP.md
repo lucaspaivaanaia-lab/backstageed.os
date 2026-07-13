@@ -51,7 +51,23 @@ Um PM consegue produzir conteúdo para um cliente específico com IA que só con
 
 **Sub-phase 1A (first partial delivery):** client created, PM linked, Tropicalia project auto-provisioned.
 
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+**Wave 1**
+
+- [ ] 01-01-PLAN.md — Dev login (D-01/02/03) + Supabase/Tropicalia env unblock, seeded Admin+PM
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 01-02-PLAN.md — ALTER clients (briefing fields + tropicalia_project_id) + RLS fix (is_pm(), clients_insert_admin_or_pm, clients_update_scoped) + db push (CLI-01, CLI-03, CLI-04)
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 01-03-PLAN.md — Client creation, list, PM linking, Tropicalia auto-provisioning — Sub-phase 1A (CLI-01, CLI-02, CLI-03)
+
+**Wave 4** *(blocked on Wave 3)*
+
+- [ ] 01-04-PLAN.md — Strategic briefing form, PM reassignment, RAG retry, phase-gate verification (CLI-04)
 
 ### Phase 2: Client-Isolated AI Chat
 
@@ -153,7 +169,7 @@ Plans:
 
 | Phase | Deadline | Plans Complete | Status | Completed |
 |-------|----------|----------------|--------|-----------|
-| 1. Client Records & Isolated RAG Setup | 2026-07-11 | 0/? | Not started (next up) | - |
+| 1. Client Records & Isolated RAG Setup | 2026-07-11 | 0/4 | Planned, not started | - |
 | 2. Client-Isolated AI Chat | 2026-07-18 | 0/? | Not started | - |
 | 3. Content Production Kanban | 2026-07-28 | 0/? | Not started | - |
 | 4. Client Approval & Scheduling | 2026-08-07 | 0/? | Not started | - |
