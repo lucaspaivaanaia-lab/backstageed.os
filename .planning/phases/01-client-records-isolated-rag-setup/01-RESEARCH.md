@@ -526,14 +526,14 @@ export async function retryTropicaliaProvisioning(clientId: string) {
 | A3 | Tropicalia's undocumented rate limits (100 req/mo free tier, 500 req/mo Pro, per the marketing/pricing page, not the API reference) are a monthly quota, not a per-request rate limit requiring backoff logic | Common Pitfalls, Don't Hand-Roll | At ~10 clients this phase's total call volume is negligible either way; risk is limited to confusion if Tropicalia later returns a 429 with no documented meaning — the existing D-08 catch-all handles this regardless of the exact cause. |
 | A4 | `SUPABASE_SECRET_KEY` can be populated without external coordination (unlike `TROPICALIA_API_KEY`, which needs Juliano) since it's the project's own Supabase dashboard value | Common Pitfalls #4, Environment Availability | If access to the Supabase dashboard is restricted to a specific team member, this could still block a solo contributor — flag as a Wave 0 task regardless of who performs it. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Should the creating PM always be auto-linked, even if they deselect themselves in the multi-select picker?**
+1. **Should the creating PM always be auto-linked, even if they deselect themselves in the multi-select picker?** — **RESOLVED** in Plan 01-03 Task 1: adopts this section's recommendation ("always include the creating PM unless explicitly deselected").
    - What we know: D-13 says the picker is on the creation form; CLI-02 says "Admin can assign one or more PMs."
    - What's unclear: Whether a PM creating a client for someone else's portfolio (e.g., handing it directly to a colleague) should be forced into `pm_clients` or not.
    - Recommendation: Default to "always include the creating PM unless explicitly deselected" (Code Examples Pattern 2 currently auto-includes `user.id` only as a fallback when `pmIds` is empty) — but this is a UX nuance the planner should make an explicit task-level decision on, not leave implicit.
 
-2. **Exact retry-button distinguishing logic (D-08 vs D-11) — derived at render time or stored?**
+2. **Exact retry-button distinguishing logic (D-08 vs D-11) — derived at render time or stored?** — **RESOLVED** in Plan 01-04's `<interfaces>` block: adopts this section's recommendation (`retryTropicaliaProvisioning()` uses a pure `process.env` check, no new DB column).
    - What we know: Both cases render identical "Pendente" badges; only the retry button's presence differs, and it depends on whether `TROPICALIA_API_KEY` currently exists in the environment.
    - What's unclear: Whether the retry-button visibility should be a pure function of `process.env.TROPICALIA_API_KEY` (evaluated at render time, in a Server Component) or the client should also track "was an attempt ever made and did it fail" for finer distinction (e.g., a client created 2 months ago before the key existed vs. one that failed yesterday with the key present).
    - Recommendation: Simplest correct behavior per D-11's literal wording ("if the key is absent, skip the call silently... no retry button needed for this case") is a pure `process.env.TROPICALIA_API_KEY ? <RetryButton /> : null` check at render time in the Server Component rendering the client list/detail — no new DB column needed to track "attempt history." Flag for planner confirmation.
