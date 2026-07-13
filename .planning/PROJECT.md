@@ -12,13 +12,12 @@ Um PM consegue produzir conteúdo para um cliente específico com IA que só con
 
 ### Validated
 
-(None yet — ship to validate)
+- [x] PM consegue preencher a base estratégica do cliente em formato estruturado (objetivo, tom de voz, público-alvo, pilares de conteúdo, etc.) — Validated in Phase 1 (2026-07-13)
 
 ### Active
 
-- [ ] PM consegue conversar com IA sobre um cliente específico, com contexto isolado daquele cliente (RAG via Tropicalia, 1 project por cliente)
+- [ ] PM consegue conversar com IA sobre um cliente específico, com contexto isolado daquele cliente (RAG via Tropicalia, 1 project por cliente) — client-level Tropicalia project provisioning wired end-to-end in Phase 1; the chat itself is not yet built
 - [ ] PM controla manualmente o que vira conhecimento permanente do cliente (curadoria explícita — nada é salvo automaticamente no RAG)
-- [ ] PM consegue preencher a base estratégica do cliente em formato estruturado (objetivo, tom de voz, público-alvo, pilares de conteúdo, etc.)
 - [ ] PM consegue criar um card de conteúdo que percorre o fluxo: briefing → produção → revisão interna → aprovação do cliente → agendamento
 - [ ] Um card pode representar um pacote de conteúdo (ex: campanha com múltiplas peças relacionadas), não só um post isolado
 - [ ] PM consegue anexar mídia pesada (imagem, vídeo, PDF) a um card via link do Google Drive, sem precisar abrir o Drive manualmente
@@ -61,7 +60,7 @@ Um PM consegue produzir conteúdo para um cliente específico com IA que só con
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| RAG isolado por cliente via project separado na Tropicalia (não filtro) | Vazamento de contexto entre clientes no ChatGPT compartilhado é uma das três dores centrais motivadoras do projeto — precisa ser estruturalmente impossível | — Pending |
+| RAG isolado por cliente via project separado na Tropicalia (não filtro) | Vazamento de contexto entre clientes no ChatGPT compartilhado é uma das três dores centrais motivadoras do projeto — precisa ser estruturalmente impossível | Validated in Phase 1 (2026-07-13) — provisioning wired end-to-end (POST /v1/projects on client creation, `public_id` stored as `tropicalia_project_id`); success path awaiting Juliano's real `TROPICALIA_API_KEY`, key-absent fallback confirmed working |
 | Curadoria manual de memória (PM gera .md e faz upload manual pro RAG) | Evita que erros de conversa virem memória permanente sem controle | — Pending |
 | Supabase RLS para multi-tenancy | PM/cliente/admin com escopos de acesso diferentes, sem lógica de autorização duplicada na aplicação | — Pending |
 | Google Drive como storage de mídia, Supabase como fonte de dados estruturados | Evita duplicar armazenamento de arquivos pesados; mantém histórico/estado estruturado consultável | — Pending |
@@ -91,4 +90,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-01 after initialization*
+*Last updated: 2026-07-13 after Phase 1 completion*
