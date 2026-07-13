@@ -24,3 +24,15 @@ export const clientLoginSchema = z.object({
 });
 
 export type ClientLoginInput = z.infer<typeof clientLoginSchema>;
+
+/**
+ * Email+password login validation for the minimal dev-auth `/login` page
+ * (D-01/D-02/D-03 — throwaway Phase 1-4 tooling). Enforced BEFORE any
+ * Supabase Auth call, same convention as `signupSchema`.
+ */
+export const loginSchema = z.object({
+  email: z.string().trim().email({ message: "E-mail inválido." }),
+  password: z.string().min(1, { message: "Senha é obrigatória." }),
+});
+
+export type LoginInput = z.infer<typeof loginSchema>;
