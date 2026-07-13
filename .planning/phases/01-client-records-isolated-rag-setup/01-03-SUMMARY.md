@@ -145,6 +145,22 @@ None. Every code path in this plan is fully wired to live data (real Supabase qu
 
 None beyond what this plan's own `<threat_model>` already covers (T-01-09 through T-01-14, T-01-SC) — all mitigations were implemented exactly as specified: app-layer authorization check before any privileged write (T-01-09), `TropicaliaProject.public_id` typed field with zero `.project_id` accesses (T-01-13), `AbortSignal.timeout(10_000)` on every Tropicalia call (T-01-14), `lib/tropicalia/client.ts` has no `"use client"` directive and is only imported from the `'use server'` `lib/actions/clients.ts` (T-01-12), `checkbox` installed from the official shadcn registry with zero new npm dependency (T-01-SC).
 
+## Self-Check: PASSED
+
+- FOUND: lib/validation/clients.ts
+- FOUND: lib/tropicalia/client.ts
+- FOUND: lib/actions/clients.ts
+- FOUND: components/ui/checkbox.tsx
+- FOUND: app/admin/clients/page.tsx
+- FOUND: app/pm/clients/page.tsx
+- FOUND: components/clients/client-create-form.tsx
+- FOUND: app/admin/clients/new/page.tsx
+- FOUND: app/pm/clients/new/page.tsx
+- FOUND commit: 3742dd7 (Task 1)
+- FOUND commit: 9dd9717 (Task 2)
+- FOUND commit: ba37b62 (Task 3)
+- FOUND commit: 73c2226 (SUMMARY commit)
+
 ---
 *Phase: 01-client-records-isolated-rag-setup*
 *Completed: 2026-07-13*
