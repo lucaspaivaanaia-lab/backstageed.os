@@ -121,6 +121,15 @@ None. This plan is schema/RLS-only (no UI, no stubbed data paths).
 ## Threat Flags
 None beyond what the plan's own `<threat_model>` already covers (T-01-05 through T-01-08, T-01-SC) — all mitigations were implemented exactly as specified and confirmed live (is_pm() SECURITY DEFINER shape, dual USING/WITH CHECK scoping on clients_update_scoped, zero pm_clients modification, live-DB confirmation via `supabase migration list` and `db query`).
 
+## Self-Check: PASSED
+
+- FOUND: supabase/migrations/0006_clients_full_record.sql
+- FOUND: supabase/migrations/0007_clients_rls_fix.sql
+- FOUND: .planning/phases/01-client-records-isolated-rag-setup/01-02-SUMMARY.md
+- FOUND commit: e73f43d (Task 1)
+- FOUND commit: d7d8201 (Task 2)
+- FOUND commit: 678ffb0 (SUMMARY commit)
+
 ---
 *Phase: 01-client-records-isolated-rag-setup*
 *Completed: 2026-07-13*
