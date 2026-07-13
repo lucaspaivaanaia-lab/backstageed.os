@@ -60,7 +60,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1)*
 
-- [ ] 01-02-PLAN.md — ALTER clients (briefing fields + tropicalia_project_id) + RLS fix (is_pm(), clients_insert_admin_or_pm, clients_update_scoped) + db push (CLI-01, CLI-03, CLI-04)
+- [x] 01-02-PLAN.md — ALTER clients (briefing fields + tropicalia_project_id) + RLS fix (is_pm(), clients_insert_admin_or_pm, clients_update_scoped) + db push (CLI-01, CLI-03, CLI-04)
 
 **Wave 3** *(blocked on Wave 2)*
 
@@ -170,7 +170,7 @@ Plans:
 
 | Phase | Deadline | Plans Complete | Status | Completed |
 |-------|----------|----------------|--------|-----------|
-| 1. Client Records & Isolated RAG Setup | 2026-07-11 | 1/4 | In Progress|  |
+| 1. Client Records & Isolated RAG Setup | 2026-07-11 | 2/4 | In Progress|  |
 | 2. Client-Isolated AI Chat | 2026-07-18 | 0/? | Not started | - |
 | 3. Content Production Kanban | 2026-07-28 | 0/? | Not started | - |
 | 4. Client Approval & Scheduling | 2026-08-07 | 0/? | Not started | - |
