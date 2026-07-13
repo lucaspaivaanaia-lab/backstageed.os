@@ -96,7 +96,11 @@ export default async function AdminClientsPage() {
 
               return (
                 <TableRow key={client.id}>
-                  <TableCell>{client.name}</TableCell>
+                  <TableCell>
+                    <Link href={`./${client.id}`} className="hover:underline">
+                      {client.name}
+                    </Link>
+                  </TableCell>
                   <TableCell>{assignedPmEmails || "—"}</TableCell>
                   <TableCell>
                     {briefingEmpty ? (
