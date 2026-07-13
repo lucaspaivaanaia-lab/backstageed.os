@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { clientCreateSchema } from "@/lib/validation/clients";
+import { clientCreateSchema, briefingSchema } from "@/lib/validation/clients";
 import { createTropicaliaProject } from "@/lib/tropicalia/client";
 
 type CreateClientResult = { success: true; clientId: string } | { error: string };
@@ -127,4 +127,157 @@ export async function resolvePmNames(
     map[row.id] = row.email ?? "";
   }
   return map;
+}
+
+type ActionResult = { success: true } | { error: string };
+
+/**
+ * Update a client's strategic briefing (CLI-04). D-10: works regardless of
+ * RAG readiness — this function never reads/writes `tropicalia_project_id`.
+ *
+ * Uses the RLS-SCOPED `createClient()` (NOT `createAdminClient()`) — the
+ * `clients_update_scoped` policy (Plan 01-02) is the actual security
+ * boundary here, correctly allowing Admin OR any PM already in
+ * `pm_assigned_clients()` for this client. Only the zod-parsed fields are
+ * ever passed to `.update()` — never a raw `formData` spread — so a caller
+ * cannot smuggle `tropicalia_project_id`/`id` into the payload (T-01-15).
+ */
+export async function updateBriefing(
+  clientId: string,
+  formData: FormData
+): Promise<ActionResult> {
+  const parsed = briefingSchema.safeParse({
+    objective: formData.get("objective"),
+    toneOfVoice: formData.get("toneOfVoice"),
+    targetAudience: formData.get("targetAudience"),
+    contentPillars: formData.getAll("contentPillars"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("clients")
+    .update({
+      objective: parsed.data.objective,
+      tone_of_voice: parsed.data.toneOfVoice,
+      target_audience: parsed.data.targetAudience,
+      content_pillars: parsed.data.contentPillars,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", clientId);
+
+  if (error) {
+    return {
+      error:
+        "Não foi possível salvar as alterações. Verifique sua conexão e tente novamente.",
+    };
+  }
+
+  return { success: true };
+}
+
+/**
+ * Replace the full set of PMs assigned to an existing client (CLI-02's
+ * literal "Admin can assign" scoping — deliberately stricter than Plan
+ * 01-03's creation-time picker, which allows PM self-inclusion only for the
+ * client THEY are creating). Authorization is re-checked HERE, server-side,
+ * regardless of UI state (T-01-16) — the `viewerIsAdmin`-gated rendering in
+ * `client-detail-form.tsx` is a convenience only, never the security
+ * boundary.
+ */
+export async function assignPms(
+  clientId: string,
+  pmIds: string[]
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Não autenticado." };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, status")
+    .eq("id", user.id)
+    .single();
+
+  const isAuthorized =
+    profile?.status === "approved" && profile.role === "admin";
+  if (!isAuthorized) {
+    return { error: "Sem permissão para alterar PMs atribuídos." };
+  }
+
+  const admin = createAdminClient();
+
+  const { error: deleteError } = await admin
+    .from("pm_clients")
+    .delete()
+    .eq("client_id", clientId);
+  if (deleteError) {
+    return {
+      error:
+        "Não foi possível salvar as alterações. Verifique sua conexão e tente novamente.",
+    };
+  }
+
+  if (pmIds.length > 0) {
+    const { error: insertError } = await admin
+      .from("pm_clients")
+      .insert(pmIds.map((pm_id) => ({ pm_id, client_id: clientId })));
+    if (insertError) {
+      return {
+        error:
+          "Não foi possível salvar as alterações. Verifique sua conexão e tente novamente.",
+      };
+    }
+  }
+
+  return { success: true };
+}
+
+/**
+ * Manual retry of Tropicalia project provisioning (D-09 — never an
+ * automatic background job, only a user-triggered button click). Uses the
+ * RLS-scoped `createClient()`, relying on `clients_update_scoped` to already
+ * grant the caller access — never `createAdminClient()`.
+ *
+ * D-11: null-checks `process.env.TROPICALIA_API_KEY` BEFORE ever calling
+ * `createTropicaliaProject()` — key-absent returns early with a distinct
+ * message, never attempting the call. D-08: any provisioning failure once
+ * the key IS present returns the exact catch-block error string below.
+ */
+export async function retryTropicaliaProvisioning(
+  clientId: string
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { data: client, error: fetchError } = await supabase
+    .from("clients")
+    .select("id, name")
+    .eq("id", clientId)
+    .single();
+  if (fetchError || !client) return { error: "Cliente não encontrado." };
+
+  if (!process.env.TROPICALIA_API_KEY) return { error: "RAG setup pendente." };
+
+  try {
+    const project = await createTropicaliaProject(client.name);
+    const { error: updateError } = await supabase
+      .from("clients")
+      .update({ tropicalia_project_id: project.public_id })
+      .eq("id", clientId);
+    if (updateError) {
+      return {
+        error:
+          "Não foi possível salvar as alterações. Verifique sua conexão e tente novamente.",
+      };
+    }
+    return { success: true };
+  } catch {
+    return {
+      error:
+        "Não foi possível provisionar o projeto Tropicalia agora. O cliente foi criado normalmente — tente novamente quando quiser.",
+    };
+  }
 }
