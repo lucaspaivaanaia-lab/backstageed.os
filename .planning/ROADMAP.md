@@ -19,7 +19,7 @@ Um PM consegue produzir conteúdo para um cliente específico com IA que só con
 
 ## Phases
 
-- [ ] **Phase 1: Client Records & Isolated RAG Setup** *(deadline: 2026-07-11)* - PM/Admin can create a client, attach it to an isolated Tropicalia project, and fill its strategic briefing
+- [x] **Phase 1: Client Records & Isolated RAG Setup** *(deadline: 2026-07-11)* - PM/Admin can create a client, attach it to an isolated Tropicalia project, and fill its strategic briefing (completed 2026-07-13)
 - [ ] **Phase 2: Client-Isolated AI Chat** *(deadline: 2026-07-18)* - PM can chat with AI about one client at a time, with zero context bleed, and curate what becomes permanent knowledge
 - [ ] **Phase 3: Content Production Kanban** *(deadline: 2026-07-28)* - PM can create a content card, attach Drive media, and move it through briefing → produção → revisão interna, gated by a per-client checklist
 - [ ] **Phase 4: Client Approval & Scheduling** *(deadline: 2026-08-07)* - Client can review, approve, or request adjustments on their content board, and once approved the PM registers the publish date
@@ -68,7 +68,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3)*
 
-- [ ] 01-04-PLAN.md — Strategic briefing form, PM reassignment, RAG retry, phase-gate verification (CLI-04)
+- [x] 01-04-PLAN.md — Strategic briefing form, PM reassignment, RAG retry, phase-gate verification (CLI-04)
 
 ### Phase 2: Client-Isolated AI Chat
 
@@ -170,7 +170,7 @@ Plans:
 
 | Phase | Deadline | Plans Complete | Status | Completed |
 |-------|----------|----------------|--------|-----------|
-| 1. Client Records & Isolated RAG Setup | 2026-07-11 | 3/4 | In Progress|  |
+| 1. Client Records & Isolated RAG Setup | 2026-07-11 | 4/4 | Complete   | 2026-07-13 |
 | 2. Client-Isolated AI Chat | 2026-07-18 | 0/? | Not started | - |
 | 3. Content Production Kanban | 2026-07-28 | 0/? | Not started | - |
 | 4. Client Approval & Scheduling | 2026-08-07 | 0/? | Not started | - |
