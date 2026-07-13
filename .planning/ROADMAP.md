@@ -64,7 +64,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2)*
 
-- [ ] 01-03-PLAN.md — Client creation, list, PM linking, Tropicalia auto-provisioning — Sub-phase 1A (CLI-01, CLI-02, CLI-03)
+- [x] 01-03-PLAN.md — Client creation, list, PM linking, Tropicalia auto-provisioning — Sub-phase 1A (CLI-01, CLI-02, CLI-03)
 
 **Wave 4** *(blocked on Wave 3)*
 
@@ -170,7 +170,7 @@ Plans:
 
 | Phase | Deadline | Plans Complete | Status | Completed |
 |-------|----------|----------------|--------|-----------|
-| 1. Client Records & Isolated RAG Setup | 2026-07-11 | 2/4 | In Progress|  |
+| 1. Client Records & Isolated RAG Setup | 2026-07-11 | 3/4 | In Progress|  |
 | 2. Client-Isolated AI Chat | 2026-07-18 | 0/? | Not started | - |
 | 3. Content Production Kanban | 2026-07-28 | 0/? | Not started | - |
 | 4. Client Approval & Scheduling | 2026-08-07 | 0/? | Not started | - |
