@@ -67,7 +67,10 @@ export async function middleware(request: NextRequest) {
 
   if (ownRoot) {
     const otherRoots = Object.values(roleRoot).filter((r) => r !== ownRoot);
-    if (otherRoots.some((root) => pathname === root || pathname.startsWith(`${root}/`))) {
+    if (
+      pathname === "/" ||
+      otherRoots.some((root) => pathname === root || pathname.startsWith(`${root}/`))
+    ) {
       return NextResponse.redirect(new URL(ownRoot, request.url));
     }
   }
