@@ -17,7 +17,7 @@ Any user (PM or Admin) can get onto the platform with a role-scoped account, and
 - **D-01:** Clients do NOT self-signup. PM creates the Client's login directly (email + provisional password), and that login is created *linked to* an existing client record (the client record from Phase 1 must already exist before the login is created — one client record can have 0 or 1 logins in v1).
 - **D-02:** PM (and Admin) can create as many Client logins as needed for the clients they manage, and can deactivate a Client's access later (e.g., end of contract).
 - **D-03:** PM still self-signs up (email/password) and goes into a "pending approval" state until Admin approves.
-- **D-04:** This supersedes the "self-signup with approval for both PM and Client" assumption captured in PROJECT.md/REQUIREMENTS.md during project init — REQUIREMENTS.md AUTH-01/02/03 need rewording to reflect this (PM signup+approval; Client account is admin/PM-issued, not self-signup). Flagged for correction after this discussion.
+- **D-04 [informational]:** This supersedes the "self-signup with approval for both PM and Client" assumption captured in PROJECT.md/REQUIREMENTS.md during project init — REQUIREMENTS.md AUTH-01/02/03 need rewording to reflect this (PM signup+approval; Client account is admin/PM-issued, not self-signup). Already resolved: REQUIREMENTS.md's AUTH-01/02/03 were reworded on 2026-07-01 (see its footer) to reflect this model. No PLAN.md task tracks this — it's a documentation-only decision with no remaining code surface.
 
 ### Admin approval flow (PM signups only)
 - **D-05:** If Admin rejects a pending PM signup, the account is marked "rejected" in the database (not deleted) — kept for audit/history, can be reactivated later if needed.
