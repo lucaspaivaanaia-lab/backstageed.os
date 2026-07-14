@@ -52,7 +52,7 @@ Um PM consegue produzir conteúdo para um cliente específico com IA que só con
 
 **Sub-phase 1A (first partial delivery):** client created, PM linked, Tropicalia project auto-provisioned.
 
-**Plans**: 4 plans
+**Plans**: 6 plans (4 executed + 2 gap-closure)
 Plans:
 **Wave 1**
 
@@ -139,7 +139,7 @@ Plans:
   5. A PM can create a Client login (email + provisional password) linked to an existing client record, and the Client is forced to change that password on first login — no self-signup or approval queue for Clients
   6. A PM attempting to access a client they are not assigned to is blocked at the data layer (RLS), not just hidden in the UI — same for a Client attempting another client's content
 
-**Plans**: 4 plans
+**Plans**: 6 plans (4 executed + 2 gap-closure)
 Plans:
 **Wave 1**
 
@@ -150,6 +150,11 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [x] 05-04-PLAN.md — Client login provisioning, forced first-login password change, and Client-access deactivation (AUTH-09, AUTH-10, AUTH-11) — **paused**
+
+**Gap closure** *(from 05-VERIFICATION.md — score 4/7 must-haves)*
+
+- [ ] 05-05-PLAN.md — Fix broken access control (CR-01/CR-02): scope createClientLogin/deactivateClientAccess to the caller's assigned clients + verify target userId, with a Docker-free automated authorization regression test (AUTH-06 write-path, AUTH-09, AUTH-11)
+- [ ] 05-06-PLAN.md — Execute the pgTAP RLS suite to green in a Docker-capable environment (human/infra) — runtime proof of AUTH-06, AUTH-07, AUTH-08 (remains blocked until run)
 
 ### Phase 6: Admin Oversight Dashboard
 
