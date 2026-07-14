@@ -17,9 +17,9 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **AUTH-06**: PM can only access clients they are assigned to (enforced via Supabase RLS)
 - [ ] **AUTH-07**: Client can only access their own content (enforced via Supabase RLS)
 - [ ] **AUTH-08**: Admin can access all clients, PMs, and content
-- [ ] **AUTH-09**: PM can create a Client login (email + provisional password) linked to an existing client record — no self-signup or approval queue for Clients
-- [ ] **AUTH-10**: Client is forced to change their provisional password on first login
-- [ ] **AUTH-11**: PM (or Admin) can deactivate a Client's access
+- [x] **AUTH-09**: PM can create a Client login (email + provisional password) linked to an existing client record — no self-signup or approval queue for Clients
+- [x] **AUTH-10**: Client is forced to change their provisional password on first login
+- [x] **AUTH-11**: PM (or Admin) can deactivate a Client's access
 
 ### Client Management (CLI)
 
