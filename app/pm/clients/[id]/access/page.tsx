@@ -21,6 +21,7 @@ type PageProps = { params: Promise<{ id: string }> };
  * Locked copy this page's tree renders (verbatim, UI-SPEC Copywriting
  * Contract — quoted here in full on single lines for traceability):
  * - One-time provisional-password callout: "Esta senha não será mostrada novamente."
+ * - Deactivate confirmation: "Desativar acesso: O cliente não conseguirá mais fazer login na plataforma até que o acesso seja reativado. Confirmar desativação?"
  */
 export default async function PmClientAccessPage({ params }: PageProps) {
   const { id: client_id } = await params;

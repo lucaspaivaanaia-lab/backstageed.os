@@ -102,3 +102,37 @@ export async function createClientLogin(
 
   return { success: true, userId: data.user.id, password };
 }
+
+type DeactivateClientAccessResult = { success: true } | { error: string };
+
+/**
+ * PM/Admin deactivates a Client's access (AUTH-11). ROLE-AGNOSTIC (no
+ * PM-only assumption) — reused verbatim by the Admin mirror route
+ * (Task 4). Bans the user at the Supabase Auth layer via the admin
+ * update-user-by-id API with a ~100-year ban duration (reactivation is out of scope per
+ * SKELETON.md) AND syncs profiles.status to 'deactivated' — NOT
+ * 'rejected' (Warning 3), so a cut-off Client is never conflated with a
+ * rejected PM signup — for UI/audit clarity (05-RESEARCH.md Alternatives
+ * Considered: use BOTH the auth ban and the status flag, not either/or).
+ * Uses the admin client for the profiles update since this is a
+ * cross-user write (RLS would otherwise scope a profiles UPDATE to the
+ * caller's own row).
+ */
+export async function deactivateClientAccess(
+  userId: string
+): Promise<DeactivateClientAccessResult> {
+  const admin = createAdminClient();
+
+  const { error: banError } = await admin.auth.admin.updateUserById(userId, {
+    ban_duration: "876000h",
+  });
+  if (banError) return { error: GENERIC_ERROR };
+
+  const { error: statusError } = await admin
+    .from("profiles")
+    .update({ status: "deactivated" })
+    .eq("id", userId);
+  if (statusError) return { error: GENERIC_ERROR };
+
+  return { success: true };
+}

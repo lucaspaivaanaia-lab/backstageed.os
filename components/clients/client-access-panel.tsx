@@ -12,7 +12,21 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { createClientLogin } from "@/app/pm/clients/[id]/access/actions";
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
+import {
+  createClientLogin,
+  deactivateClientAccess,
+} from "@/app/pm/clients/[id]/access/actions";
 
 type ClientAccessPanelProps = {
   clientId: string;
@@ -31,7 +45,11 @@ type ClientAccessPanelProps = {
  * toast "Acesso do cliente criado. Compartilhe o e-mail e a senha
  * provisória com segurança."; one-time callout "Senha provisória:
  * `{password}` — anote e compartilhe com o cliente com segurança. Esta
- * senha não será mostrada novamente."
+ * senha não será mostrada novamente."; deactivate confirmation
+ * "Desativar acesso: O cliente não conseguirá mais fazer login na
+ * plataforma até que o acesso seja reativado. Confirmar desativação?"
+ * (buttons "Cancelar" / "Desativar acesso"), destructive-styled per
+ * UI-SPEC Color.
  */
 export function ClientAccessPanel({
   clientId,
@@ -46,6 +64,25 @@ export function ClientAccessPanel({
   const [activeUserId, setActiveUserId] = useState<string | null>(
     existingLoginUserId
   );
+
+  const [isDeactivatePending, startDeactivateTransition] = useTransition();
+  const [deactivateServerError, setDeactivateServerError] = useState<
+    string | null
+  >(null);
+  const [deactivated, setDeactivated] = useState(false);
+
+  function handleDeactivate() {
+    if (!activeUserId) return;
+    setDeactivateServerError(null);
+    startDeactivateTransition(async () => {
+      const result = await deactivateClientAccess(activeUserId);
+      if ("error" in result) {
+        setDeactivateServerError(result.error);
+        return;
+      }
+      setDeactivated(true);
+    });
+  }
 
   function handleCreateSubmit(formData: FormData) {
     setEmailError(null);
@@ -69,6 +106,19 @@ export function ClientAccessPanel({
         "Acesso do cliente criado. Compartilhe o e-mail e a senha provisória com segurança."
       );
     });
+  }
+
+  if (deactivated) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Acesso desativado</CardTitle>
+          <CardDescription>
+            O cliente não consegue mais fazer login na plataforma.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
   }
 
   return (
@@ -133,6 +183,52 @@ export function ClientAccessPanel({
               — anote e compartilhe com o cliente com segurança. Esta senha
               não será mostrada novamente.
             </p>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {activeUserId ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Acesso do cliente</CardTitle>
+            <CardDescription>
+              Este cliente já possui um login ativo.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={isDeactivatePending}
+                  className="w-fit"
+                >
+                  Desativar acesso
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Desativar acesso</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Desativar acesso: O cliente não conseguirá mais fazer
+                    login na plataforma até que o acesso seja reativado.
+                    Confirmar desativação?
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeactivate}>
+                    Desativar acesso
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            {deactivateServerError ? (
+              <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                {deactivateServerError}
+              </p>
+            ) : null}
           </CardContent>
         </Card>
       ) : null}
