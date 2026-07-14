@@ -144,8 +144,8 @@ Plans:
 **Wave 1**
 
 - [x] 05-01-PLAN.md — Walking Skeleton: Next.js/Supabase scaffold, migrations + RLS foundations, PM signup → pending gate (AUTH-01, AUTH-02) — **complete**
-- [ ] 05-02-PLAN.md — Login, session persistence, admin approval queue, role assignment, role-scoped landing pages (AUTH-03, AUTH-04, AUTH-05) — **paused**
-- [ ] 05-03-PLAN.md — pgTAP RLS test suite proving PM/Client scoping and admin-unrestricted enforcement at the data layer (AUTH-06, AUTH-07, AUTH-08) — **paused**
+- [x] 05-02-PLAN.md — Login, session persistence, admin approval queue, role assignment, role-scoped landing pages (AUTH-03, AUTH-04, AUTH-05) — **paused**
+- [x] 05-03-PLAN.md — pgTAP RLS test suite proving PM/Client scoping and admin-unrestricted enforcement at the data layer (AUTH-06, AUTH-07, AUTH-08) — **paused**
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -174,7 +174,7 @@ Plans:
 | 2. Client-Isolated AI Chat | 2026-07-18 | 0/? | Not started | - |
 | 3. Content Production Kanban | 2026-07-28 | 0/? | Not started | - |
 | 4. Client Approval & Scheduling | 2026-08-07 | 0/? | Not started | - |
-| 5. Access & Roles | 2026-08-12 | 1/4 | Paused (05-01 done; 05-02/03/04 paused) | - |
+| 5. Access & Roles | 2026-08-12 | 3/4 | In Progress|  |
 | 6. Admin Oversight Dashboard | 2026-08-15 | 0/? | Not started | - |
 
 ---
