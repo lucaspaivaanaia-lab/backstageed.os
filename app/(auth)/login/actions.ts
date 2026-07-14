@@ -38,7 +38,9 @@ export async function signIn(formData: FormData): Promise<SignInResult> {
   });
 
   if (error) {
-    return { error: "E-mail ou senha incorretos." };
+    return {
+      error: "E-mail ou senha incorretos. Verifique os dados e tente novamente.",
+    };
   }
 
   return { success: true };
