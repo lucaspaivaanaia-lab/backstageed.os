@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-07-08)
 Phase: 05 (access-roles) — GAPS FOUND (verification score 4/7 must-haves; see 05-VERIFICATION.md)
 Plan: 4 of 4 (all plans executed and summarized)
 Status: Ready to execute
-Last activity: 2026-07-14 -- Phase 05 planning complete
+Last activity: 2026-07-15 - Completed quick task 260715-ca2: Fix 2 pgTAP test bugs from Phase 5 gap 2 (broken \i include path + auth.users trigger ownership error)
 
 Progress: [██████████] 100% (plans this phase) — 8/8 plans complete overall, but Phase 5 itself remains open pending gap closure
 
@@ -72,6 +72,12 @@ Recent decisions affecting current work:
 ### Pending Todos
 
 - Run `/gsd:discuss-phase` for the new Phase 1 (Client Records & Isolated RAG Setup) — including resolving the login/auth dependency gap noted above.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260715-ca2 | Fix 2 pgTAP test bugs from Phase 5 gap 2: broken \i include path + auth.users trigger ownership error | 2026-07-15 | b5829bb | [260715-ca2-fix-2-pgtap-test-bugs-from-phase-5-gap-2](./quick/260715-ca2-fix-2-pgtap-test-bugs-from-phase-5-gap-2/) |
 
 ### Blockers/Concerns
 
