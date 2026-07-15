@@ -10,7 +10,7 @@
 begin;
 select plan(3);
 
-\i supabase/tests/rls_helpers.sql
+\ir rls_helpers.sql
 
 -- Authenticate as admin_user.
 select tests.set_auth('cccccccc-cccc-cccc-cccc-cccccccccccc');

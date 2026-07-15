@@ -53,7 +53,9 @@ on conflict (id) do nothing;
 --    actor's role/status -- never an UPDATE, so the column-immutability
 --    trigger under test is never invoked by fixture setup.
 -- ---------------------------------------------------------------------------
+set local role supabase_auth_admin;
 alter table auth.users disable trigger on_auth_user_created;
+reset role;
 
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password,
@@ -85,7 +87,9 @@ insert into auth.users (
    '', '', '', '')
 on conflict (id) do nothing;
 
+set local role supabase_auth_admin;
 alter table auth.users enable trigger on_auth_user_created;
+reset role;
 
 -- ---------------------------------------------------------------------------
 -- 3. public.profiles fixture rows -- a direct INSERT (not an UPDATE), so the
