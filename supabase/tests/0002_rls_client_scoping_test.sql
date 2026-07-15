@@ -12,7 +12,7 @@
 begin;
 select plan(4);
 
-\i supabase/tests/rls_helpers.sql
+\ir rls_helpers.sql
 
 -- Authenticate as client_a_user (client_id = client_a per the fixture).
 select tests.set_auth('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb');

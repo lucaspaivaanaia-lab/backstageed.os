@@ -15,7 +15,7 @@
 begin;
 select plan(6);
 
-\i supabase/tests/rls_helpers.sql
+\ir rls_helpers.sql
 
 -- Authenticate as pm_a (assigned to client_a ONLY per the fixture).
 select tests.set_auth('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
