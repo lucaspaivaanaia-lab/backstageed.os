@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-07-08)
 Phase: 05 (access-roles) — GAPS FOUND (verification score 4/7 must-haves; see 05-VERIFICATION.md)
 Plan: 4 of 4 (all plans executed and summarized)
 Status: Ready to execute
-Last activity: 2026-07-15 - Completed quick task 260715-ca2: Fix 2 pgTAP test bugs from Phase 5 gap 2 (broken \i include path + auth.users trigger ownership error)
+Last activity: 2026-07-15 - Completed quick task 260715-cut: redesigned rls_helpers.sql fixture bootstrap (round 2, after the set-role-to-supabase_auth_admin fix in 260715-ca2 failed with permission denied)
 
 Progress: [██████████] 100% (plans this phase) — 8/8 plans complete overall, but Phase 5 itself remains open pending gap closure
 
@@ -78,6 +78,7 @@ Recent decisions affecting current work:
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260715-ca2 | Fix 2 pgTAP test bugs from Phase 5 gap 2: broken \i include path + auth.users trigger ownership error | 2026-07-15 | b5829bb | [260715-ca2-fix-2-pgtap-test-bugs-from-phase-5-gap-2](./quick/260715-ca2-fix-2-pgtap-test-bugs-from-phase-5-gap-2/) |
+| 260715-cut | Round 2: redesign rls_helpers.sql fixture bootstrap after set-role-to-supabase_auth_admin approach failed with permission denied | 2026-07-15 | 23301d4 | [260715-cut-redesign-rls-helpers-sql-fixture-bootstr](./quick/260715-cut-redesign-rls-helpers-sql-fixture-bootstr/) |
 
 ### Blockers/Concerns
 
