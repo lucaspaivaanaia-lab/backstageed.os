@@ -23,7 +23,7 @@ Um PM consegue produzir conteúdo para um cliente específico com IA que só con
 - [ ] **Phase 2: Client-Isolated AI Chat** *(deadline: 2026-07-18)* - PM can chat with AI about one client at a time, with zero context bleed, and curate what becomes permanent knowledge
 - [ ] **Phase 3: Content Production Kanban** *(deadline: 2026-07-28)* - PM can create a content card, attach Drive media, and move it through briefing → produção → revisão interna, gated by a per-client checklist
 - [ ] **Phase 4: Client Approval & Scheduling** *(deadline: 2026-08-07)* - Client can review, approve, or request adjustments on their content board, and once approved the PM registers the publish date
-- [ ] **Phase 5: Access & Roles** *(deadline: 2026-08-12)* - PM signs up and gets approved by admin; Client accounts are provisioned by PM (no self-signup); both land in a role-scoped platform where PM/Client/Admin each see only what they're allowed to (gaps found 2026-07-14 — see 05-VERIFICATION.md)
+- [ ] **Phase 5: Access & Roles** *(deadline: 2026-08-12)* - PM signs up and gets approved by admin; Client accounts are provisioned by PM (no self-signup); both land in a role-scoped platform where PM/Client/Admin each see only what they're allowed to (gaps found 2026-07-14 — see 05-VERIFICATION.md; all 6 plans executed 2026-07-16, but AUTH-06/07/08 remain runtime-unverified — 05-06 surfaced a missing `GRANT` on `public.clients` blocking the pgTAP suite, see 05-06-SUMMARY.md)
 - [ ] **Phase 6: Admin Oversight Dashboard** *(deadline: 2026-08-15)* - Admin can see a consolidated, real-time status view across all clients, PMs, and cards, and drill into any of them
 
 ## Phase Details
@@ -153,8 +153,8 @@ Plans:
 
 **Gap closure** *(from 05-VERIFICATION.md — score 4/7 must-haves)*
 
-- [ ] 05-05-PLAN.md — Fix broken access control (CR-01/CR-02): scope createClientLogin/deactivateClientAccess to the caller's assigned clients + verify target userId, with a Docker-free automated authorization regression test (AUTH-06 write-path, AUTH-09, AUTH-11)
-- [ ] 05-06-PLAN.md — Execute the pgTAP RLS suite to green in a Docker-capable environment (human/infra) — runtime proof of AUTH-06, AUTH-07, AUTH-08 (remains blocked until run)
+- [x] 05-05-PLAN.md — Fix broken access control (CR-01/CR-02): scope createClientLogin/deactivateClientAccess to the caller's assigned clients + verify target userId, with a Docker-free automated authorization regression test (AUTH-06 write-path, AUTH-09, AUTH-11)
+- [x] 05-06-PLAN.md — Execute the pgTAP RLS suite to green in a Docker-capable environment (human/infra) — runtime proof of AUTH-06, AUTH-07, AUTH-08 (remains blocked until run)
 
 ### Phase 6: Admin Oversight Dashboard
 
@@ -179,7 +179,7 @@ Plans:
 | 2. Client-Isolated AI Chat | 2026-07-18 | 0/? | Not started | - |
 | 3. Content Production Kanban | 2026-07-28 | 0/? | Not started | - |
 | 4. Client Approval & Scheduling | 2026-08-07 | 0/? | Not started | - |
-| 5. Access & Roles | 2026-08-12 | 4/4 | Gaps found | - |
+| 5. Access & Roles | 2026-08-12 | 6/6 | Blocked (AUTH-06/07/08 unverified) | - |
 | 6. Admin Oversight Dashboard | 2026-08-15 | 0/? | Not started | - |
 
 ---

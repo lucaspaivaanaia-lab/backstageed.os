@@ -4,8 +4,8 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 1 UI-SPEC approved
-last_updated: "2026-07-14T04:14:40.051Z"
-last_activity: 2026-07-14 -- Phase 05 planning complete
+last_updated: "2026-07-16T02:43:18.089Z"
+last_activity: 2026-07-16 -- Phase 05 gap-closure plans 05-05/05-06 executed; AUTH-06/07/08 still unverified (missing GRANT on public.clients found by 05-06)
 progress:
   total_phases: 6
   completed_phases: 1
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-07-08)
 
 ## Current Position
 
-Phase: 05 (access-roles) — GAPS FOUND (verification score 4/7 must-haves; see 05-VERIFICATION.md)
-Plan: 4 of 4 (all plans executed and summarized)
-Status: Ready to execute
-Last activity: 2026-07-15 - Completed quick task 260715-cut: redesigned rls_helpers.sql fixture bootstrap (round 2, after the set-role-to-supabase_auth_admin fix in 260715-ca2 failed with permission denied)
+Phase: 05 (access-roles) — GAP-CLOSURE PLANS EXECUTED, PHASE BLOCKED (new gap found)
+Plan: 6 of 6 (all plans executed and summarized)
+Status: Blocked — 05-06 surfaced a missing `GRANT SELECT/INSERT/UPDATE ON public.clients TO authenticated` (no migration ever issued it); the pgTAP suite fails at the privilege check before RLS is even evaluated, so AUTH-06/07/08 remain runtime-unproven. Needs a follow-up migration (e.g. 0008_clients_grants.sql) + a re-run of `npx supabase test db`. 05-05's authorization-gate fix (CR-01/CR-02, AUTH-09/AUTH-11) is fully closed and verified (7/7 tests, tsc clean).
+Last activity: 2026-07-16 -- Phase 05 gap-closure plans 05-05/05-06 executed; AUTH-06/07/08 still unverified (missing GRANT on public.clients found by 05-06)
 
-Progress: [██████████] 100% (plans this phase) — 8/8 plans complete overall, but Phase 5 itself remains open pending gap closure
+Progress: [██████████] 100% (plans this phase) — 10/10 plans complete overall (05-05 + 05-06 executed), but Phase 5 itself remains open — new blocker found by 05-06, not yet closed
 
 ## Performance Metrics
 
