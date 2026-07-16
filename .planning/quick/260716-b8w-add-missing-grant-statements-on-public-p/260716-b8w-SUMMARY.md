@@ -41,6 +41,8 @@ completed: 2026-07-16
 
 **Added `0009_profiles_pm_clients_grants.sql` granting select/insert/update/delete on `public.profiles` and select/insert/delete on `public.pm_clients` to `authenticated`; re-ran `npx supabase test db` and confirmed the `permission denied for table profiles` error is fully resolved — AUTH-06 and AUTH-07 now pass all subtests — but a new, different, non-permission failure surfaced in AUTH-08 (a fixture data-count mismatch: admin sees 3 clients, test expects 2), so AUTH-08 remains still-blocked while AUTH-06/AUTH-07 are now runtime-proven.**
 
+> **CORRECTION (2026-07-16):** Verified directly against the hosted Supabase project (`ancfwsgyzoostoidqzqj`) — it already has full grants on `public.profiles` and `public.pm_clients` for `authenticated`, granted automatically at provisioning by Supabase's hosted platform. This entire GRANT gap (clients, profiles, pm_clients) only ever existed in the local `supabase start` Docker stack; production was never affected. This migration is still valuable for local-dev/CI parity with production and for making the pgTAP suite runnable at all.
+
 ## Performance
 
 - **Duration:** 28 min

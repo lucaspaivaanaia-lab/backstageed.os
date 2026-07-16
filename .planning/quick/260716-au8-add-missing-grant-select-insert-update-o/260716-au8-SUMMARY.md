@@ -38,6 +38,8 @@ completed: 2026-07-16
 
 **Added `0008_clients_grants.sql` granting SELECT/INSERT/UPDATE on `public.clients` to `authenticated`; re-ran `npx supabase test db` and found the suite still fails — same permission-denied pattern, now against `public.profiles` instead of `public.clients` — so AUTH-06/07/08 remain runtime-blocked, one layer further than 05-06-SUMMARY.md diagnosed.**
 
+> **CORRECTION (2026-07-16):** Verified directly against the hosted Supabase project (`ancfwsgyzoostoidqzqj`) — it already has full grants on `public.clients` for `authenticated`, granted automatically at provisioning by Supabase's hosted platform. This GRANT gap only ever existed in the local `supabase start` Docker stack, not in production. "AUTH-06/07/08 remain runtime-blocked" below means blocked from local/CI automated proof, not that production was affected.
+
 ## Performance
 
 - **Duration:** 22 min

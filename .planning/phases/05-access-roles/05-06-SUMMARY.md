@@ -39,6 +39,8 @@ completed: 2026-07-15
 
 **First actual Docker-backed execution of the Phase 5 pgTAP RLS suite — result is FAIL (exit 1), not the anticipated PASS: all three requirement test files (0001/0002/0003) error out immediately with `permission denied for table clients`, a missing table-level GRANT that predates and is independent of the RLS policies under test. AUTH-06/07/08 remain unverified; this plan makes zero file changes per its execution-only scope.**
 
+> **CORRECTION (2026-07-16, added after direct verification against the hosted project):** The finding above is real but its scope was mis-stated at the time — this GRANT gap only affects a **local** `supabase start` Docker stack. The hosted Supabase project (`ancfwsgyzoostoidqzqj`, checked directly via `information_schema.role_table_grants`) already has full `SELECT/INSERT/UPDATE/DELETE` grants on `public.clients`/`profiles`/`pm_clients` for `authenticated` — these were granted automatically at project provisioning by Supabase's hosted platform, which local `supabase start` does not fully replicate. **Production was never broken by this.** The three follow-up quick tasks (260716-au8, 260716-b8w, 260716-bjk) closed the gap for local dev/CI parity and got `npx supabase test db` green, which is what makes AUTH-06/07/08 provable by an automated suite at all — but the original framing below ("AUTH-06/07/08 remain unverified" / implying a production gap) should be read as "unverified by the local automated suite," not "broken in production."
+
 ## Performance
 
 - **Started:** 2026-07-15 (this session)

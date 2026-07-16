@@ -35,6 +35,8 @@ completed: 2026-07-16
 
 **Scoped `0003_rls_admin_unrestricted_test.sql`'s first assertion to the two known fixture client IDs (client_a, client_b) instead of an unscoped `count(*) from public.clients`, closing the last gap blocking AUTH-08; re-ran the full pgTAP suite and confirmed all three RLS test files (0001, 0002, 0003) now pass with zero failed subtests -- AUTH-06, AUTH-07, and AUTH-08 are all runtime-verified.**
 
+> **Context note (2026-07-16):** This fixture-count bug (test file, unrelated to the GRANT gap) is the only issue in this 3-quick-task arc (260716-au8/b8w/bjk) that was a genuine bug in the codebase itself. The GRANT gaps that 260716-au8/b8w fixed were confirmed, by direct query against the hosted Supabase project, to have never affected production — see the CORRECTION notes in those two SUMMARYs. "AUTH-06/07/08 are all runtime-verified" here means verified by the local/CI automated pgTAP suite, which is the intended and valuable outcome regardless.
+
 ## Performance
 
 - **Duration:** 12 min
