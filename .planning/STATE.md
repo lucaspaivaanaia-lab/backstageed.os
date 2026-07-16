@@ -5,10 +5,10 @@ milestone_name: milestone
 status: executing
 stopped_at: Phase 1 UI-SPEC approved
 last_updated: "2026-07-16T02:43:18.089Z"
-last_activity: 2026-07-16 -- Phase 05 gap-closure plans 05-05/05-06 executed; AUTH-06/07/08 still unverified (missing GRANT on public.clients found by 05-06)
+last_activity: 2026-07-16 -- Phase 05 fully closed: AUTH-06/07/08 all runtime-verified via quick tasks 260716-au8/b8w/bjk (clients+profiles+pm_clients GRANTs, AUTH-08 fixture-count test fix)
 progress:
   total_phases: 6
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 10
   completed_plans: 8
   percent: 17
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-07-08)
 
 ## Current Position
 
-Phase: 05 (access-roles) — GAP-CLOSURE PLANS EXECUTED, PHASE BLOCKED (new gap found)
+Phase: 05 (access-roles) — COMPLETE
 Plan: 6 of 6 (all plans executed and summarized)
-Status: Blocked — 05-06 surfaced a missing `GRANT SELECT/INSERT/UPDATE ON public.clients TO authenticated` (no migration ever issued it); the pgTAP suite fails at the privilege check before RLS is even evaluated, so AUTH-06/07/08 remain runtime-unproven. Needs a follow-up migration (e.g. 0008_clients_grants.sql) + a re-run of `npx supabase test db`. 05-05's authorization-gate fix (CR-01/CR-02, AUTH-09/AUTH-11) is fully closed and verified (7/7 tests, tsc clean).
-Last activity: 2026-07-16 - Completed quick task 260716-b8w: added profiles/pm_clients GRANT migration (0009); AUTH-06/AUTH-07 now fully pass at the RLS layer, AUTH-08 still blocked on a fixture-count test bug (unrelated to grants)
+Status: Complete. 05-06 surfaced a missing base-table `GRANT` on `public.clients` (no migration ever issued it — the pgTAP suite failed at the Postgres privilege check before RLS was even evaluated). Three follow-up quick tasks closed it out: 260716-au8 (clients GRANT, 0008), 260716-b8w (profiles+pm_clients GRANTs, same root cause on 2 more tables, 0009), 260716-bjk (fixed an unrelated AUTH-08 fixture-count test bug in 0003_rls_admin_unrestricted_test.sql — the unscoped `count(*)` didn't account for the 'Cliente Demo' seed row from 0002_clients_stub.sql). `npx supabase test db` now reports `ok` with zero `not ok` lines across 0001/0002/0003 — AUTH-06/AUTH-07/AUTH-08 are all runtime-verified. (Overall exit code is still 1 for an unrelated cosmetic reason: `rls_helpers.sql`, a fixture helper not a test file, gets mis-picked-up by pg_prove's glob with no TAP plan — does not affect the requirement verdicts.) 05-05's authorization-gate fix (CR-01/CR-02, AUTH-09/AUTH-11) is fully closed and verified (7/7 tests, tsc clean).
+Last activity: 2026-07-16 -- Phase 05 fully closed: AUTH-06/07/08 all runtime-verified via quick tasks 260716-au8/b8w/bjk (clients+profiles+pm_clients GRANTs, AUTH-08 fixture-count test fix)
 
-Progress: [██████████] 100% (plans this phase) — 10/10 plans complete overall (05-05 + 05-06 executed), but Phase 5 itself remains open — new blocker found by 05-06, not yet closed
+Progress: [██████████] 100% (plans this phase) — 10/10 plans complete, Phase 5 fully closed
 
 ## Performance Metrics
 
@@ -81,6 +81,7 @@ Recent decisions affecting current work:
 | 260715-cut | Round 2: redesign rls_helpers.sql fixture bootstrap after set-role-to-supabase_auth_admin approach failed with permission denied | 2026-07-15 | 23301d4 | [260715-cut-redesign-rls-helpers-sql-fixture-bootstr](./quick/260715-cut-redesign-rls-helpers-sql-fixture-bootstr/) |
 | 260716-au8 | Add missing GRANT SELECT/INSERT/UPDATE ON public.clients TO authenticated (0008_clients_grants.sql) — closes the clients half of 05-06's blocker; re-run of npx supabase test db now fails one layer earlier on public.profiles (same class of gap, different table), so AUTH-06/07/08 remain still-blocked | 2026-07-16 | 87edfbf | [260716-au8-add-missing-grant-select-insert-update-o](./quick/260716-au8-add-missing-grant-select-insert-update-o/) |
 | 260716-b8w | Add missing GRANT statements on public.profiles and public.pm_clients to authenticated (0009_profiles_pm_clients_grants.sql) — AUTH-06 and AUTH-07 now fully PASS at the RLS layer; AUTH-08 still blocked, but on a new fixture-count mismatch (3 clients found, test expects 2 — the "Cliente Demo" seed row from 0002_clients_stub.sql wasn't accounted for), not a permission/grant issue | 2026-07-16 | b0b0aed | [260716-b8w-add-missing-grant-statements-on-public-p](./quick/260716-b8w-add-missing-grant-statements-on-public-p/) |
+| 260716-bjk | Fix AUTH-08 fixture-count test bug in 0003_rls_admin_unrestricted_test.sql — scoped the admin-unrestricted clients assertion to the fixture's own 2 known client IDs instead of an unscoped count(*). AUTH-06/AUTH-07/AUTH-08 now ALL PASS (0 not-ok lines across 0001/0002/0003). Overall `supabase test db` exit code still 1 for an unrelated, pre-existing reason: rls_helpers.sql (a fixture helper, not a test) gets mis-picked-up by pg_prove's glob with no TAP plan — cosmetic, does not affect the AUTH-06/07/08 verdict | 2026-07-16 | 3ba4120 | [260716-bjk-fix-auth-08-fixture-count-test-bug-in-su](./quick/260716-bjk-fix-auth-08-fixture-count-test-bug-in-su/) |
 
 ### Blockers/Concerns
 
