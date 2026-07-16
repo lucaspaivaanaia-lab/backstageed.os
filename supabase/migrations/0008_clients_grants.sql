@@ -1,0 +1,21 @@
+-- Phase 5 follow-up (quick task 260716-au8): close the runtime blocker
+-- 05-06-SUMMARY.md diagnosed — `npx supabase test db` failed all three RLS
+-- requirement test files (0001/0002/0003_*_test.sql) with
+-- `permission denied for table clients`, fired inside `tests.set_auth()`
+-- before RLS policy evaluation ever ran.
+--
+-- Root cause: no migration in this repo ever issued a base-table `GRANT`
+-- on `public.clients` to the `authenticated` role. This is independent of
+-- the RLS policies defined in 0004_rls_policies.sql / 0007_clients_rls_fix.sql
+-- (`clients_select_scoped`, `clients_insert_admin_or_pm`,
+-- `clients_update_scoped`), which were already correct by static review.
+-- `supabase/config.toml`'s `[api] auto_expose_new_tables` note confirms the
+-- underlying cause: local Supabase now defaults new public-schema tables to
+-- NOT auto-exposed to API roles (matching the cloud default), so an
+-- explicit GRANT is required before Postgres will even consult RLS.
+--
+-- This migration is additive only — it does not modify any existing
+-- migration or RLS policy. `delete` is intentionally NOT granted: 0004/0007
+-- define no delete policy on public.clients, so delete remains out of scope
+-- for this phase.
+grant select, insert, update on public.clients to authenticated;
