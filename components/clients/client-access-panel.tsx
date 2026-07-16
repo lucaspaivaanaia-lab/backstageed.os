@@ -75,7 +75,7 @@ export function ClientAccessPanel({
     if (!activeUserId) return;
     setDeactivateServerError(null);
     startDeactivateTransition(async () => {
-      const result = await deactivateClientAccess(activeUserId);
+      const result = await deactivateClientAccess(clientId, activeUserId);
       if ("error" in result) {
         setDeactivateServerError(result.error);
         return;
