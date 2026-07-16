@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-07-08)
 Phase: 05 (access-roles) — GAP-CLOSURE PLANS EXECUTED, PHASE BLOCKED (new gap found)
 Plan: 6 of 6 (all plans executed and summarized)
 Status: Blocked — 05-06 surfaced a missing `GRANT SELECT/INSERT/UPDATE ON public.clients TO authenticated` (no migration ever issued it); the pgTAP suite fails at the privilege check before RLS is even evaluated, so AUTH-06/07/08 remain runtime-unproven. Needs a follow-up migration (e.g. 0008_clients_grants.sql) + a re-run of `npx supabase test db`. 05-05's authorization-gate fix (CR-01/CR-02, AUTH-09/AUTH-11) is fully closed and verified (7/7 tests, tsc clean).
-Last activity: 2026-07-16 - Completed quick task 260716-au8: added clients GRANT migration (0008); AUTH-06/07/08 still blocked, now on a missing public.profiles GRANT surfaced by the re-run
+Last activity: 2026-07-16 - Completed quick task 260716-b8w: added profiles/pm_clients GRANT migration (0009); AUTH-06/AUTH-07 now fully pass at the RLS layer, AUTH-08 still blocked on a fixture-count test bug (unrelated to grants)
 
 Progress: [██████████] 100% (plans this phase) — 10/10 plans complete overall (05-05 + 05-06 executed), but Phase 5 itself remains open — new blocker found by 05-06, not yet closed
 
@@ -80,6 +80,7 @@ Recent decisions affecting current work:
 | 260715-ca2 | Fix 2 pgTAP test bugs from Phase 5 gap 2: broken \i include path + auth.users trigger ownership error | 2026-07-15 | b5829bb | [260715-ca2-fix-2-pgtap-test-bugs-from-phase-5-gap-2](./quick/260715-ca2-fix-2-pgtap-test-bugs-from-phase-5-gap-2/) |
 | 260715-cut | Round 2: redesign rls_helpers.sql fixture bootstrap after set-role-to-supabase_auth_admin approach failed with permission denied | 2026-07-15 | 23301d4 | [260715-cut-redesign-rls-helpers-sql-fixture-bootstr](./quick/260715-cut-redesign-rls-helpers-sql-fixture-bootstr/) |
 | 260716-au8 | Add missing GRANT SELECT/INSERT/UPDATE ON public.clients TO authenticated (0008_clients_grants.sql) — closes the clients half of 05-06's blocker; re-run of npx supabase test db now fails one layer earlier on public.profiles (same class of gap, different table), so AUTH-06/07/08 remain still-blocked | 2026-07-16 | 87edfbf | [260716-au8-add-missing-grant-select-insert-update-o](./quick/260716-au8-add-missing-grant-select-insert-update-o/) |
+| 260716-b8w | Add missing GRANT statements on public.profiles and public.pm_clients to authenticated (0009_profiles_pm_clients_grants.sql) — AUTH-06 and AUTH-07 now fully PASS at the RLS layer; AUTH-08 still blocked, but on a new fixture-count mismatch (3 clients found, test expects 2 — the "Cliente Demo" seed row from 0002_clients_stub.sql wasn't accounted for), not a permission/grant issue | 2026-07-16 | b0b0aed | [260716-b8w-add-missing-grant-statements-on-public-p](./quick/260716-b8w-add-missing-grant-statements-on-public-p/) |
 
 ### Blockers/Concerns
 
