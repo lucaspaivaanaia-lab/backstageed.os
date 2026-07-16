@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: Phase 2 context gathered
-last_updated: "2026-07-16T13:08:32.980Z"
+stopped_at: Phase 2 UI-SPEC approved
+last_updated: "2026-07-16T13:15:40.590Z"
 last_activity: "2026-07-16 -- Phase 05 fully closed: AUTH-06/07/08 all runtime-verified via quick tasks 260716-au8/b8w/bjk (clients+profiles+pm_clients GRANTs, AUTH-08 fixture-count test fix)"
 progress:
   total_phases: 6
@@ -101,6 +101,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-16T13:08:32.973Z
-Stopped at: Phase 2 context gathered
-Resume file: .planning/phases/02-client-isolated-ai-chat/02-CONTEXT.md
+Last session: 2026-07-16T13:15:40.583Z
+Stopped at: Phase 2 UI-SPEC approved
+Resume file: .planning/phases/02-client-isolated-ai-chat/02-UI-SPEC.md
