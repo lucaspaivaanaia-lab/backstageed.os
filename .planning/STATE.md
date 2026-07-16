@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-07-08)
 Phase: 05 (access-roles) — GAP-CLOSURE PLANS EXECUTED, PHASE BLOCKED (new gap found)
 Plan: 6 of 6 (all plans executed and summarized)
 Status: Blocked — 05-06 surfaced a missing `GRANT SELECT/INSERT/UPDATE ON public.clients TO authenticated` (no migration ever issued it); the pgTAP suite fails at the privilege check before RLS is even evaluated, so AUTH-06/07/08 remain runtime-unproven. Needs a follow-up migration (e.g. 0008_clients_grants.sql) + a re-run of `npx supabase test db`. 05-05's authorization-gate fix (CR-01/CR-02, AUTH-09/AUTH-11) is fully closed and verified (7/7 tests, tsc clean).
-Last activity: 2026-07-16 -- Phase 05 gap-closure plans 05-05/05-06 executed; AUTH-06/07/08 still unverified (missing GRANT on public.clients found by 05-06)
+Last activity: 2026-07-16 - Completed quick task 260716-au8: added clients GRANT migration (0008); AUTH-06/07/08 still blocked, now on a missing public.profiles GRANT surfaced by the re-run
 
 Progress: [██████████] 100% (plans this phase) — 10/10 plans complete overall (05-05 + 05-06 executed), but Phase 5 itself remains open — new blocker found by 05-06, not yet closed
 
@@ -79,6 +79,7 @@ Recent decisions affecting current work:
 |---|-------------|------|--------|-----------|
 | 260715-ca2 | Fix 2 pgTAP test bugs from Phase 5 gap 2: broken \i include path + auth.users trigger ownership error | 2026-07-15 | b5829bb | [260715-ca2-fix-2-pgtap-test-bugs-from-phase-5-gap-2](./quick/260715-ca2-fix-2-pgtap-test-bugs-from-phase-5-gap-2/) |
 | 260715-cut | Round 2: redesign rls_helpers.sql fixture bootstrap after set-role-to-supabase_auth_admin approach failed with permission denied | 2026-07-15 | 23301d4 | [260715-cut-redesign-rls-helpers-sql-fixture-bootstr](./quick/260715-cut-redesign-rls-helpers-sql-fixture-bootstr/) |
+| 260716-au8 | Add missing GRANT SELECT/INSERT/UPDATE ON public.clients TO authenticated (0008_clients_grants.sql) — closes the clients half of 05-06's blocker; re-run of npx supabase test db now fails one layer earlier on public.profiles (same class of gap, different table), so AUTH-06/07/08 remain still-blocked | 2026-07-16 | 87edfbf | [260716-au8-add-missing-grant-select-insert-update-o](./quick/260716-au8-add-missing-grant-select-insert-update-o/) |
 
 ### Blockers/Concerns
 
