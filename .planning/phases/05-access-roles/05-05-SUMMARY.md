@@ -161,9 +161,9 @@ None - no external service configuration required.
 - **Residual manual-verification item, explicitly out of this plan's scope per its `<output>` note:** the live two-real-PM/two-real-client browser click-through (05-VERIFICATION.md human_verification item 3 / 05-REVIEW.md CR-01/CR-02 manual confirmation) is NOT covered by this plan's automated `node:test` suite nor by 05-06 (whose scope is the pgTAP suite, human_verification item 1). It remains an accepted residual manual-verification item to be spot-checked ad hoc post-deploy, or explicitly noted by the phase as accepted residual manual verification.
 - Both PM and Admin routes reach the identical, now-authorized `actions.ts` implementation (no separate Admin-mirror code path to update).
 
-## Self-Check
+## Self-Check: PASSED
 
-See `## Self-Check` section appended below after verification.
+All created/modified files confirmed present on disk; all task commits (`ad73876`, `fd8b8aa`) and the docs commit (`57b8e27`) confirmed present in `git log --oneline --all`.
 
 ---
 *Phase: 05-access-roles*
