@@ -17,7 +17,7 @@ select tests.set_auth('cccccccc-cccc-cccc-cccc-cccccccccccc');
 
 -- AUTH-08: admin sees both fixture clients (client_a and client_b), unrestricted.
 select results_eq(
-  $$ select count(*) from public.clients $$,
+  $$ select count(*) from public.clients where id in ('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222') $$,
   $$ values (2::bigint) $$,
   'AUTH-08: admin sees both fixture clients (unrestricted)'
 );
