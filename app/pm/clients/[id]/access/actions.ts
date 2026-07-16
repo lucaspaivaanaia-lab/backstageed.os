@@ -1,12 +1,80 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { createClientLoginSchema } from "@/lib/validation/client-access";
 import { generateProvisionalPassword } from "@/lib/security/password";
+import {
+  isClientActionAuthorized,
+  isActiveLoginMatch,
+} from "@/lib/security/client-access-authz";
 
 const GENERIC_ERROR =
   "Não foi possível completar a ação. Tente novamente em instantes.";
 const ALREADY_HAS_LOGIN_ERROR = "Este cliente já possui um acesso ativo.";
+const UNAUTHORIZED_ERROR = "Cliente inválido ou fora do seu escopo.";
+const UNAUTHENTICATED_ERROR = "Não autenticado.";
+
+/**
+ * T-05-01 / T-05-02 / T-05-05 guard: authorizes the AUTHENTICATED caller
+ * for a specific clientId BEFORE any service-role admin-client call is
+ * constructed. Authorization is derived SOLELY from the RLS-scoped
+ * `is_admin()` / `pm_assigned_clients()` RPCs — never from row visibility
+ * (e.g. `clients_select_scoped` also grants a `client`-role caller
+ * visibility into their own client row, which must NEVER be conflated
+ * with "this caller manages this client" per D-01: no self-provisioning).
+ * Fails closed: any RPC error is treated as unauthorized, no fallback.
+ */
+async function assertCallerManagesClient(
+  clientId: string
+): Promise<{ ok: true } | { error: string }> {
+  const scoped = await createClient();
+
+  const {
+    data: { user },
+  } = await scoped.auth.getUser();
+  if (!user) {
+    return { error: UNAUTHENTICATED_ERROR };
+  }
+
+  const [adminResult, assignedResult] = await Promise.all([
+    scoped.rpc("is_admin"),
+    scoped.rpc("pm_assigned_clients"),
+  ]);
+
+  if (adminResult.error) {
+    console.error(
+      "assertCallerManagesClient: is_admin() RPC failed",
+      adminResult.error
+    );
+    return { error: UNAUTHORIZED_ERROR };
+  }
+  if (assignedResult.error) {
+    console.error(
+      "assertCallerManagesClient: pm_assigned_clients() RPC failed",
+      assignedResult.error
+    );
+    return { error: UNAUTHORIZED_ERROR };
+  }
+
+  const isAdmin = adminResult.data === true;
+  const assignedClientIds = (assignedResult.data ?? []).map(
+    (row: string | { client_id: string }) =>
+      typeof row === "string" ? row : row.client_id
+  );
+
+  const authorized = isClientActionAuthorized({
+    isAdmin,
+    assignedClientIds,
+    clientId,
+  });
+
+  if (!authorized) {
+    return { error: UNAUTHORIZED_ERROR };
+  }
+
+  return { ok: true };
+}
 
 /**
  * D-10 lookup (Blocker 3): the single query used to decide BOTH whether
@@ -25,7 +93,7 @@ export async function findActiveClientLogin(
 ): Promise<{ userId: string } | null> {
   const admin = createAdminClient();
 
-  const { data } = await admin
+  const { data, error } = await admin
     .from("profiles")
     .select("id")
     .eq("client_id", client_id)
@@ -33,6 +101,15 @@ export async function findActiveClientLogin(
     .neq("status", "rejected")
     .neq("status", "deactivated")
     .maybeSingle();
+
+  if (error) {
+    // WR-01 fix: a swallowed query error here previously masked lookup
+    // failures as "no active login" — deactivateClientAccess now depends
+    // on this lookup for its ownership check (isActiveLoginMatch), so
+    // fail closed and log instead of silently discarding the error.
+    console.error("findActiveClientLogin query failed", error);
+    return null;
+  }
 
   return data ? { userId: data.id } : null;
 }
@@ -66,6 +143,11 @@ export async function createClientLogin(
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? GENERIC_ERROR };
+  }
+
+  const authz = await assertCallerManagesClient(parsed.data.client_id);
+  if ("error" in authz) {
+    return { error: authz.error };
   }
 
   const existingLogin = await findActiveClientLogin(parsed.data.client_id);
@@ -117,10 +199,28 @@ type DeactivateClientAccessResult = { success: true } | { error: string };
  * Uses the admin client for the profiles update since this is a
  * cross-user write (RLS would otherwise scope a profiles UPDATE to the
  * caller's own row).
+ *
+ * T-05-02 (IDOR) fix: takes an explicit clientId, authorizes the caller
+ * for it via assertCallerManagesClient(), then re-derives the target
+ * server-side via findActiveClientLogin(clientId) and requires the
+ * caller-supplied userId to match it via isActiveLoginMatch() — BEFORE
+ * constructing the admin client or calling updateUserById. This rejects
+ * an arbitrary/guessed userId even from an otherwise-authorized caller.
  */
 export async function deactivateClientAccess(
+  clientId: string,
   userId: string
 ): Promise<DeactivateClientAccessResult> {
+  const authz = await assertCallerManagesClient(clientId);
+  if ("error" in authz) {
+    return { error: authz.error };
+  }
+
+  const active = await findActiveClientLogin(clientId);
+  if (!isActiveLoginMatch(active, userId)) {
+    return { error: GENERIC_ERROR };
+  }
+
   const admin = createAdminClient();
 
   const { error: banError } = await admin.auth.admin.updateUserById(userId, {
