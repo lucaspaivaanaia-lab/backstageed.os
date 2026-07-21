@@ -89,9 +89,9 @@ Plans:
 Plans:
 **Wave 1** *(parallel foundation — no file overlap)*
 
-- [ ] 02-01-PLAN.md — messages table + RLS + GRANT + pgTAP scoping test + [BLOCKING] schema push (CTX-01, CTX-02)
-- [ ] 02-02-PLAN.md — pure logic (assemble-prompt, build-knowledge-markdown, stale-response-guard) + zod schemas + node:test scaffolds (CTX-01..05)
-- [ ] 02-03-PLAN.md — @anthropic-ai/sdk install + server-only Anthropic factory + Tropicalia search/upload (generate_answer:false) (CTX-01, CTX-04, CTX-05)
+- [x] 02-01-PLAN.md — messages table + RLS + GRANT + pgTAP scoping test + [BLOCKING] schema push (CTX-01, CTX-02)
+- [x] 02-02-PLAN.md — pure logic (assemble-prompt, build-knowledge-markdown, stale-response-guard) + zod schemas + node:test scaffolds (CTX-01..05)
+- [x] 02-03-PLAN.md — @anthropic-ai/sdk install + server-only Anthropic factory + Tropicalia search/upload (generate_answer:false) (CTX-01, CTX-04, CTX-05)
 
 **Wave 2** *(blocked on Wave 1)*
 
@@ -194,7 +194,7 @@ Plans:
 | Phase | Deadline | Plans Complete | Status | Completed |
 |-------|----------|----------------|--------|-----------|
 | 1. Client Records & Isolated RAG Setup | 2026-07-11 | 4/4 | Complete   | 2026-07-13 |
-| 2. Client-Isolated AI Chat | 2026-07-18 | 0/? | Not started | - |
+| 2. Client-Isolated AI Chat | 2026-07-18 | 3/6 | In Progress|  |
 | 3. Content Production Kanban | 2026-07-28 | 0/? | Not started | - |
 | 4. Client Approval & Scheduling | 2026-08-07 | 0/? | Not started | - |
 | 5. Access & Roles | 2026-08-12 | 6/6 | Complete   | 2026-07-16 |
