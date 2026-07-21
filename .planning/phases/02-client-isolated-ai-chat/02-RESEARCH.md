@@ -711,22 +711,25 @@ ANTHROPIC_CHAT_MODEL=
 | A3 | The Vercel AI SDK's `useChat` client model doesn't cleanly compose with this phase's "Supabase-is-source-of-truth, checkbox-per-persisted-row" requirement, therefore direct `@anthropic-ai/sdk` + manual stream reading is the better choice | Standard Stack, Alternatives Considered | This is an architectural judgment call, not a hard fact — if the planner disagrees, the Vercel AI SDK is a fully legitimate, well-supported alternative; documented here as reasoning to revisit, not a locked technical constraint. |
 | A4 | The recommended `retrieval_strategy: "hybrid"`, `limit: 10` search parameters are sensible defaults for this use case | Pattern 2 code example | Untested against real client data (no `TROPICALIA_API_KEY` available in this environment) — these should be treated as a reasonable starting point to tune once real retrieval traffic exists, not a benchmarked recommendation. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Does the Tropicalia upload endpoint reject or mis-handle `.md`/`text/markdown` content?**
    - What we know: the endpoint documents a generic binary `file` field with a 100MB limit; the only example shown in the fetched docs uses a `.pdf`.
    - What's unclear: whether markdown files index/chunk correctly, or whether a `.txt` extension/MIME type would be safer.
    - Recommendation: smoke-test the very first real upload (once `TROPICALIA_API_KEY` is supplied) with a small `.md` file and confirm via `list-documents` that it reaches `status: "ready"` before relying on this path for a demo.
+   - **Resolved:** plans upload one new `.md` file per save (02-05) and defer the format smoke-test to the first live upload once the key exists; no design change pending.
 
 2. **What model should `ANTHROPIC_CHAT_MODEL` default to, and what's the expected per-conversation cost?**
    - What we know: Anthropic's currently-documented model family includes `claude-sonnet-4-5`, `claude-opus-4-8`, `claude-haiku-4-5` (confirmed present in official docs fetched this session).
    - What's unclear: which one Juliano/the team wants for cost-vs-quality tradeoffs at v1 chat-assistant scale, and whether a cheaper model (`claude-haiku-4-5`) would be adequate given retrieval is already doing most of the "knowing about this client" work.
    - Recommendation: default to `claude-sonnet-4-5` in code but make it env-configurable (already reflected in the code example) so this can be tuned without a redeploy-requiring code change.
+   - **Resolved:** plans default `ANTHROPIC_CHAT_MODEL` to `claude-sonnet-4-5`, env-configurable (02-04 Task 1).
 
 3. **Should the retry-on-interrupted-stream UI action (`"Tentar novamente"`, per 02-UI-SPEC.md) re-send only the last user turn, or truly resume the interrupted stream?**
    - What we know: Anthropic's own docs describe a capture-and-resume strategy for interrupted streams (re-sending the partial response as context and asking the model to continue) — this is more complex than a simple retry.
    - What's unclear: whether this phase's "keep it simple" ethos (D-09, no citations, single history) extends to accepting the simpler "just re-ask the same question" retry over Anthropic's documented resume strategy.
    - Recommendation: given the deadline pressure and v1 scope, a simple retry (re-run generation for the already-persisted last user message, without deleting/duplicating it) is sufficient — the more sophisticated resume strategy is not warranted for this phase.
+   - **Resolved:** plans implement the simple last-user-turn re-send retry (02-04 Task 2); no stream-resume.
 
 ## Environment Availability
 
