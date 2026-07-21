@@ -85,7 +85,25 @@ Plans:
   4. PM can select a specific piece of the conversation and explicitly save it as permanent client knowledge — nothing is saved automatically
   5. Content the PM chooses to save is written as a curated `.md` file and uploaded to that client's Tropicalia project via its upload endpoint, and is retrievable in a later chat
 
-**Plans**: TBD
+**Plans**: 6 plans
+Plans:
+**Wave 1** *(parallel foundation — no file overlap)*
+
+- [ ] 02-01-PLAN.md — messages table + RLS + GRANT + pgTAP scoping test + [BLOCKING] schema push (CTX-01, CTX-02)
+- [ ] 02-02-PLAN.md — pure logic (assemble-prompt, build-knowledge-markdown, stale-response-guard) + zod schemas + node:test scaffolds (CTX-01..05)
+- [ ] 02-03-PLAN.md — @anthropic-ai/sdk install + server-only Anthropic factory + Tropicalia search/upload (generate_answer:false) (CTX-01, CTX-04, CTX-05)
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 02-04-PLAN.md — streaming /api/chat Route Handler + /pm/chat screen (client-scoped chat, degraded mode, stale-guard) (CTX-01, CTX-02, CTX-05)
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 02-05-PLAN.md — curation: saveKnowledge Server Action + per-message checkboxes/save bar (CTX-03, CTX-04)
+
+**Wave 4** *(phase gate)*
+
+- [ ] 02-06-PLAN.md — end-to-end human-verify checkpoints (live streaming isolation + curation round-trip) (CTX-01..05)
 
 ### Phase 3: Content Production Kanban
 
