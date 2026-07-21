@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, useTransition, type KeyboardEvent } from "react";
 import { SendHorizontal } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 import { shouldAppendChunk } from "@/lib/chat/stale-response-guard";
+import { saveKnowledge, listMessagesForClient } from "./actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -18,6 +20,11 @@ import {
 type ClientOption = { id: string; name: string; hasRag: boolean };
 
 type ChatMessage = {
+  // `id` is only present once the message is persisted in `public.messages`
+  // — an in-progress streaming bubble has no id and therefore renders no
+  // curation checkbox (D-04/D-05: only already-persisted messages are
+  // eligible for "Salvar como conhecimento").
+  id?: string;
   role: "user" | "assistant";
   content: string;
   streaming?: boolean;
@@ -32,6 +39,10 @@ const SEND_ERROR =
 const INTERRUPTED_ERROR = "A resposta foi interrompida. Tente novamente.";
 const DEGRADED_NOTICE =
   "Busca de contexto indisponível — respostas usam apenas o briefing do cliente.";
+const SAVE_SUCCESS =
+  "Conhecimento salvo. As mensagens selecionadas foram enviadas para a base de conhecimento do cliente.";
+const SAVE_ERROR = "Não foi possível salvar o conhecimento. Tente novamente.";
+const CHECKBOX_LABEL = "Incluir esta mensagem no conhecimento salvo";
 
 /**
  * Client switcher + message list + composer (CTX-01, CTX-02). This is the
@@ -53,6 +64,13 @@ export function ChatPanel({ clients }: ChatPanelProps) {
   const [sendError, setSendError] = useState<string | null>(null);
   const [interrupted, setInterrupted] = useState(false);
 
+  // Ephemeral curation selection (D-04) — nothing here is ever persisted
+  // until the PM explicitly clicks "Salvar como conhecimento" (CTX-03).
+  const [checkedMessageIds, setCheckedMessageIds] = useState<Set<string>>(
+    new Set()
+  );
+  const [isSavingKnowledge, startSaveTransition] = useTransition();
+
   const activeClientIdRef = useRef<string | null>(activeClientId);
   const abortControllerRef = useRef<AbortController | null>(null);
   const lastUserMessageRef = useRef<string>("");
@@ -64,19 +82,15 @@ export function ChatPanel({ clients }: ChatPanelProps) {
   const activeClient = clients.find((c) => c.id === activeClientId) ?? null;
 
   async function loadHistory(clientId: string) {
-    const supabase = createClient();
-    const { data } = await supabase
-      .from("messages")
-      .select("role, content")
-      .eq("client_id", clientId)
-      .order("created_at", { ascending: true });
+    const rows = await listMessagesForClient(clientId);
 
     // The PM may have switched again while this resolved — never apply a
     // stale client's history onto the currently-active thread.
     if (activeClientIdRef.current !== clientId) return;
     setMessages(
-      (data ?? []).map((row) => ({
-        role: row.role as "user" | "assistant",
+      rows.map((row) => ({
+        id: row.id,
+        role: row.role,
         content: row.content,
       }))
     );
@@ -90,9 +104,38 @@ export function ChatPanel({ clients }: ChatPanelProps) {
     activeClientIdRef.current = clientId;
     setActiveClientId(clientId);
     // Never carry in-memory state across clients — clear immediately, then
-    // refetch this client's persisted history.
+    // refetch this client's persisted history. Curation selection is
+    // ephemeral and never carries across clients either.
     setMessages([]);
+    setCheckedMessageIds(new Set());
     void loadHistory(clientId);
+  }
+
+  function toggleMessageChecked(messageId: string) {
+    setCheckedMessageIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(messageId)) {
+        next.delete(messageId);
+      } else {
+        next.add(messageId);
+      }
+      return next;
+    });
+  }
+
+  function handleSaveKnowledge() {
+    if (!activeClientId || checkedMessageIds.size === 0) return;
+    const messageIds = Array.from(checkedMessageIds);
+
+    startSaveTransition(async () => {
+      const result = await saveKnowledge(activeClientId, messageIds);
+      if ("error" in result) {
+        toast.error(SAVE_ERROR);
+        return;
+      }
+      toast.success(SAVE_SUCCESS);
+      setCheckedMessageIds(new Set());
+    });
   }
 
   async function streamResponse(clientId: string, content: string) {
@@ -162,6 +205,12 @@ export function ChatPanel({ clients }: ChatPanelProps) {
         });
         if (streamEndedEarly) {
           setInterrupted(true);
+        } else {
+          // The user + assistant turns are now persisted server-side —
+          // refetch so both carry a real DB id and become eligible for a
+          // curation checkbox (D-04/D-05: only persisted messages are
+          // eligible, never an in-progress streaming bubble).
+          await loadHistory(clientId);
         }
       }
     } catch (err) {
@@ -255,18 +304,12 @@ export function ChatPanel({ clients }: ChatPanelProps) {
                 </p>
               </div>
             ) : (
-              messages.map((message, index) => (
-                <div
-                  key={index}
-                  className={
-                    message.role === "user"
-                      ? "flex justify-end"
-                      : "flex justify-start"
-                  }
-                >
+              messages.map((message, index) => {
+                const isUser = message.role === "user";
+                const bubble = (
                   <div
                     className={
-                      message.role === "user"
+                      isUser
                         ? "max-w-[80%] rounded-2xl bg-secondary px-4 py-2 text-sm text-secondary-foreground"
                         : "max-w-[80%] rounded-2xl border bg-card px-4 py-2 text-sm text-card-foreground"
                     }
@@ -280,8 +323,41 @@ export function ChatPanel({ clients }: ChatPanelProps) {
                       </span>
                     ) : null}
                   </div>
-                </div>
-              ))
+                );
+                // Only an already-persisted message (has a DB id) is
+                // eligible for curation — a streaming/ephemeral bubble
+                // never renders a checkbox (D-04/D-05).
+                const checkbox = message.id ? (
+                  <Checkbox
+                    aria-label={CHECKBOX_LABEL}
+                    checked={checkedMessageIds.has(message.id)}
+                    onCheckedChange={() => toggleMessageChecked(message.id!)}
+                  />
+                ) : null;
+
+                return (
+                  <div
+                    key={message.id ?? index}
+                    className={
+                      isUser
+                        ? "flex items-center justify-end gap-2"
+                        : "flex items-center justify-start gap-2"
+                    }
+                  >
+                    {isUser ? (
+                      <>
+                        {checkbox}
+                        {bubble}
+                      </>
+                    ) : (
+                      <>
+                        {bubble}
+                        {checkbox}
+                      </>
+                    )}
+                  </div>
+                );
+              })
             )}
 
             {interrupted ? (
@@ -304,6 +380,23 @@ export function ChatPanel({ clients }: ChatPanelProps) {
       </div>
 
       <footer className="sticky bottom-0 z-10 flex flex-col gap-2 border-t bg-background px-6 py-4">
+        {checkedMessageIds.size > 0 ? (
+          <div className="flex items-center justify-between gap-2 rounded-md border bg-muted/50 px-3 py-2">
+            <p className="text-sm text-muted-foreground">
+              {checkedMessageIds.size}{" "}
+              {checkedMessageIds.size === 1
+                ? "mensagem selecionada"
+                : "mensagens selecionadas"}
+            </p>
+            <Button
+              type="button"
+              disabled={isSavingKnowledge}
+              onClick={handleSaveKnowledge}
+            >
+              {isSavingKnowledge ? "Salvando..." : "Salvar como conhecimento"}
+            </Button>
+          </div>
+        ) : null}
         {sendError ? (
           <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
             {sendError}
