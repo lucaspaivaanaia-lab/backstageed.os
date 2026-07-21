@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
+status: executing
 stopped_at: Phase 2 UI-SPEC approved
-last_updated: "2026-07-16T13:15:40.590Z"
-last_activity: "2026-07-16 -- Phase 05 fully closed: AUTH-06/07/08 all runtime-verified via quick tasks 260716-au8/b8w/bjk (clients+profiles+pm_clients GRANTs, AUTH-08 fixture-count test fix)"
+last_updated: "2026-07-21T20:43:03.837Z"
+last_activity: 2026-07-21 -- Phase 02 planning complete
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 10
+  total_plans: 16
   completed_plans: 10
   percent: 33
 ---
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-07-08)
 
 Phase: 05 (access-roles) — COMPLETE
 Plan: 6 of 6 (all plans executed and summarized)
-Status: Complete. 05-06 surfaced a missing base-table `GRANT` on `public.clients` in the **local** `supabase start` Docker stack (no migration ever issued it — the pgTAP suite failed at the Postgres privilege check before RLS was even evaluated). **Verified 2026-07-16 by direct query against the hosted project (`ancfwsgyzoostoidqzqj`): production already had full grants on clients/profiles/pm_clients from provisioning — this was a local-dev/CI gap only, production was never affected.** Three follow-up quick tasks closed it for local-dev parity: 260716-au8 (clients GRANT, 0008), 260716-b8w (profiles+pm_clients GRANTs, same root cause on 2 more tables, 0009), 260716-bjk (fixed an unrelated, genuine AUTH-08 fixture-count test bug in 0003_rls_admin_unrestricted_test.sql — the unscoped `count(*)` didn't account for the 'Cliente Demo' seed row from 0002_clients_stub.sql). `npx supabase test db` now reports `ok` with zero `not ok` lines across 0001/0002/0003 — AUTH-06/AUTH-07/AUTH-08 are all verified by the local automated suite. (Overall exit code is still 1 for an unrelated cosmetic reason: `rls_helpers.sql`, a fixture helper not a test file, gets mis-picked-up by pg_prove's glob with no TAP plan — does not affect the requirement verdicts.) 05-05's authorization-gate fix (CR-01/CR-02, AUTH-09/AUTH-11) is fully closed and verified (7/7 tests, tsc clean) and is a genuine code fix independent of the grants question. Migrations 0008/0009 **were subsequently applied to the hosted project** — by the user directly, via their own separate Supabase connection (a Cowork session, outside this coding session's tool access), not by this coding session. Confirmed 2026-07-16 via `list_migrations` on `ancfwsgyzoostoidqzqj`: they show up as `20260716122549_clients_grants` and `20260716122557_profiles_pm_clients_grants` (timestamp-versioned, since they were applied through a different path than this repo's sequential `0008`/`0009` filenames). As expected, this was a safe no-op — the hosted project already had a superset of these grants from provisioning. Separately, neither this session's commits nor the pre-existing backlog have been pushed to `origin/main` (108 commits ahead as of 2026-07-16, including the correction commit) — that part remains accurate and still pending.
-Last activity: 2026-07-16 -- Phase 05 fully closed: AUTH-06/07/08 all runtime-verified via quick tasks 260716-au8/b8w/bjk (clients+profiles+pm_clients GRANTs, AUTH-08 fixture-count test fix)
+Status: Ready to execute
+Last activity: 2026-07-21 -- Phase 02 planning complete
 
 Progress: [██████████] 100% (plans this phase) — 10/10 plans complete, Phase 5 fully closed
 
