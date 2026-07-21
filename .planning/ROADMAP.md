@@ -99,7 +99,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2)*
 
-- [ ] 02-05-PLAN.md — curation: saveKnowledge Server Action + per-message checkboxes/save bar (CTX-03, CTX-04)
+- [x] 02-05-PLAN.md — curation: saveKnowledge Server Action + per-message checkboxes/save bar (CTX-03, CTX-04)
 
 **Wave 4** *(phase gate)*
 
@@ -194,7 +194,7 @@ Plans:
 | Phase | Deadline | Plans Complete | Status | Completed |
 |-------|----------|----------------|--------|-----------|
 | 1. Client Records & Isolated RAG Setup | 2026-07-11 | 4/4 | Complete   | 2026-07-13 |
-| 2. Client-Isolated AI Chat | 2026-07-18 | 4/6 | In Progress|  |
+| 2. Client-Isolated AI Chat | 2026-07-18 | 5/6 | In Progress|  |
 | 3. Content Production Kanban | 2026-07-28 | 0/? | Not started | - |
 | 4. Client Approval & Scheduling | 2026-08-07 | 0/? | Not started | - |
 | 5. Access & Roles | 2026-08-12 | 6/6 | Complete   | 2026-07-16 |
