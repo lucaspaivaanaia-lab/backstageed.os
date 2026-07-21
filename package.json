@@ -7,9 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test lib/security/*.test.ts"
+    "test": "node --test lib/security/*.test.ts lib/chat/*.test.ts lib/tropicalia/*.test.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.112.4",
     "@hookform/resolvers": "^5.4.0",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.110.0",
