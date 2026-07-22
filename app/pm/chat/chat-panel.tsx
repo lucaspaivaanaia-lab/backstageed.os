@@ -38,8 +38,9 @@ type ChatPanelProps = {
 const SEND_ERROR =
   "Não foi possível enviar sua mensagem. Verifique sua conexão e tente novamente.";
 const INTERRUPTED_ERROR = "A resposta foi interrompida. Tente novamente.";
+// Nenhum arquivo de referencia (client_files vazio) -> badge degradado.
 const DEGRADED_NOTICE =
-  "Busca de contexto indisponível — respostas usam apenas o briefing do cliente.";
+  "Nenhum arquivo de referência — respostas usam apenas o briefing do cliente.";
 const SAVE_SUCCESS =
   "Conhecimento salvo. As mensagens selecionadas foram enviadas para a base de conhecimento do cliente.";
 const SAVE_ERROR = "Não foi possível salvar o conhecimento. Tente novamente.";

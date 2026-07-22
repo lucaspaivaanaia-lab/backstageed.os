@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import { getAnthropicClient } from "@/lib/anthropic/client";
-import { searchTropicaliaProject } from "@/lib/tropicalia/client";
 import { assembleSystemPrompt } from "@/lib/chat/assemble-prompt";
 import { sendMessageSchema } from "@/lib/validation/chat";
 
@@ -8,16 +7,17 @@ import { sendMessageSchema } from "@/lib/validation/chat";
 export const runtime = "nodejs";
 
 /**
- * Streaming chat send flow (CTX-01, CTX-02, CTX-05). resolve -> retrieve ->
- * assemble -> stream -> persist, all in this single Route Handler — the
- * ONLY chat-send flow in this phase (02-RESEARCH.md Pattern 2).
+ * Streaming chat send flow (CTX-01, CTX-02, CTX-05). resolve -> fetch
+ * client_files -> assemble -> stream -> persist, all in this single Route
+ * Handler — the ONLY chat-send flow in this phase (02-RESEARCH.md
+ * Pattern 2).
  *
- * T-2-01 (mitigate): `tropicalia_project_id` is derived ONLY from an
- * RLS-scoped `.eq("id", clientId).single()` read below. The request body
- * NEVER carries a project id — accepting one from client input would make
- * the isolation boundary tamperable (02-RESEARCH.md Anti-Patterns). An
- * empty/errored lookup 403s; it never falls back to a shared/default
- * project.
+ * T-hnm-01 (mitigate): `clientId` is only ever used as the RLS-scoped
+ * `.eq("id", clientId).single()` filter below. The request body NEVER
+ * carries file content directly — client_files are always re-fetched
+ * server-side via the SAME RLS-scoped client, never trusted from the
+ * caller. An empty/errored lookup 403s; it never falls back to a
+ * shared/default client's files.
  */
 export async function POST(request: Request) {
   let body: unknown;
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
   const { data: client, error: clientError } = await supabase
     .from("clients")
     .select(
-      "id, name, tropicalia_project_id, objective, tone_of_voice, target_audience, content_pillars"
+      "id, name, objective, tone_of_voice, target_audience, content_pillars"
     )
     .eq("id", clientId)
     .single();
@@ -60,23 +60,21 @@ export async function POST(request: Request) {
   }
 
   // D-06/D-07: degraded mode is the SAME code path as normal mode — just an
-  // empty chunk list, never a separate branch, never a fallback to a
-  // shared/default project (Anti-Pattern). A transient Tropicalia failure
-  // degrades this turn only; it never crashes the chat (Pitfall #6).
-  let chunks: { document: string }[] = [];
-  if (client.tropicalia_project_id && process.env.TROPICALIA_API_KEY) {
-    try {
-      const retrieved = await searchTropicaliaProject(
-        client.tropicalia_project_id,
-        content
-      );
-      chunks = retrieved.map((chunk) => ({
-        document: typeof chunk.document === "string" ? chunk.document : "",
-      }));
-    } catch {
-      chunks = [];
-    }
-  }
+  // empty files list, never a separate branch, never a fallback to a
+  // shared/default client's files. client_files is fetched via the SAME
+  // RLS-scoped `supabase` client used for `client` above — never
+  // `createAdminClient()` — so isolation is enforced by
+  // `client_files_select_scoped` (T-hnm-01/T-hnm-04), not by this route's
+  // own filter.
+  const { data: clientFiles } = await supabase
+    .from("client_files")
+    .select("filename, content")
+    .eq("client_id", clientId);
+
+  const files = (clientFiles ?? []).map((f) => ({
+    filename: f.filename,
+    content: f.content,
+  }));
 
   const { data: history } = await supabase
     .from("messages")
@@ -96,7 +94,7 @@ export async function POST(request: Request) {
     });
   }
 
-  const system = assembleSystemPrompt(client, chunks);
+  const system = assembleSystemPrompt(client, files);
   const anthropic = getAnthropicClient();
   const stream = anthropic.messages.stream({
     model: process.env.ANTHROPIC_CHAT_MODEL ?? "claude-sonnet-4-5",
@@ -114,8 +112,8 @@ export async function POST(request: Request) {
   const encoder = new TextEncoder();
   const readable = new ReadableStream({
     async start(controller) {
-      // CTX-05 has no degraded-mode equivalent — an Anthropic failure is NOT
-      // swallowed the way a Tropicalia failure is above; it propagates.
+      // CTX-05 has no degraded-mode equivalent — an Anthropic streaming
+      // failure is never swallowed; it always propagates to the client.
       try {
         for await (const event of stream) {
           if (

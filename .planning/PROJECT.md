@@ -16,7 +16,7 @@ Um PM consegue produzir conteúdo para um cliente específico com IA que só con
 
 ### Active
 
-- [ ] PM consegue conversar com IA sobre um cliente específico, com contexto isolado daquele cliente (RAG via Tropicalia, 1 project por cliente) — client-level Tropicalia project provisioning wired end-to-end in Phase 1; the chat itself is not yet built
+- [ ] PM consegue conversar com IA sobre um cliente específico, com contexto isolado daquele cliente (arquivos do cliente em `public.client_files`, RLS-scoped por client_id, injeção direta no prompt — migrado de Tropicalia em 2026-07-22)
 - [ ] PM controla manualmente o que vira conhecimento permanente do cliente (curadoria explícita — nada é salvo automaticamente no RAG)
 - [ ] PM consegue criar um card de conteúdo que percorre o fluxo: briefing → produção → revisão interna → aprovação do cliente → agendamento
 - [ ] Um card pode representar um pacote de conteúdo (ex: campanha com múltiplas peças relacionadas), não só um post isolado
@@ -52,19 +52,20 @@ Um PM consegue produzir conteúdo para um cliente específico com IA que só con
 
 - **Timeline**: Data alvo de 30/09/2026 para ter uma primeira versão funcionando — pressiona o cronograma, mas sem detalhes adicionais sobre o evento/compromisso por trás da data.
 - **Tech stack**: Next.js (App Router) + Supabase (Postgres, Auth, RLS, Storage) + Vercel + GitHub — já definido, não é uma decisão em aberto.
-- **RAG**: Tropicalia API (tropicalia.dev), 1 project por cliente, `generate_answer: false` — a geração de resposta é sempre feita pela Claude API, não pela Tropicalia.
+- **RAG**: arquivos do cliente (PDF/TXT/MD/DOCX, ~3 por cliente) são extraídos para texto puro no upload e armazenados diretamente em `public.client_files` no Supabase — sem embeddings/vetor, sem serviço externo. O conteúdo completo de todos os arquivos do cliente ativo é injetado no system prompt a cada turno; a geração de resposta é sempre feita pela Claude API. (Migrado de Tropicalia em 2026-07-22 — ver Key Decisions.)
 - **Storage de mídia**: Google Drive API para arquivos pesados (imagem, vídeo, PDF) — dados estruturados (briefing, status, comentários, histórico) ficam no Supabase.
-- **Isolamento de contexto**: precisa ser estrutural (project separado por cliente na Tropicalia), não um filtro — requisito não-negociável motivado pelo problema real de vazamento de contexto no ChatGPT compartilhado.
+- **Isolamento de contexto**: precisa ser estrutural, não um filtro — requisito não-negociável motivado pelo problema real de vazamento de contexto no ChatGPT compartilhado. Mecanismo atual: RLS scoping de `client_files` por `client_id` no Postgres (`is_admin()`/`pm_assigned_clients()`), a mesma camada de multi-tenancy usada por todas as outras tabelas do sistema.
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| RAG isolado por cliente via project separado na Tropicalia (não filtro) | Vazamento de contexto entre clientes no ChatGPT compartilhado é uma das três dores centrais motivadoras do projeto — precisa ser estruturalmente impossível | Validated in Phase 1 (2026-07-13) — provisioning wired end-to-end (POST /v1/projects on client creation, `public_id` stored as `tropicalia_project_id`); success path awaiting Juliano's real `TROPICALIA_API_KEY`, key-absent fallback confirmed working |
+| RAG isolado por cliente via project separado na Tropicalia (não filtro) | Vazamento de contexto entre clientes no ChatGPT compartilhado é uma das três dores centrais motivadoras do projeto — precisa ser estruturalmente impossível | Superseded 2026-07-22 (ver linha abaixo) — provisioning chegou a ser wired end-to-end em Phase 1 (POST /v1/projects on client creation, `public_id` stored as `tropicalia_project_id`), mas nunca chegou a rodar com uma key real de produção antes da migração |
+| Migração do RAG de Tropicalia para armazenamento direto em Supabase (`client_files`), com injeção completa de conteúdo no prompt, sem embeddings/vetor | Mudança de modelo de negócio da Tropicalia confirmada em reunião com o fundador; volume real por cliente é baixo (~3 arquivos), tornando embeddings desnecessários; simplicidade operacional e ausência de latência de indexação assíncrona superam o retrieval vetorial para esse volume. O isolamento estrutural (requisito não-negociável) é preservado via RLS scoping de `client_files` por `client_id`, no lugar de um project separado por cliente | 2026-07-22 |
 | Curadoria manual de memória (PM gera .md e faz upload manual pro RAG) | Evita que erros de conversa virem memória permanente sem controle | — Pending |
 | Supabase RLS para multi-tenancy | PM/cliente/admin com escopos de acesso diferentes, sem lógica de autorização duplicada na aplicação | — Pending |
 | Google Drive como storage de mídia, Supabase como fonte de dados estruturados | Evita duplicar armazenamento de arquivos pesados; mantém histórico/estado estruturado consultável | — Pending |
-| Claude API com prompt montado no servidor (Tropicalia só recupera contexto) | Controle total de tom, instrução de sistema e personalização por cliente, fora da camada de RAG | — Pending |
+| Claude API com prompt montado no servidor (client_files só fornece o contexto injetado) | Controle total de tom, instrução de sistema e personalização por cliente, fora da camada de armazenamento de contexto | — Pending |
 | Card pode representar pacote de conteúdo, não só post único | Reflete como PMs realmente trabalham (campanhas com múltiplas peças relacionadas avançando juntas) | — Pending |
 | Agendamento v1 = registro de data/hora + status "pronto para publicar", sem integração de publicação | Publicação automática via API de redes sociais é integração futura mapeada, não bloqueia o processo central | — Pending |
 | Self-signup com aprovação do admin (PM apenas) | Evita que Juliano precise criar manualmente cada conta de PM, mas mantém controle de quem entra | — Pending |
@@ -90,4 +91,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-13 after Phase 1 completion*
+*Last updated: 2026-07-22 after RAG migration from Tropicalia to Supabase client_files (quick task 260722-hnm)*

@@ -3,13 +3,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { clientCreateSchema, briefingSchema } from "@/lib/validation/clients";
-import { createTropicaliaProject } from "@/lib/tropicalia/client";
 
 type CreateClientResult = { success: true; clientId: string } | { error: string };
 
 /**
  * Privileged multi-step client-creation transaction: clients insert +
- * pm_clients insert + conditional Tropicalia provisioning.
+ * pm_clients insert.
  *
  * Authorization is an APP-LAYER check (profiles.status === "approved" &&
  * role in ("admin","pm")) performed via the RLS-scoped `createClient()`
@@ -71,20 +70,6 @@ export async function createClientRecord(
     .from("pm_clients")
     .insert(pmIds.map((pm_id) => ({ pm_id, client_id: client.id })));
 
-  // D-11: null-check the key first — silent skip if absent, no attempt,
-  // no error. D-08: a Tropicalia failure never rolls back client creation.
-  if (process.env.TROPICALIA_API_KEY) {
-    try {
-      const project = await createTropicaliaProject(client.name);
-      await admin
-        .from("clients")
-        .update({ tropicalia_project_id: project.public_id })
-        .eq("id", client.id);
-    } catch {
-      // D-08: tropicalia_project_id stays null; UI shows "Pendente" + retry.
-    }
-  }
-
   return { success: true, clientId: client.id };
 }
 
@@ -133,14 +118,15 @@ type ActionResult = { success: true } | { error: string };
 
 /**
  * Update a client's strategic briefing (CLI-04). D-10: works regardless of
- * RAG readiness — this function never reads/writes `tropicalia_project_id`.
+ * RAG/context readiness — this function never reads/writes any client-files
+ * or context-related column.
  *
  * Uses the RLS-SCOPED `createClient()` (NOT `createAdminClient()`) — the
  * `clients_update_scoped` policy (Plan 01-02) is the actual security
  * boundary here, correctly allowing Admin OR any PM already in
  * `pm_assigned_clients()` for this client. Only the zod-parsed fields are
  * ever passed to `.update()` — never a raw `formData` spread — so a caller
- * cannot smuggle `tropicalia_project_id`/`id` into the payload (T-01-15).
+ * cannot smuggle unexpected columns/`id` into the payload (T-01-15).
  */
 export async function updateBriefing(
   clientId: string,
@@ -235,49 +221,4 @@ export async function assignPms(
   }
 
   return { success: true };
-}
-
-/**
- * Manual retry of Tropicalia project provisioning (D-09 — never an
- * automatic background job, only a user-triggered button click). Uses the
- * RLS-scoped `createClient()`, relying on `clients_update_scoped` to already
- * grant the caller access — never `createAdminClient()`.
- *
- * D-11: null-checks `process.env.TROPICALIA_API_KEY` BEFORE ever calling
- * `createTropicaliaProject()` — key-absent returns early with a distinct
- * message, never attempting the call. D-08: any provisioning failure once
- * the key IS present returns the exact catch-block error string below.
- */
-export async function retryTropicaliaProvisioning(
-  clientId: string
-): Promise<ActionResult> {
-  const supabase = await createClient();
-  const { data: client, error: fetchError } = await supabase
-    .from("clients")
-    .select("id, name")
-    .eq("id", clientId)
-    .single();
-  if (fetchError || !client) return { error: "Cliente não encontrado." };
-
-  if (!process.env.TROPICALIA_API_KEY) return { error: "RAG setup pendente." };
-
-  try {
-    const project = await createTropicaliaProject(client.name);
-    const { error: updateError } = await supabase
-      .from("clients")
-      .update({ tropicalia_project_id: project.public_id })
-      .eq("id", clientId);
-    if (updateError) {
-      return {
-        error:
-          "Não foi possível salvar as alterações. Verifique sua conexão e tente novamente.",
-      };
-    }
-    return { success: true };
-  } catch {
-    return {
-      error:
-        "Não foi possível provisionar o projeto Tropicalia agora. O cliente foi criado normalmente — tente novamente quando quiser.",
-    };
-  }
 }

@@ -40,17 +40,20 @@ test("assembleSystemPrompt: NEGATIVE - never includes another client's name/fiel
   assert.doesNotMatch(promptB, /Crescer no LinkedIn/);
 });
 
-test("assembleSystemPrompt: POSITIVE - empty retrievedChunks still yields a briefing-inclusive prompt (degraded mode, D-07)", () => {
+test("assembleSystemPrompt: POSITIVE - empty files list still yields a briefing-inclusive prompt (degraded mode, D-07)", () => {
   const prompt = assembleSystemPrompt(CLIENT_A, []);
   assert.match(prompt, /Cliente A/);
   assert.match(prompt, /Crescer no LinkedIn/);
 });
 
-test("assembleSystemPrompt: POSITIVE - non-empty chunk list appends the chunk text (same code path, no separate branch)", () => {
-  const withChunks = assembleSystemPrompt(CLIENT_A, [{ document: "Trecho recuperado X" }]);
-  const withoutChunks = assembleSystemPrompt(CLIENT_A, []);
-  assert.match(withChunks, /Trecho recuperado X/);
-  assert.doesNotMatch(withoutChunks, /Trecho recuperado X/);
+test("assembleSystemPrompt: POSITIVE - non-empty files list appends filename + content (same code path, no separate branch)", () => {
+  const withFiles = assembleSystemPrompt(CLIENT_A, [
+    { filename: "notas.md", content: "Trecho recuperado X" },
+  ]);
+  const withoutFiles = assembleSystemPrompt(CLIENT_A, []);
+  assert.match(withFiles, /notas\.md/);
+  assert.match(withFiles, /Trecho recuperado X/);
+  assert.doesNotMatch(withoutFiles, /Trecho recuperado X/);
 });
 
 test("assembleSystemPrompt: POSITIVE - null briefing fields are omitted cleanly, not rendered as 'null'", () => {

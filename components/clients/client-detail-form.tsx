@@ -3,16 +3,12 @@
 import { useState, useTransition } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CheckCircle2, Clock, XIcon } from "lucide-react";
+import { XIcon } from "lucide-react";
 import {
   briefingSchema,
   type BriefingInput,
 } from "@/lib/validation/clients";
-import {
-  updateBriefing,
-  assignPms,
-  retryTropicaliaProvisioning,
-} from "@/lib/actions/clients";
+import { updateBriefing, assignPms } from "@/lib/actions/clients";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,6 +31,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { PageTitle, SectionTitle } from "@/components/layout/page-shell";
+import { ClientFilesSection } from "@/components/clients/client-files-section";
+import type { ClientFileRow } from "@/lib/actions/client-files";
 
 type PmRosterEntry = { id: string; email: string };
 
@@ -46,13 +44,12 @@ type ClientDetailFormProps = {
     toneOfVoice: string | null;
     targetAudience: string | null;
     contentPillars: string[];
-    tropicaliaProjectId: string | null;
   };
   pmRoster: PmRosterEntry[];
   assignedPmIds: string[];
   assignedPmNames: Record<string, string>;
   viewerIsAdmin: boolean;
-  canRetry: boolean;
+  initialFiles: ClientFileRow[];
 };
 
 /**
@@ -60,8 +57,8 @@ type ClientDetailFormProps = {
  * data — this component performs no data fetching itself). Renders, in
  * this locked order (UI-SPEC Visual Focal Points): Display heading (client
  * name) -> "Briefing estratégico" (CLI-04, D-04, D-05, D-06 -- single form,
- * no wizard) -> "PMs atribuídos" (CLI-02, Admin-only edit) -> RAG status
- * (D-08/D-09/D-11).
+ * no wizard) -> "PMs atribuídos" (CLI-02, Admin-only edit) -> "Arquivos do
+ * cliente" (CLI-03/CTX-01..05, Task 5 -- upload/list/remove client_files).
  */
 export function ClientDetailForm({
   client,
@@ -69,7 +66,7 @@ export function ClientDetailForm({
   assignedPmIds,
   assignedPmNames,
   viewerIsAdmin,
-  canRetry,
+  initialFiles,
 }: ClientDetailFormProps) {
   // -- Briefing form (updateBriefing) --
   const [isBriefingPending, startBriefingTransition] = useTransition();
@@ -151,22 +148,6 @@ export function ClientDetailForm({
       const result = await assignPms(client.id, pmIds);
       if ("error" in result) {
         setPmServerError(result.error);
-      }
-    });
-  }
-
-  // -- RAG retry (retryTropicaliaProvisioning) --
-  const [isRetryPending, startRetryTransition] = useTransition();
-  const [retryServerError, setRetryServerError] = useState<string | null>(
-    null
-  );
-
-  function retryProvisioning() {
-    setRetryServerError(null);
-    startRetryTransition(async () => {
-      const result = await retryTropicaliaProvisioning(client.id);
-      if ("error" in result) {
-        setRetryServerError(result.error);
       }
     });
   }
@@ -381,42 +362,7 @@ export function ClientDetailForm({
         ) : null}
       </section>
 
-      <section className="flex flex-col gap-4">
-        <SectionTitle>RAG</SectionTitle>
-
-        {client.tropicaliaProjectId ? (
-          <Badge variant="secondary" className="w-fit">
-            <CheckCircle2 /> Pronto
-          </Badge>
-        ) : (
-          <div className="flex flex-col gap-2">
-            <Badge variant="outline" className="w-fit">
-              <Clock /> Pendente
-            </Badge>
-            {canRetry ? (
-              <Button
-                type="button"
-                variant="outline"
-                className="w-fit"
-                onClick={retryProvisioning}
-                disabled={isRetryPending}
-              >
-                {isRetryPending ? "Tentando..." : "Tentar novamente"}
-              </Button>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                RAG setup pendente.
-              </p>
-            )}
-          </div>
-        )}
-
-        {retryServerError ? (
-          <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-            {retryServerError}
-          </p>
-        ) : null}
-      </section>
+      <ClientFilesSection clientId={client.id} initialFiles={initialFiles} />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { listPmRoster, resolvePmNames } from "@/lib/actions/clients";
+import { listClientFiles } from "@/lib/actions/client-files";
 import { ClientDetailForm } from "@/components/clients/client-detail-form";
 
 type PageProps = { params: Promise<{ id: string }> };
@@ -26,7 +27,7 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
     supabase
       .from("clients")
       .select(
-        "id, name, objective, tone_of_voice, target_audience, content_pillars, tropicalia_project_id"
+        "id, name, objective, tone_of_voice, target_audience, content_pillars"
       )
       .eq("id", id)
       .single(),
@@ -46,10 +47,7 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
   const assignedPmIds = (pmClientRows ?? []).map((row) => row.pm_id);
   const assignedPmNames = await resolvePmNames(assignedPmIds);
   const pmRoster = await listPmRoster();
-
-  const canRetry =
-    Boolean(process.env.TROPICALIA_API_KEY) &&
-    client.tropicalia_project_id === null;
+  const initialFiles = await listClientFiles(client.id);
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-8">
@@ -61,13 +59,12 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
           toneOfVoice: client.tone_of_voice,
           targetAudience: client.target_audience,
           contentPillars: client.content_pillars ?? [],
-          tropicaliaProjectId: client.tropicalia_project_id,
         }}
         pmRoster={pmRoster}
         assignedPmIds={assignedPmIds}
         assignedPmNames={assignedPmNames}
         viewerIsAdmin={profile?.role === "admin"}
-        canRetry={canRetry}
+        initialFiles={initialFiles}
       />
     </div>
   );

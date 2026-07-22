@@ -1,7 +1,7 @@
 /**
  * Pure, I/O-free Q/A transcript -> markdown packaging for the save-to-
  * knowledge Server Action (app/pm/chat/actions.ts, 02-05). Intentionally
- * free of any Supabase/Tropicalia client import so this module can be
+ * free of any Supabase client import so this module can be
  * imported by its sibling `build-knowledge-markdown.test.ts` via a
  * relative path and exercised with Node's built-in test runner — no live
  * DB, no service-role key (02-RESEARCH.md Pattern 3, CTX-03/CTX-04).

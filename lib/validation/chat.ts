@@ -5,14 +5,12 @@ import { z } from "zod";
  * file (not an edit to lib/validation/clients.ts, which owns the client
  * creation/briefing schemas) per 02-02-PLAN.md's interfaces section, to
  * avoid a file-ownership conflict between plans. Enforced BEFORE any
- * privileged Supabase/Tropicalia/Claude call (Security Domain V5 input
- * validation).
+ * privileged Supabase/Claude call (Security Domain V5 input validation).
  */
 export const sendMessageSchema = z.object({
   clientId: z.string().uuid({ message: "Cliente inválido." }),
-  // .max(4000) bounds the Claude/Tropicalia payload size per 02-RESEARCH.md
-  // Security Domain V5 ("reasonable max length to bound Claude/Tropicalia
-  // payload size").
+  // .max(4000) bounds the Claude payload size per 02-RESEARCH.md Security
+  // Domain V5 ("reasonable max length to bound Claude payload size").
   content: z
     .string()
     .trim()

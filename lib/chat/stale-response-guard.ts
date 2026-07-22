@@ -1,7 +1,7 @@
 /**
  * Pure client-switch stale-response guard for the chat panel
  * (app/pm/chat/chat-panel.tsx, 02-03/02-04). Intentionally free of any
- * Supabase/Anthropic/Tropicalia client import or I/O so this module can be
+ * Supabase/Anthropic client import or I/O so this module can be
  * imported by its sibling `stale-response-guard.test.ts` via a relative
  * path and exercised with Node's built-in test runner — no live DB, no
  * Docker (02-RESEARCH.md Pattern 4, Pitfall #3, CTX-02).

@@ -25,16 +25,16 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [ ] **CLI-01**: Admin or PM can create a new client record
 - [ ] **CLI-02**: Admin can assign one or more PMs to a client
-- [ ] **CLI-03**: Each client record stores a Tropicalia `project_id`, isolating that client's RAG context from all others
+- [ ] **CLI-03**: Each client's uploaded files (PDF/TXT/MD/DOCX) are stored as extracted text in `public.client_files`, RLS-scoped by `client_id`, isolating that client's context from all others (migrated from Tropicalia project provisioning on 2026-07-22)
 - [ ] **CLI-04**: PM can fill and edit a client's structured strategic briefing (objective, tone of voice, target audience, content pillars)
 
 ### Client-Isolated AI Context (CTX)
 
-- [ ] **CTX-01**: PM can chat with AI about a specific client, with context limited to that client's Tropicalia project
+- [ ] **CTX-01**: PM can chat with AI about a specific client, with context limited to that client's `client_files` rows (RLS-scoped, injected directly into the prompt)
 - [ ] **CTX-02**: Switching the active client in the chat switches the entire knowledge base consulted — no context bleeds from one client to another
 - [ ] **CTX-03**: PM can manually select a piece of a conversation to save as permanent knowledge for the client — nothing is saved automatically
-- [ ] **CTX-04**: Saved knowledge is written as a curated `.md` file and uploaded to the client's Tropicalia project via its upload endpoint
-- [ ] **CTX-05**: AI responses are generated via the Claude API using context retrieved from Tropicalia (`generate_answer: false`), with the prompt assembled server-side for tone/system-instruction control
+- [ ] **CTX-04**: Saved knowledge is written as a curated `.md` file and inserted directly as a new row in the client's `client_files` (Supabase) — no external upload endpoint
+- [ ] **CTX-05**: AI responses are generated via the Claude API using the client's full `client_files` content injected server-side, with the system prompt assembled server-side for tone/system-instruction control
 
 ### Content Production — Kanban (KAN)
 
@@ -150,3 +150,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 ---
 *Requirements defined: 2026-07-01*
 *Last updated: 2026-07-08 after stakeholder reprioritization — phase order changed (Access & Roles moved from Phase 1 to Phase 5; Client Records moved from Phase 2 to Phase 1). AUTH-01..03 reworded, AUTH-09..11 added on 2026-07-01 (Client accounts are PM-issued, not self-signup).*
+*2026-07-22: CLI-03, CTX-01, CTX-04, CTX-05 reworded to describe the client_files/Supabase mechanism (migrated from Tropicalia) — the requirements themselves are unchanged, only the described mechanism.*
