@@ -220,16 +220,23 @@ export function ChatPanel({ clients }: ChatPanelProps) {
         setMessages((prev) => {
           const next = [...prev];
           const last = next[next.length - 1];
-          if (last?.streaming && last.content === "") {
-            next.pop();
+          if (last?.streaming) {
+            if (last.content === "") {
+              next.pop();
+            } else {
+              next[next.length - 1] = { ...last, streaming: false };
+            }
           }
           return next;
         });
       }
     } finally {
-      if (isStillActive()) {
-        setIsSending(false);
-      }
+      // isSending reflects "a request currently owned by this component is
+      // in flight" — not scoped per-client. A client switch always
+      // terminates that ownership (via the abort above), so this must
+      // reset unconditionally; gating it on isStillActive() would leave
+      // isSending permanently stuck after any mid-stream client switch.
+      setIsSending(false);
     }
   }
 

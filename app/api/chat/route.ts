@@ -20,7 +20,12 @@ export const runtime = "nodejs";
  * project.
  */
 export async function POST(request: Request) {
-  const body = await request.json();
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return new Response("Dados inválidos.", { status: 400 });
+  }
   const parsed = sendMessageSchema.safeParse(body);
   if (!parsed.success) {
     return new Response("Dados inválidos.", { status: 400 });
@@ -80,10 +85,16 @@ export async function POST(request: Request) {
     .order("created_at", { ascending: true });
 
   // Persist the user's turn BEFORE generating, so it survives a mid-stream
-  // drop or a Claude call failure.
-  await supabase
+  // drop or a Claude call failure. Fail the request if this insert fails —
+  // proceeding would generate a reply with no matching question in history.
+  const { error: userInsertError } = await supabase
     .from("messages")
     .insert({ client_id: clientId, role: "user", content });
+  if (userInsertError) {
+    return new Response("Não foi possível salvar sua mensagem.", {
+      status: 500,
+    });
+  }
 
   const system = assembleSystemPrompt(client, chunks);
   const anthropic = getAnthropicClient();
@@ -105,22 +116,32 @@ export async function POST(request: Request) {
     async start(controller) {
       // CTX-05 has no degraded-mode equivalent — an Anthropic failure is NOT
       // swallowed the way a Tropicalia failure is above; it propagates.
-      for await (const event of stream) {
-        if (
-          event.type === "content_block_delta" &&
-          event.delta.type === "text_delta"
-        ) {
-          controller.enqueue(encoder.encode(event.delta.text));
+      try {
+        for await (const event of stream) {
+          if (
+            event.type === "content_block_delta" &&
+            event.delta.type === "text_delta"
+          ) {
+            controller.enqueue(encoder.encode(event.delta.text));
+          }
         }
+        const finalMessage = await stream.finalMessage();
+        const textBlock = finalMessage.content.find((b) => b.type === "text");
+        const { error: assistantInsertError } = await supabase
+          .from("messages")
+          .insert({
+            client_id: clientId,
+            role: "assistant",
+            content: textBlock?.type === "text" ? textBlock.text : "",
+          });
+        if (assistantInsertError) {
+          console.error("chat: assistant turn insert failed", assistantInsertError);
+        }
+        controller.close();
+      } catch (err) {
+        console.error("chat: stream failed", err);
+        controller.error(err);
       }
-      const finalMessage = await stream.finalMessage();
-      const textBlock = finalMessage.content.find((b) => b.type === "text");
-      await supabase.from("messages").insert({
-        client_id: clientId,
-        role: "assistant",
-        content: textBlock?.type === "text" ? textBlock.text : "",
-      });
-      controller.close();
     },
   });
 
