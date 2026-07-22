@@ -10,7 +10,15 @@ import { createClient } from "@/lib/supabase/server";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/reset-password";
+  const rawNext = searchParams.get("next");
+  // Only allow a same-origin relative path — `next` comes from a public
+  // query param, so an unvalidated value here is an open-redirect (CWE-601):
+  // "//evil.com" or "https://evil.com" would otherwise bounce a legitimate
+  // code exchange off this domain to an attacker-controlled site.
+  const next =
+    rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//")
+      ? rawNext
+      : "/reset-password";
 
   if (code) {
     const supabase = await createClient();
