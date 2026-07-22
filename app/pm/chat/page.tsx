@@ -7,26 +7,29 @@ import { ChatPanel } from "./chat-panel";
  * client-switcher roster, no separate unscoped query (mirrors
  * app/pm/clients/page.tsx's "zero additional app-layer filtering" comment).
  *
- * The `"use client"` panel cannot read server env, so RAG availability is
- * computed HERE, on the server, exactly like the `canRetry` prop in
- * components/clients/client-detail-form.tsx. This server-resolved `hasRag`
- * is the ONLY data path that drives the degraded-mode badge — it must never
- * be re-derived client-side from `process.env` (T-2-04).
+ * The `"use client"` panel never computes context availability itself —
+ * `hasRag` is resolved HERE, on the server, from the EXISTENCE of at least
+ * one row in `public.client_files` per client (quick task 260722-hnm — no
+ * external RAG service, no env var). This server-resolved `hasRag` is the
+ * ONLY data path that drives the degraded-mode badge (T-2-04).
  */
 export default async function PmChatPage() {
   const supabase = await createClient();
 
-  const { data: clients } = await supabase
-    .from("clients")
-    .select("id, name, tropicalia_project_id")
-    .order("name", { ascending: true });
+  const [{ data: clients }, { data: fileRows }] = await Promise.all([
+    supabase
+      .from("clients")
+      .select("id, name")
+      .order("name", { ascending: true }),
+    supabase.from("client_files").select("client_id"),
+  ]);
 
-  const hasTropicaliaKey = Boolean(process.env.TROPICALIA_API_KEY);
+  const clientIdsWithFiles = new Set((fileRows ?? []).map((f) => f.client_id));
 
   const roster = (clients ?? []).map((c) => ({
     id: c.id,
     name: c.name,
-    hasRag: hasTropicaliaKey && Boolean(c.tropicalia_project_id),
+    hasRag: clientIdsWithFiles.has(c.id),
   }));
 
   return <ChatPanel clients={roster} />;
