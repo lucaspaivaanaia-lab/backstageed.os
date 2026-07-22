@@ -1,4 +1,4 @@
-// Quick task 260722-hnm: Migrar RAG de Tropicalia para Supabase -- CLI-03, T-hnm-03.
+// Quick task 260722-hnm: Migração do RAG para armazenamento direto em Supabase -- CLI-03, T-hnm-03.
 //
 // Node runtime ONLY -- import apenas em Server Actions/Route Handlers que
 // declarem `export const runtime = "nodejs"` (o mesmo runtime ja usado em

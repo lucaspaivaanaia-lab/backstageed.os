@@ -1,4 +1,4 @@
-// Quick task 260722-hnm: Migrar RAG de Tropicalia para Supabase.
+// Quick task 260722-hnm: Migração do RAG para armazenamento direto em Supabase.
 //
 // Helper de limite de arquivos por cliente, compartilhado entre o upload
 // direto (lib/actions/client-files.ts, Task 5) e a curadoria manual do chat
