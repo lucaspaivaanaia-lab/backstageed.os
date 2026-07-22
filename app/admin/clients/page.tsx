@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { CheckCircle2, Clock } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { resolvePmNames } from "@/lib/actions/clients";
 import { Button } from "@/components/ui/button";
@@ -16,7 +15,6 @@ import {
 type ClientRow = {
   id: string;
   name: string;
-  tropicalia_project_id: string | null;
   objective: string | null;
   tone_of_voice: string | null;
   target_audience: string | null;
@@ -35,7 +33,7 @@ export default async function AdminClientsPage() {
   const { data } = await supabase
     .from("clients")
     .select(
-      "id, name, tropicalia_project_id, objective, tone_of_voice, target_audience, content_pillars, pm_clients(pm_id)"
+      "id, name, objective, tone_of_voice, target_audience, content_pillars, pm_clients(pm_id)"
     );
 
   const clients = (data ?? []) as ClientRow[];
@@ -78,7 +76,6 @@ export default async function AdminClientsPage() {
               <TableHead>Nome</TableHead>
               <TableHead>PMs atribuídos</TableHead>
               <TableHead>Briefing</TableHead>
-              <TableHead>RAG</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -110,17 +107,6 @@ export default async function AdminClientsPage() {
                       <Badge variant="outline">Vazio</Badge>
                     ) : (
                       <Badge variant="secondary">Preenchido</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {client.tropicalia_project_id ? (
-                      <Badge variant="secondary">
-                        <CheckCircle2 /> Pronto
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline">
-                        <Clock /> Pendente
-                      </Badge>
                     )}
                   </TableCell>
                 </TableRow>

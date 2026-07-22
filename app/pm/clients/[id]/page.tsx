@@ -26,7 +26,7 @@ export default async function PmClientDetailPage({ params }: PageProps) {
     supabase
       .from("clients")
       .select(
-        "id, name, objective, tone_of_voice, target_audience, content_pillars, tropicalia_project_id"
+        "id, name, objective, tone_of_voice, target_audience, content_pillars"
       )
       .eq("id", id)
       .single(),
@@ -47,10 +47,6 @@ export default async function PmClientDetailPage({ params }: PageProps) {
   const assignedPmNames = await resolvePmNames(assignedPmIds);
   const pmRoster = await listPmRoster();
 
-  const canRetry =
-    Boolean(process.env.TROPICALIA_API_KEY) &&
-    client.tropicalia_project_id === null;
-
   return (
     <PageShell>
       <ClientDetailForm
@@ -61,13 +57,11 @@ export default async function PmClientDetailPage({ params }: PageProps) {
           toneOfVoice: client.tone_of_voice,
           targetAudience: client.target_audience,
           contentPillars: client.content_pillars ?? [],
-          tropicaliaProjectId: client.tropicalia_project_id,
         }}
         pmRoster={pmRoster}
         assignedPmIds={assignedPmIds}
         assignedPmNames={assignedPmNames}
         viewerIsAdmin={profile?.role === "admin"}
-        canRetry={canRetry}
       />
     </PageShell>
   );
