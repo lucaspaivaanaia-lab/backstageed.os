@@ -57,7 +57,7 @@ export default async function PmClientsPage() {
       <PageTitle
         action={
           <Button asChild>
-            <Link href="./new">Criar cliente</Link>
+            <Link href="/pm/clients/new">Criar cliente</Link>
           </Button>
         }
       >
@@ -70,7 +70,7 @@ export default async function PmClientsPage() {
           description="Crie o primeiro cliente para organizar produção de conteúdo e RAG isolado por cliente."
           action={
             <Button asChild>
-              <Link href="./new">Criar cliente</Link>
+              <Link href="/pm/clients/new">Criar cliente</Link>
             </Button>
           }
         />
@@ -100,7 +100,10 @@ export default async function PmClientsPage() {
               return (
                 <TableRow key={client.id}>
                   <TableCell>
-                    <Link href={`./${client.id}`} className="hover:underline">
+                    <Link
+                      href={`/pm/clients/${client.id}`}
+                      className="hover:underline"
+                    >
                       {client.name}
                     </Link>
                   </TableCell>

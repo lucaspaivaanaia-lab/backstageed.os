@@ -7,6 +7,9 @@ const PUBLIC_PATHS = [
   "/pending",
   "/rejected",
   "/change-password",
+  "/forgot-password",
+  "/reset-password",
+  "/auth/callback",
 ];
 
 function isPublicPath(pathname: string) {

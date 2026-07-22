@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -109,6 +110,12 @@ export default function LoginPage() {
                 {isPending ? "Entrando..." : "Entrar"}
               </Button>
             </form>
+            <Link
+              href="/forgot-password"
+              className="mt-4 block text-center text-sm text-muted-foreground hover:underline"
+            >
+              Esqueceu sua senha?
+            </Link>
           </CardContent>
         </Card>
       </div>
