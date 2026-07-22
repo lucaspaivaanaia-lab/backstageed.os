@@ -24,7 +24,8 @@ export type ClientCreateInput = z.infer<typeof clientCreateSchema>;
  * toneOfVoice/targetAudience are free-text narrative fields (single
  * textarea each). D-04: contentPillars is a structured add/remove chip
  * list. D-10: briefing editing is fully decoupled from RAG readiness — no
- * field here references `tropicalia_project_id`.
+ * field references any RAG/context-storage mechanism (client_files or
+ * otherwise) — briefing editing is fully decoupled from context readiness.
  */
 export const briefingSchema = z.object({
   objective: z.string().trim().max(5000).optional().nullable(),

@@ -9,9 +9,9 @@ import Anthropic from "@anthropic-ai/sdk";
  *
  * `ANTHROPIC_API_KEY` must NOT carry a `NEXT_PUBLIC_` prefix.
  *
- * Claude (not Tropicalia) is always the response generator — Tropicalia
- * is retrieval/upload only, called with `generate_answer: false`
- * (see lib/tropicalia/client.ts).
+ * Claude is always the response generator — client context (files stored
+ * in public.client_files) is injected directly into the system prompt
+ * server-side (lib/chat/assemble-prompt.ts), no external RAG service.
  */
 
 let cached: Anthropic | null = null;
