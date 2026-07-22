@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { findActiveClientLogin } from "./actions";
 import { ClientAccessPanel } from "@/components/clients/client-access-panel";
+import { PageShell } from "@/components/layout/page-shell";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -30,11 +31,11 @@ export default async function PmClientAccessPage({ params }: PageProps) {
   const existingLogin = await findActiveClientLogin(client_id);
 
   return (
-    <div className="max-w-xl mx-auto px-6 py-8">
+    <PageShell width="narrow">
       <ClientAccessPanel
         clientId={client_id}
         existingLoginUserId={existingLogin?.userId ?? null}
       />
-    </div>
+    </PageShell>
   );
 }

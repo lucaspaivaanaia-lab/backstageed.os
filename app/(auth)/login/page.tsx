@@ -52,56 +52,66 @@ export default function LoginPage() {
 
   return (
     <div className="flex flex-1 items-center justify-center p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>Entrar</CardTitle>
-          <CardDescription>
-            Acesse a plataforma com seu e-mail e senha.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form action={handleSubmit} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="email">E-mail</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                disabled={isPending}
-                aria-invalid={emailError ? true : undefined}
-              />
-              {emailError ? (
-                <p className="text-sm text-destructive">{emailError}</p>
+      <div className="flex w-full max-w-sm flex-col gap-6">
+        <div className="flex flex-col items-center gap-1 text-center">
+          <span className="text-lg font-semibold tracking-tight text-primary">
+            BackstageEd.OS
+          </span>
+          <p className="text-sm text-muted-foreground">
+            Produção e gestão de conteúdo, num só lugar.
+          </p>
+        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Entrar</CardTitle>
+            <CardDescription>
+              Acesse a plataforma com seu e-mail e senha.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form action={handleSubmit} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="email">E-mail</Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  disabled={isPending}
+                  aria-invalid={emailError ? true : undefined}
+                />
+                {emailError ? (
+                  <p className="text-sm text-destructive">{emailError}</p>
+                ) : null}
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="password">Senha</Label>
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  disabled={isPending}
+                  aria-invalid={passwordError ? true : undefined}
+                />
+                {passwordError ? (
+                  <p className="text-sm text-destructive">{passwordError}</p>
+                ) : null}
+              </div>
+              {serverError ? (
+                <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                  {serverError}
+                </p>
               ) : null}
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="password">Senha</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                disabled={isPending}
-                aria-invalid={passwordError ? true : undefined}
-              />
-              {passwordError ? (
-                <p className="text-sm text-destructive">{passwordError}</p>
-              ) : null}
-            </div>
-            {serverError ? (
-              <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-                {serverError}
-              </p>
-            ) : null}
-            <Button type="submit" disabled={isPending} className="w-full">
-              {isPending ? "Entrando..." : "Entrar"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+              <Button type="submit" disabled={isPending} className="w-full">
+                {isPending ? "Entrando..." : "Entrar"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

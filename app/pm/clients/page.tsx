@@ -12,6 +12,11 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
+import {
+  PageShell,
+  PageTitle,
+  EmptyState,
+} from "@/components/layout/page-shell";
 
 type ClientRow = {
   id: string;
@@ -48,29 +53,27 @@ export default async function PmClientsPage() {
   const pmNames = await resolvePmNames(pmIds);
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-8">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-[28px] font-semibold leading-[1.2]">Clientes</h1>
-        <Button asChild>
-          <Link href="./new">Criar cliente</Link>
-        </Button>
-      </div>
-
-      {clients.length === 0 ? (
-        <div className="flex flex-col items-center gap-6 py-12 text-center">
-          <div>
-            <h2 className="text-xl font-semibold leading-[1.2]">
-              Nenhum cliente cadastrado ainda
-            </h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Crie o primeiro cliente para organizar produção de conteúdo e
-              RAG isolado por cliente.
-            </p>
-          </div>
+    <PageShell width="wide">
+      <PageTitle
+        action={
           <Button asChild>
             <Link href="./new">Criar cliente</Link>
           </Button>
-        </div>
+        }
+      >
+        Clientes
+      </PageTitle>
+
+      {clients.length === 0 ? (
+        <EmptyState
+          title="Nenhum cliente cadastrado ainda"
+          description="Crie o primeiro cliente para organizar produção de conteúdo e RAG isolado por cliente."
+          action={
+            <Button asChild>
+              <Link href="./new">Criar cliente</Link>
+            </Button>
+          }
+        />
       ) : (
         <Table>
           <TableHeader>
@@ -126,6 +129,6 @@ export default async function PmClientsPage() {
           </TableBody>
         </Table>
       )}
-    </div>
+    </PageShell>
   );
 }

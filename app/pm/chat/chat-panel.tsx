@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SectionTitle } from "@/components/layout/page-shell";
 
 type ClientOption = { id: string; name: string; hasRag: boolean };
 
@@ -286,9 +287,7 @@ export function ChatPanel({ clients }: ChatPanelProps) {
       <div className="flex-1 overflow-y-auto px-6 py-4">
         {!activeClient ? (
           <div className="flex flex-col items-center gap-2 py-12 text-center">
-            <h2 className="text-xl font-semibold leading-[1.2]">
-              Nenhum cliente selecionado
-            </h2>
+            <SectionTitle>Nenhum cliente selecionado</SectionTitle>
             <p className="text-sm text-muted-foreground">
               Selecione um cliente acima para começar a conversar.
             </p>
@@ -296,16 +295,17 @@ export function ChatPanel({ clients }: ChatPanelProps) {
         ) : (
           <div className="flex flex-col gap-4">
             {!activeClient.hasRag ? (
-              <Badge variant="outline" className="w-fit">
+              <Badge
+                variant="outline"
+                className="w-fit border-accent-foreground/20 bg-accent text-accent-foreground"
+              >
                 {DEGRADED_NOTICE}
               </Badge>
             ) : null}
 
             {messages.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-12 text-center">
-                <h2 className="text-xl font-semibold leading-[1.2]">
-                  Nenhuma mensagem ainda
-                </h2>
+                <SectionTitle>Nenhuma mensagem ainda</SectionTitle>
                 <p className="text-sm text-muted-foreground">
                   Faça uma pergunta sobre {activeClient.name} para começar.
                 </p>
@@ -323,10 +323,10 @@ export function ChatPanel({ clients }: ChatPanelProps) {
                   >
                     {message.content}
                     {message.streaming ? (
-                      <span className="ml-1 inline-flex gap-0.5 align-middle">
-                        <span className="size-1 animate-pulse rounded-full bg-muted-foreground" />
-                        <span className="size-1 animate-pulse rounded-full bg-muted-foreground" />
-                        <span className="size-1 animate-pulse rounded-full bg-muted-foreground" />
+                      <span className="ml-1 inline-flex gap-1 align-middle">
+                        <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.3s]" />
+                        <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.15s]" />
+                        <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground" />
                       </span>
                     ) : null}
                   </div>
@@ -368,14 +368,14 @@ export function ChatPanel({ clients }: ChatPanelProps) {
             )}
 
             {interrupted ? (
-              <div className="flex flex-col items-start gap-2">
-                <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+              <div className="flex flex-col items-start gap-2 rounded-md bg-destructive/10 p-3">
+                <p className="text-sm text-destructive">
                   {INTERRUPTED_ERROR}
                 </p>
                 <Button
                   type="button"
                   variant="link"
-                  className="h-auto p-0"
+                  className="h-auto p-0 text-destructive"
                   onClick={handleRetry}
                 >
                   Tentar novamente
@@ -386,9 +386,9 @@ export function ChatPanel({ clients }: ChatPanelProps) {
         )}
       </div>
 
-      <footer className="sticky bottom-0 z-10 flex flex-col gap-2 border-t bg-background px-6 py-4">
+      <footer className="sticky bottom-0 z-10 flex flex-col gap-3 border-t bg-background px-6 py-4">
         {checkedMessageIds.size > 0 ? (
-          <div className="flex items-center justify-between gap-2 rounded-md border bg-muted/50 px-3 py-2">
+          <div className="flex items-center justify-between gap-2 rounded-md border border-accent-foreground/15 bg-accent/50 px-3 py-2">
             <p className="text-sm text-muted-foreground">
               {checkedMessageIds.size}{" "}
               {checkedMessageIds.size === 1
