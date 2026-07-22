@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { listPmRoster, resolvePmNames } from "@/lib/actions/clients";
 import { ClientDetailForm } from "@/components/clients/client-detail-form";
+import { PageShell } from "@/components/layout/page-shell";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -51,7 +52,7 @@ export default async function PmClientDetailPage({ params }: PageProps) {
     client.tropicalia_project_id === null;
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-8">
+    <PageShell>
       <ClientDetailForm
         client={{
           id: client.id,
@@ -68,6 +69,6 @@ export default async function PmClientDetailPage({ params }: PageProps) {
         viewerIsAdmin={profile?.role === "admin"}
         canRetry={canRetry}
       />
-    </div>
+    </PageShell>
   );
 }

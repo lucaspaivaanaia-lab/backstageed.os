@@ -34,6 +34,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { PageTitle, SectionTitle } from "@/components/layout/page-shell";
 
 type PmRosterEntry = { id: string; email: string };
 
@@ -172,14 +173,10 @@ export function ClientDetailForm({
 
   return (
     <div className="flex flex-col gap-8">
-      <h1 className="text-[28px] font-semibold leading-[1.2]">
-        {client.name}
-      </h1>
+      <PageTitle className="mb-0">{client.name}</PageTitle>
 
       <section className="flex flex-col gap-6">
-        <h2 className="text-xl font-semibold leading-[1.2]">
-          Briefing estratégico
-        </h2>
+        <SectionTitle>Briefing estratégico</SectionTitle>
 
         <Form {...form}>
           <form
@@ -309,9 +306,7 @@ export function ClientDetailForm({
       </section>
 
       <section className="flex flex-col gap-4">
-        <h2 className="text-xl font-semibold leading-[1.2]">
-          PMs atribuídos
-        </h2>
+        <SectionTitle>PMs atribuídos</SectionTitle>
 
         {selectedPmIds.length > 0 ? (
           <div className="flex flex-wrap gap-2">
@@ -387,7 +382,7 @@ export function ClientDetailForm({
       </section>
 
       <section className="flex flex-col gap-4">
-        <h2 className="text-xl font-semibold leading-[1.2]">RAG</h2>
+        <SectionTitle>RAG</SectionTitle>
 
         {client.tropicaliaProjectId ? (
           <Badge variant="secondary" className="w-fit">
