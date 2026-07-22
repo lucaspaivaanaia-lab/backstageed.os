@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { listPmRoster } from "@/lib/actions/clients";
 import { ClientCreateForm } from "@/components/clients/client-create-form";
+import { PageShell, PageTitle } from "@/components/layout/page-shell";
 
 export default async function PmNewClientPage() {
   const supabase = await createClient();
@@ -11,15 +12,13 @@ export default async function PmNewClientPage() {
   const pmRoster = await listPmRoster();
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-8">
-      <h1 className="text-[28px] font-semibold leading-[1.2] mb-8">
-        Novo cliente
-      </h1>
+    <PageShell>
+      <PageTitle>Novo cliente</PageTitle>
       <ClientCreateForm
         pmRoster={pmRoster}
         currentUserId={user?.id ?? ""}
         basePath="/pm/clients"
       />
-    </div>
+    </PageShell>
   );
 }

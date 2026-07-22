@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { XIcon } from "lucide-react";
 import {
   clientCreateSchema,
   type ClientCreateInput,
@@ -119,7 +120,7 @@ export function ClientCreateForm({
           )}
         />
 
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3">
           <FormLabel>PMs atribuídos</FormLabel>
           <div>
             <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
@@ -171,7 +172,7 @@ export function ClientCreateForm({
                       disabled={isPending}
                       className="ml-1"
                     >
-                      ×
+                      <XIcon className="size-3" />
                     </button>
                   </Badge>
                 );
