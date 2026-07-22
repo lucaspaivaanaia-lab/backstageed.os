@@ -170,12 +170,12 @@ export function ClientAccessPanel({
       ) : null}
 
       {createdPassword ? (
-        <Card>
+        <Card className="border-primary/30">
           <CardHeader>
             <CardTitle>Senha provisória</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm">
+            <p className="text-sm leading-relaxed">
               Senha provisória:{" "}
               <code className="rounded bg-muted px-1.5 py-0.5 font-mono">
                 {createdPassword}
