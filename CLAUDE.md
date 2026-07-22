@@ -11,9 +11,9 @@ BackstageEd.OS é a plataforma central de produção e gestão de conteúdo para
 
 - **Timeline**: Data alvo de 30/09/2026 para ter uma primeira versão funcionando — pressiona o cronograma, mas sem detalhes adicionais sobre o evento/compromisso por trás da data.
 - **Tech stack**: Next.js (App Router) + Supabase (Postgres, Auth, RLS, Storage) + Vercel + GitHub — já definido, não é uma decisão em aberto.
-- **RAG**: Tropicalia API (tropicalia.dev), 1 project por cliente, `generate_answer: false` — a geração de resposta é sempre feita pela Claude API, não pela Tropicalia.
+- **RAG**: arquivos do cliente (PDF/TXT/MD/DOCX, ~3 por cliente) são extraídos para texto puro no upload e armazenados diretamente em `public.client_files` no Supabase — sem embeddings/vetor, sem serviço externo. O conteúdo completo de todos os arquivos do cliente ativo é injetado no system prompt a cada turno; a geração de resposta é sempre feita pela Claude API. (Migrado de Tropicalia em 2026-07-22 — ver Key Decisions em PROJECT.md.)
 - **Storage de mídia**: Google Drive API para arquivos pesados (imagem, vídeo, PDF) — dados estruturados (briefing, status, comentários, histórico) ficam no Supabase.
-- **Isolamento de contexto**: precisa ser estrutural (project separado por cliente na Tropicalia), não um filtro — requisito não-negociável motivado pelo problema real de vazamento de contexto no ChatGPT compartilhado.
+- **Isolamento de contexto**: precisa ser estrutural, não um filtro — requisito não-negociável motivado pelo problema real de vazamento de contexto no ChatGPT compartilhado. Mecanismo atual: RLS scoping de `client_files` por `client_id` no Postgres (`is_admin()`/`pm_assigned_clients()`), a mesma camada de multi-tenancy usada por todas as outras tabelas do sistema.
 <!-- GSD:project-end -->
 
 <!-- GSD:stack-start source:STACK.md -->

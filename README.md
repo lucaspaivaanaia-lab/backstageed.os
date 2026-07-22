@@ -19,7 +19,7 @@ BackstageEd.OS é o sistema operacional interno de uma operação de social medi
 | Banco de dados | Supabase (PostgreSQL + Auth + RLS + Storage) |
 | Deploy | Vercel |
 | Versionamento | GitHub |
-| RAG por cliente | Tropicalia API (tropicalia.dev) |
+| RAG por cliente | Arquivos armazenados no Supabase (`public.client_files`), injeção direta de conteúdo — sem embeddings/vetor |
 | Geração de IA | Claude API (Anthropic) |
 | Storage de mídia | Google Drive API |
 
@@ -30,7 +30,6 @@ BackstageEd.OS é o sistema operacional interno de uma operação de social medi
 - Node.js 18+
 - Conta no [Supabase](https://supabase.com)
 - Conta na [Vercel](https://vercel.com)
-- Acesso à [Tropicalia API](https://tropicalia.dev)
 - Chave de API da [Anthropic](https://console.anthropic.com)
 - Projeto no [Google Cloud](https://console.cloud.google.com) com Drive API habilitada
 
@@ -68,10 +67,6 @@ SUPABASE_SERVICE_ROLE_KEY=
 # Anthropic
 ANTHROPIC_API_KEY=
 
-# Tropicalia
-TROPICALIA_API_KEY=
-TROPICALIA_BASE_URL=https://api.tropicalia.dev
-
 # Google Drive
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
@@ -91,7 +86,7 @@ src/
 ├── components/           # Componentes reutilizáveis
 ├── lib/                  # Lógica de negócio e integrações
 │   ├── supabase/         # Queries e helpers do Supabase
-│   ├── tropicalia/       # Integração com RAG por cliente
+│   ├── extract/          # Extração de texto de arquivos do cliente (PDF/DOCX/TXT/MD)
 │   ├── anthropic/        # Chamadas à Claude API
 │   └── drive/            # Integração com Google Drive API
 ├── hooks/                # Custom hooks
@@ -130,13 +125,13 @@ briefing → produção → revisão interna → aprovação do cliente → agen
 ## Decisões de arquitetura
 
 **RAG isolado por cliente**
-Cada cliente tem um `project` separado na Tropicalia. O `project_id` é salvo em `CLIENTE.tropicalia_project_id`. O isolamento é estrutural — não é filtro, é cofre separado. Isso torna contaminação de contexto entre clientes impossível por design.
+Arquivos do cliente (PDF/TXT/MD/DOCX, ~3 por cliente) são extraídos para texto puro no upload e armazenados em `public.client_files` no Supabase — sem embeddings/vetor, sem serviço externo. O isolamento é estrutural via RLS scoping por `client_id` (`is_admin()`/`pm_assigned_clients()`) — não é filtro de aplicação. Isso torna contaminação de contexto entre clientes impossível por design. (Migrado de Tropicalia em 2026-07-22 — a Tropicalia mudou de modelo de negócio; ver `.planning/PROJECT.md` Key Decisions.)
 
 **Curadoria manual de memória**
-Quando a PM marca um trecho de conversa como aprendizado permanente, a aplicação gera um arquivo `.md` e chama o endpoint de upload da Tropicalia. Nada vai para o RAG automaticamente.
+Quando a PM marca um trecho de conversa como aprendizado permanente, a aplicação gera um arquivo `.md` e insere uma nova linha em `client_files`. Nada vai para o contexto automaticamente.
 
 **Claude API com controle total de prompt**
-A Tropicalia é chamada com `generate_answer: false`. Os trechos recuperados + a pergunta da PM + as instruções de sistema são enviados à Claude API para geração da resposta. Tom e personalização ficam sob controle da aplicação, não da camada de RAG.
+O conteúdo completo dos arquivos do cliente ativo + a pergunta da PM + as instruções de sistema são enviados à Claude API para geração da resposta. Tom e personalização ficam sob controle da aplicação.
 
 **Google Drive como storage de mídia**
 Dados estruturados (briefing, status, comentários, aprovações) ficam no Supabase. Arquivos pesados (imagem final, vídeo, PDF) vão para o Google Drive via API, com o link salvo no banco. A PM nunca abre o Drive manualmente.
