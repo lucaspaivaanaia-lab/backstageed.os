@@ -31,6 +31,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { PageTitle, SectionTitle } from "@/components/layout/page-shell";
+import { ClientFilesSection } from "@/components/clients/client-files-section";
+import type { ClientFileRow } from "@/lib/actions/client-files";
 
 type PmRosterEntry = { id: string; email: string };
 
@@ -47,6 +49,7 @@ type ClientDetailFormProps = {
   assignedPmIds: string[];
   assignedPmNames: Record<string, string>;
   viewerIsAdmin: boolean;
+  initialFiles: ClientFileRow[];
 };
 
 /**
@@ -54,7 +57,8 @@ type ClientDetailFormProps = {
  * data — this component performs no data fetching itself). Renders, in
  * this locked order (UI-SPEC Visual Focal Points): Display heading (client
  * name) -> "Briefing estratégico" (CLI-04, D-04, D-05, D-06 -- single form,
- * no wizard) -> "PMs atribuídos" (CLI-02, Admin-only edit).
+ * no wizard) -> "PMs atribuídos" (CLI-02, Admin-only edit) -> "Arquivos do
+ * cliente" (CLI-03/CTX-01..05, Task 5 -- upload/list/remove client_files).
  */
 export function ClientDetailForm({
   client,
@@ -62,6 +66,7 @@ export function ClientDetailForm({
   assignedPmIds,
   assignedPmNames,
   viewerIsAdmin,
+  initialFiles,
 }: ClientDetailFormProps) {
   // -- Briefing form (updateBriefing) --
   const [isBriefingPending, startBriefingTransition] = useTransition();
@@ -356,6 +361,8 @@ export function ClientDetailForm({
           </p>
         ) : null}
       </section>
+
+      <ClientFilesSection clientId={client.id} initialFiles={initialFiles} />
     </div>
   );
 }

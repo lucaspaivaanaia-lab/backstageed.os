@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { listPmRoster, resolvePmNames } from "@/lib/actions/clients";
+import { listClientFiles } from "@/lib/actions/client-files";
 import { ClientDetailForm } from "@/components/clients/client-detail-form";
 import { PageShell } from "@/components/layout/page-shell";
 
@@ -46,6 +47,7 @@ export default async function PmClientDetailPage({ params }: PageProps) {
   const assignedPmIds = (pmClientRows ?? []).map((row) => row.pm_id);
   const assignedPmNames = await resolvePmNames(assignedPmIds);
   const pmRoster = await listPmRoster();
+  const initialFiles = await listClientFiles(client.id);
 
   return (
     <PageShell>
@@ -62,6 +64,7 @@ export default async function PmClientDetailPage({ params }: PageProps) {
         assignedPmIds={assignedPmIds}
         assignedPmNames={assignedPmNames}
         viewerIsAdmin={profile?.role === "admin"}
+        initialFiles={initialFiles}
       />
     </PageShell>
   );
