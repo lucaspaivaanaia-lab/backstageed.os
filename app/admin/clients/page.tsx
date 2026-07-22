@@ -52,7 +52,7 @@ export default async function AdminClientsPage() {
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-[28px] font-semibold leading-[1.2]">Clientes</h1>
         <Button asChild>
-          <Link href="./new">Criar cliente</Link>
+          <Link href="/admin/clients/new">Criar cliente</Link>
         </Button>
       </div>
 
@@ -68,7 +68,7 @@ export default async function AdminClientsPage() {
             </p>
           </div>
           <Button asChild>
-            <Link href="./new">Criar cliente</Link>
+            <Link href="/admin/clients/new">Criar cliente</Link>
           </Button>
         </div>
       ) : (
@@ -97,7 +97,10 @@ export default async function AdminClientsPage() {
               return (
                 <TableRow key={client.id}>
                   <TableCell>
-                    <Link href={`./${client.id}`} className="hover:underline">
+                    <Link
+                      href={`/admin/clients/${client.id}`}
+                      className="hover:underline"
+                    >
                       {client.name}
                     </Link>
                   </TableCell>
