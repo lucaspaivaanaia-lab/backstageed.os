@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { XIcon } from "lucide-react";
+import { XIcon, PlusIcon } from "lucide-react";
 import {
   clientCreateSchema,
   type ClientCreateInput,
@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ErrorBox } from "@/components/ui/error-box";
 import {
   Form,
   FormField,
@@ -126,6 +127,7 @@ export function ClientCreateForm({
             <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
               <DialogTrigger asChild>
                 <Button type="button" variant="outline" disabled={isPending}>
+                  <PlusIcon className="size-4" />
                   Adicionar PM
                 </Button>
               </DialogTrigger>
@@ -181,11 +183,7 @@ export function ClientCreateForm({
           ) : null}
         </div>
 
-        {serverError ? (
-          <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-            {serverError}
-          </p>
-        ) : null}
+        {serverError ? <ErrorBox>{serverError}</ErrorBox> : null}
 
         <Button type="submit" disabled={isPending} className="w-full">
           {isPending ? "Criando..." : "Criar cliente"}
