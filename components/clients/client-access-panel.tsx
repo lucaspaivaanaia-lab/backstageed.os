@@ -2,16 +2,12 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { DataCard } from "@/components/ui/data-card";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { ErrorBox } from "@/components/ui/error-box";
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -110,92 +106,69 @@ export function ClientAccessPanel({
 
   if (deactivated) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Acesso desativado</CardTitle>
-          <CardDescription>
-            O cliente não consegue mais fazer login na plataforma.
-          </CardDescription>
-        </CardHeader>
-      </Card>
+      <DataCard
+        title="Acesso desativado"
+        description="O cliente não consegue mais fazer login na plataforma."
+        badge={<StatusBadge tone="neutral">Desativado</StatusBadge>}
+      />
     );
   }
 
   return (
     <div className="flex flex-col gap-6">
       {!activeUserId ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Criar acesso do cliente</CardTitle>
-            <CardDescription>
-              Crie o login do cliente com uma senha provisória gerada pelo
-              sistema.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form
-              action={handleCreateSubmit}
-              className="flex flex-col gap-4"
-            >
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="email">E-mail do cliente</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  disabled={isCreatePending}
-                  aria-invalid={emailError ? true : undefined}
-                />
-                {emailError ? (
-                  <p className="text-sm text-destructive">{emailError}</p>
-                ) : null}
-              </div>
-              {createServerError ? (
-                <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-                  {createServerError}
-                </p>
-              ) : null}
-              <Button
-                type="submit"
+        <DataCard
+          title="Criar acesso do cliente"
+          description="Crie o login do cliente com uma senha provisória gerada pelo sistema."
+        >
+          <form action={handleCreateSubmit} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="email">E-mail do cliente</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
                 disabled={isCreatePending}
-                className="w-fit"
-              >
-                {isCreatePending ? "Criando..." : "Criar acesso do cliente"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+                aria-invalid={emailError ? true : undefined}
+              />
+              {emailError ? (
+                <p className="text-meta text-destructive">{emailError}</p>
+              ) : null}
+            </div>
+            {createServerError ? <ErrorBox>{createServerError}</ErrorBox> : null}
+            <Button
+              type="submit"
+              disabled={isCreatePending}
+              className="w-fit"
+            >
+              {isCreatePending ? "Criando..." : "Criar acesso do cliente"}
+            </Button>
+          </form>
+        </DataCard>
       ) : null}
 
       {createdPassword ? (
-        <Card className="border-primary/30">
-          <CardHeader>
-            <CardTitle>Senha provisória</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm leading-relaxed">
-              Senha provisória:{" "}
-              <code className="rounded bg-muted px-1.5 py-0.5 font-mono">
-                {createdPassword}
-              </code>{" "}
-              — anote e compartilhe com o cliente com segurança. Esta senha
-              não será mostrada novamente.
-            </p>
-          </CardContent>
-        </Card>
+        <DataCard title="Senha provisória" className="border-primary/30">
+          <p className="text-sm leading-relaxed">
+            Senha provisória:{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5 font-mono">
+              {createdPassword}
+            </code>{" "}
+            — anote e compartilhe com o cliente com segurança. Esta senha
+            não será mostrada novamente.
+          </p>
+        </DataCard>
       ) : null}
 
       {activeUserId ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Acesso do cliente</CardTitle>
-            <CardDescription>
-              Este cliente já possui um login ativo.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
+        <DataCard
+          title="Acesso do cliente"
+          description="Este cliente já possui um login ativo."
+          badge={<StatusBadge tone="success">Ativo</StatusBadge>}
+        >
+          <div className="flex flex-col gap-4">
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button
@@ -225,12 +198,10 @@ export function ClientAccessPanel({
               </AlertDialogContent>
             </AlertDialog>
             {deactivateServerError ? (
-              <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-                {deactivateServerError}
-              </p>
+              <ErrorBox>{deactivateServerError}</ErrorBox>
             ) : null}
-          </CardContent>
-        </Card>
+          </div>
+        </DataCard>
       ) : null}
     </div>
   );

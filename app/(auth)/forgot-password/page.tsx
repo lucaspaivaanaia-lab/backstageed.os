@@ -73,7 +73,7 @@ export default function ForgotPasswordPage() {
                     aria-invalid={emailError ? true : undefined}
                   />
                   {emailError ? (
-                    <p className="text-sm text-destructive">{emailError}</p>
+                    <p className="text-meta text-destructive">{emailError}</p>
                   ) : null}
                 </div>
                 <Button type="submit" disabled={isPending} className="w-full">
