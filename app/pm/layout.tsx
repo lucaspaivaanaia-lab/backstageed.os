@@ -1,8 +1,10 @@
-import { AppNav } from "@/components/layout/app-nav";
+import { UsersIcon, MessageSquareIcon } from "lucide-react";
+
+import { AppSidebar } from "@/components/layout/app-sidebar";
 
 /**
- * Persistent nav shell for the PM area (Task 2). Includes the previously
- * missing link to /pm/chat.
+ * Persistent two-column shell for the PM area: fixed sidebar + scrollable
+ * main content.
  */
 export default function PmLayout({
   children,
@@ -10,14 +12,16 @@ export default function PmLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <div className="flex min-h-full flex-1 flex-col">
-      <AppNav
-        links={[
-          { href: "/pm/clients", label: "Clientes" },
-          { href: "/pm/chat", label: "Chat" },
+    <div className="flex h-screen">
+      <AppSidebar
+        items={[
+          { href: "/pm/clients", label: "Clientes", icon: <UsersIcon /> },
+          { href: "/pm/chat", label: "Chat", icon: <MessageSquareIcon /> },
         ]}
       />
-      {children}
+      <main className="flex min-w-0 flex-1 flex-col overflow-y-auto">
+        {children}
+      </main>
     </div>
   );
 }

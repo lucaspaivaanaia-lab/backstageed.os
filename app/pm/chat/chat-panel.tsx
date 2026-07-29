@@ -266,7 +266,7 @@ export function ChatPanel({ clients }: ChatPanelProps) {
   }
 
   return (
-    <div className="mx-auto flex h-screen max-w-2xl flex-col">
+    <div className="mx-auto flex h-full min-h-0 max-w-3xl flex-col">
       <header className="sticky top-0 z-10 border-b bg-background px-6 py-4">
         <Select
           value={activeClientId ?? undefined}

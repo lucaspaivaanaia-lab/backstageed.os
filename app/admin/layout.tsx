@@ -1,7 +1,10 @@
-import { AppNav } from "@/components/layout/app-nav";
+import { UsersIcon, ClipboardCheckIcon } from "lucide-react";
+
+import { AppSidebar } from "@/components/layout/app-sidebar";
 
 /**
- * Persistent nav shell for the Admin area (Task 2).
+ * Persistent two-column shell for the Admin area: fixed sidebar + scrollable
+ * main content.
  */
 export default function AdminLayout({
   children,
@@ -9,14 +12,20 @@ export default function AdminLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <div className="flex min-h-full flex-1 flex-col">
-      <AppNav
-        links={[
-          { href: "/admin/clients", label: "Clientes" },
-          { href: "/admin/approvals", label: "Aprovações" },
+    <div className="flex h-screen">
+      <AppSidebar
+        items={[
+          { href: "/admin/clients", label: "Clientes", icon: <UsersIcon /> },
+          {
+            href: "/admin/approvals",
+            label: "Aprovações",
+            icon: <ClipboardCheckIcon />,
+          },
         ]}
       />
-      {children}
+      <main className="flex min-w-0 flex-1 flex-col overflow-y-auto">
+        {children}
+      </main>
     </div>
   );
 }
