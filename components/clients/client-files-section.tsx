@@ -10,8 +10,10 @@ import {
 import { FILE_LIMIT, atFileLimit } from "@/lib/client-files/limit";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { XIcon } from "lucide-react";
-import { SectionTitle } from "@/components/layout/page-shell";
+import { XIcon, FileTextIcon } from "lucide-react";
+import { ErrorBox } from "@/components/ui/error-box";
+import { DataCard } from "@/components/ui/data-card";
+import { EmptyState } from "@/components/layout/page-shell";
 
 type ClientFilesSectionProps = {
   clientId: string;
@@ -65,74 +67,78 @@ export function ClientFilesSection({
   }
 
   return (
-    <section className="flex flex-col gap-4">
-      <SectionTitle>Arquivos do cliente</SectionTitle>
-
-      {files.length > 0 ? (
-        <ul className="flex flex-col gap-2">
-          {files.map((file) => (
-            <li
-              key={file.id}
-              className="flex items-center justify-between gap-3 rounded-md border p-3 text-sm"
-            >
-              <div className="flex flex-col gap-0.5">
-                <span className="font-medium">{file.filename}</span>
-                <span className="text-xs text-muted-foreground">
-                  {file.file_type.toUpperCase()} ·{" "}
-                  {new Date(file.created_at).toLocaleDateString("pt-BR")}
-                </span>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label={`Remover ${file.filename}`}
-                disabled={isDeletePending && deletingId === file.id}
-                onClick={() => handleDelete(file.id)}
+    <DataCard
+      title="Arquivos do cliente"
+      description={`Até ${FILE_LIMIT} arquivos (PDF/TXT/MD/DOCX) usados como contexto da IA deste cliente.`}
+    >
+      <div className="flex flex-col gap-4">
+        {files.length > 0 ? (
+          <ul className="flex flex-col gap-2">
+            {files.map((file) => (
+              <li
+                key={file.id}
+                className="flex items-center justify-between gap-3 rounded-md border p-3 text-sm"
               >
-                <XIcon className="size-4" />
+                <div className="flex items-center gap-2">
+                  <FileTextIcon className="size-4 text-muted-foreground" />
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-medium">{file.filename}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {file.file_type.toUpperCase()} ·{" "}
+                      {new Date(file.created_at).toLocaleDateString("pt-BR")}
+                    </span>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`Remover ${file.filename}`}
+                  disabled={isDeletePending && deletingId === file.id}
+                  onClick={() => handleDelete(file.id)}
+                >
+                  <XIcon className="size-4" />
+                </Button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <EmptyState
+            icon={<FileTextIcon className="size-5" />}
+            title="Nenhum arquivo enviado ainda"
+            description={`Envie até ${FILE_LIMIT} arquivos para alimentar o contexto da IA deste cliente.`}
+          />
+        )}
+
+        {atFileLimit(files.length) ? (
+          <Badge variant="outline" className="w-fit">
+            Limite de {FILE_LIMIT} arquivos atingido — remova um arquivo para
+            enviar outro
+          </Badge>
+        ) : (
+          <form action={handleUpload} className="flex flex-col gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                name="file"
+                accept=".pdf,.txt,.md,.docx"
+                disabled={isUploadPending}
+                className="text-sm"
+              />
+              <Button
+                type="submit"
+                variant="outline"
+                disabled={isUploadPending}
+              >
+                {isUploadPending ? "Enviando..." : "Enviar arquivo"}
               </Button>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="text-sm text-muted-foreground">
-          Nenhum arquivo enviado ainda.
-        </p>
-      )}
+            </div>
+          </form>
+        )}
 
-      {atFileLimit(files.length) ? (
-        <Badge variant="outline" className="w-fit">
-          Limite de {FILE_LIMIT} arquivos atingido — remova um arquivo para
-          enviar outro
-        </Badge>
-      ) : (
-        <form action={handleUpload} className="flex flex-col gap-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <input
-              ref={fileInputRef}
-              type="file"
-              name="file"
-              accept=".pdf,.txt,.md,.docx"
-              disabled={isUploadPending}
-              className="text-sm"
-            />
-            <Button
-              type="submit"
-              variant="outline"
-              disabled={isUploadPending}
-            >
-              {isUploadPending ? "Enviando..." : "Enviar arquivo"}
-            </Button>
-          </div>
-        </form>
-      )}
-
-      {uploadError ? (
-        <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-          {uploadError}
-        </p>
-      ) : null}
-    </section>
+        {uploadError ? <ErrorBox>{uploadError}</ErrorBox> : null}
+      </div>
+    </DataCard>
   );
 }

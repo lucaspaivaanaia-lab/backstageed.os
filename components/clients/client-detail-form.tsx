@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { XIcon } from "lucide-react";
+import { XIcon, PlusIcon } from "lucide-react";
 import {
   briefingSchema,
   type BriefingInput,
@@ -14,6 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ErrorBox } from "@/components/ui/error-box";
+import { DataCard } from "@/components/ui/data-card";
 import {
   Form,
   FormField,
@@ -30,7 +32,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { PageTitle, SectionTitle } from "@/components/layout/page-shell";
+import { PageTitle } from "@/components/layout/page-shell";
 import { ClientFilesSection } from "@/components/clients/client-files-section";
 import type { ClientFileRow } from "@/lib/actions/client-files";
 
@@ -153,12 +155,13 @@ export function ClientDetailForm({
   }
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-section">
       <PageTitle className="mb-0">{client.name}</PageTitle>
 
-      <section className="flex flex-col gap-6">
-        <SectionTitle>Briefing estratégico</SectionTitle>
-
+      <DataCard
+        title="Briefing estratégico"
+        description="Alimenta o contexto da IA deste cliente em todas as conversas do chat."
+      >
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmitBriefing)}
@@ -270,9 +273,7 @@ export function ClientDetailForm({
             </div>
 
             {briefingServerError ? (
-              <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-                {briefingServerError}
-              </p>
+              <ErrorBox>{briefingServerError}</ErrorBox>
             ) : null}
 
             <Button
@@ -284,83 +285,84 @@ export function ClientDetailForm({
             </Button>
           </form>
         </Form>
-      </section>
+      </DataCard>
 
-      <section className="flex flex-col gap-4">
-        <SectionTitle>PMs atribuídos</SectionTitle>
+      <DataCard title="PMs atribuídos">
+        <div className="flex flex-col gap-4">
+          {selectedPmIds.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {selectedPmIds.map((pmId) => {
+                const name = assignedPmNames[pmId] ?? pmId;
+                return (
+                  <Badge key={pmId} variant="secondary" className="gap-1">
+                    {name}
+                    {viewerIsAdmin ? (
+                      <button
+                        type="button"
+                        aria-label={`Remover ${name}`}
+                        onClick={() => removePm(pmId)}
+                        disabled={isPmPending}
+                        className="ml-1"
+                      >
+                        <XIcon className="size-3" />
+                      </button>
+                    ) : null}
+                  </Badge>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Nenhum PM atribuído ainda.
+            </p>
+          )}
 
-        {selectedPmIds.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {selectedPmIds.map((pmId) => {
-              const name = assignedPmNames[pmId] ?? pmId;
-              return (
-                <Badge key={pmId} variant="secondary" className="gap-1">
-                  {name}
-                  {viewerIsAdmin ? (
-                    <button
-                      type="button"
-                      aria-label={`Remover ${name}`}
-                      onClick={() => removePm(pmId)}
-                      disabled={isPmPending}
-                      className="ml-1"
-                    >
-                      <XIcon className="size-3" />
-                    </button>
-                  ) : null}
-                </Badge>
-              );
-            })}
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            Nenhum PM atribuído ainda.
-          </p>
-        )}
-
-        {viewerIsAdmin ? (
-          <div>
-            <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
-              <DialogTrigger asChild>
-                <Button type="button" variant="outline" disabled={isPmPending}>
-                  Adicionar PM
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Selecionar PMs</DialogTitle>
-                </DialogHeader>
-                <div className="flex flex-col gap-3">
-                  {pmRoster.map((pm) => (
-                    <label
-                      key={pm.id}
-                      className="flex items-center gap-2 text-sm"
-                    >
-                      <Checkbox
-                        checked={selectedPmIds.includes(pm.id)}
-                        onCheckedChange={(checked) =>
-                          togglePm(pm.id, checked === true)
-                        }
-                      />
-                      {pm.email}
-                    </label>
-                  ))}
-                </div>
-                <DialogFooter>
-                  <Button type="button" onClick={saveAndClosePicker}>
-                    Concluir
+          {viewerIsAdmin ? (
+            <div>
+              <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={isPmPending}
+                  >
+                    <PlusIcon className="size-4" />
+                    Adicionar PM
                   </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
-        ) : null}
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Selecionar PMs</DialogTitle>
+                  </DialogHeader>
+                  <div className="flex flex-col gap-3">
+                    {pmRoster.map((pm) => (
+                      <label
+                        key={pm.id}
+                        className="flex items-center gap-2 text-sm"
+                      >
+                        <Checkbox
+                          checked={selectedPmIds.includes(pm.id)}
+                          onCheckedChange={(checked) =>
+                            togglePm(pm.id, checked === true)
+                          }
+                        />
+                        {pm.email}
+                      </label>
+                    ))}
+                  </div>
+                  <DialogFooter>
+                    <Button type="button" onClick={saveAndClosePicker}>
+                      Concluir
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+          ) : null}
 
-        {pmServerError ? (
-          <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-            {pmServerError}
-          </p>
-        ) : null}
-      </section>
+          {pmServerError ? <ErrorBox>{pmServerError}</ErrorBox> : null}
+        </div>
+      </DataCard>
 
       <ClientFilesSection clientId={client.id} initialFiles={initialFiles} />
     </div>
