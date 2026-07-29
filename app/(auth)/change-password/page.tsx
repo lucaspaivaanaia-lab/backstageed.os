@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { ErrorBox } from "@/components/ui/error-box";
 import { changePassword } from "./actions";
 
 /**
@@ -82,7 +83,7 @@ export default function ChangePasswordPage() {
                 aria-invalid={passwordError ? true : undefined}
               />
               {passwordError ? (
-                <p className="text-sm text-destructive">{passwordError}</p>
+                <p className="text-meta text-destructive">{passwordError}</p>
               ) : null}
             </div>
             <div className="flex flex-col gap-2">
@@ -97,14 +98,10 @@ export default function ChangePasswordPage() {
                 aria-invalid={confirmError ? true : undefined}
               />
               {confirmError ? (
-                <p className="text-sm text-destructive">{confirmError}</p>
+                <p className="text-meta text-destructive">{confirmError}</p>
               ) : null}
             </div>
-            {serverError ? (
-              <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-                {serverError}
-              </p>
-            ) : null}
+            {serverError ? <ErrorBox>{serverError}</ErrorBox> : null}
             <Button type="submit" disabled={isPending} className="w-full">
               {isPending ? "Salvando..." : "Salvar nova senha"}
             </Button>

@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { ErrorBox } from "@/components/ui/error-box";
 import { signIn } from "./actions";
 
 export default function LoginPage() {
@@ -83,7 +84,7 @@ export default function LoginPage() {
                   aria-invalid={emailError ? true : undefined}
                 />
                 {emailError ? (
-                  <p className="text-sm text-destructive">{emailError}</p>
+                  <p className="text-meta text-destructive">{emailError}</p>
                 ) : null}
               </div>
               <div className="flex flex-col gap-2">
@@ -98,14 +99,10 @@ export default function LoginPage() {
                   aria-invalid={passwordError ? true : undefined}
                 />
                 {passwordError ? (
-                  <p className="text-sm text-destructive">{passwordError}</p>
+                  <p className="text-meta text-destructive">{passwordError}</p>
                 ) : null}
               </div>
-              {serverError ? (
-                <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-                  {serverError}
-                </p>
-              ) : null}
+              {serverError ? <ErrorBox>{serverError}</ErrorBox> : null}
               <Button type="submit" disabled={isPending} className="w-full">
                 {isPending ? "Entrando..." : "Entrar"}
               </Button>
