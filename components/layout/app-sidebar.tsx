@@ -1,0 +1,74 @@
+"use client";
+
+import type { ReactNode } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { LogOutIcon } from "lucide-react";
+
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { signOut } from "@/lib/actions/auth";
+
+export type SidebarNavItem = {
+  href: string;
+  label: string;
+  icon: ReactNode;
+};
+
+type AppSidebarProps = {
+  items: SidebarNavItem[];
+};
+
+/**
+ * Persistent vertical nav shell for /pm/* and /admin/* (replaces the prior
+ * horizontal header nav). Fixed width, always visible, desktop-first (D-01
+ * — no expand/shrink interaction, no saved-preference persistence, no
+ * hamburger). Highlights the active route and exposes the logout Server
+ * Action at the footer — same mechanics as before, just repositioned.
+ */
+export function AppSidebar({ items }: AppSidebarProps) {
+  const pathname = usePathname();
+
+  return (
+    <aside className="flex h-screen w-sidebar shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
+      <div className="px-page py-stack">
+        <span className="text-sm font-semibold tracking-tight text-sidebar-primary">
+          BackstageEd.OS
+        </span>
+      </div>
+      <nav className="flex flex-1 flex-col gap-1 px-3">
+        {items.map((item) => {
+          const isActive =
+            pathname === item.href || pathname.startsWith(`${item.href}/`);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex items-center gap-2 rounded-md px-3 py-2 text-body transition-colors",
+                isActive
+                  ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
+                  : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+              )}
+            >
+              <span className="size-4">{item.icon}</span>
+              {item.label}
+            </Link>
+          );
+        })}
+      </nav>
+      <div className="border-t border-sidebar-border p-3">
+        <form action={signOut}>
+          <Button
+            variant="ghost"
+            type="submit"
+            className="w-full justify-start"
+          >
+            <LogOutIcon className="size-4" />
+            Sair
+          </Button>
+        </form>
+      </div>
+    </aside>
+  );
+}
