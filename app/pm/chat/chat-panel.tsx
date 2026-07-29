@@ -1,11 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition, type KeyboardEvent } from "react";
-import { SendHorizontal } from "lucide-react";
+import {
+  SendHorizontal,
+  TriangleAlertIcon,
+  MessageSquareIcon,
+  InboxIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 import { shouldAppendChunk } from "@/lib/chat/stale-response-guard";
 import { saveKnowledge, listMessagesForClient } from "./actions";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,7 +20,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SectionTitle } from "@/components/layout/page-shell";
+import { EmptyState } from "@/components/layout/page-shell";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { ErrorBox } from "@/components/ui/error-box";
 
 type ClientOption = { id: string; name: string; hasRag: boolean };
 
@@ -287,30 +293,27 @@ export function ChatPanel({ clients }: ChatPanelProps) {
 
       <div className="flex-1 overflow-y-auto px-6 py-4">
         {!activeClient ? (
-          <div className="flex flex-col items-center gap-2 py-12 text-center">
-            <SectionTitle>Nenhum cliente selecionado</SectionTitle>
-            <p className="text-sm text-muted-foreground">
-              Selecione um cliente acima para começar a conversar.
-            </p>
-          </div>
+          <EmptyState
+            icon={<MessageSquareIcon className="size-5" />}
+            title="Nenhum cliente selecionado"
+            description="Selecione um cliente acima para começar a conversar."
+          />
         ) : (
           <div className="flex flex-col gap-4">
             {!activeClient.hasRag ? (
-              <Badge
-                variant="outline"
-                className="w-fit border-accent-foreground/20 bg-accent text-accent-foreground"
-              >
+              <StatusBadge tone="warning" icon={<TriangleAlertIcon />}>
                 {DEGRADED_NOTICE}
-              </Badge>
+              </StatusBadge>
             ) : null}
 
             {messages.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 py-12 text-center">
-                <SectionTitle>Nenhuma mensagem ainda</SectionTitle>
-                <p className="text-sm text-muted-foreground">
-                  Faça uma pergunta sobre {activeClient.name} para começar.
-                </p>
-              </div>
+              <EmptyState
+                icon={<InboxIcon className="size-5" />}
+                title="Nenhuma mensagem ainda"
+                description={
+                  <>Faça uma pergunta sobre {activeClient.name} para começar.</>
+                }
+              />
             ) : (
               messages.map((message, index) => {
                 const isUser = message.role === "user";
@@ -318,8 +321,8 @@ export function ChatPanel({ clients }: ChatPanelProps) {
                   <div
                     className={
                       isUser
-                        ? "max-w-[80%] rounded-2xl bg-secondary px-4 py-2 text-sm text-secondary-foreground"
-                        : "max-w-[80%] rounded-2xl border bg-card px-4 py-2 text-sm text-card-foreground"
+                        ? "max-w-[80%] rounded-2xl bg-secondary px-4 py-2 text-body text-secondary-foreground"
+                        : "max-w-[80%] rounded-2xl border bg-card px-4 py-2 text-body text-card-foreground"
                     }
                   >
                     {message.content}
@@ -369,19 +372,20 @@ export function ChatPanel({ clients }: ChatPanelProps) {
             )}
 
             {interrupted ? (
-              <div className="flex flex-col items-start gap-2 rounded-md bg-destructive/10 p-3">
-                <p className="text-sm text-destructive">
-                  {INTERRUPTED_ERROR}
-                </p>
-                <Button
-                  type="button"
-                  variant="link"
-                  className="h-auto p-0 text-destructive"
-                  onClick={handleRetry}
-                >
-                  Tentar novamente
-                </Button>
-              </div>
+              <ErrorBox
+                action={
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="h-auto p-0 text-destructive"
+                    onClick={handleRetry}
+                  >
+                    Tentar novamente
+                  </Button>
+                }
+              >
+                {INTERRUPTED_ERROR}
+              </ErrorBox>
             ) : null}
           </div>
         )}
@@ -405,11 +409,7 @@ export function ChatPanel({ clients }: ChatPanelProps) {
             </Button>
           </div>
         ) : null}
-        {sendError ? (
-          <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-            {sendError}
-          </p>
-        ) : null}
+        {sendError ? <ErrorBox>{sendError}</ErrorBox> : null}
         <div className="flex items-end gap-2">
           <Textarea
             value={input}
