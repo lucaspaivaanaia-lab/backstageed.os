@@ -33,13 +33,16 @@ PM can take a content idea from briefing through internal review: create a card 
 ### Board navigation (carried forward from Phase 2 precedent)
 - **D-10:** The Kanban board follows the same navigation pattern Phase 2 established for chat (02-CONTEXT.md D-01): a dedicated screen with a client switcher, not nested under `app/pm/clients/[id]/*`. Not re-discussed in depth this session — flagged here as an assumption carried forward by precedent, not a fresh decision; researcher/planner should confirm it still fits once the sidebar/nav (from the 260728-uab design-system quick task) is accounted for.
 
+### Admin checklist override (CHK-04)
+- **D-11:** Admin has a manual override to force-advance a card past a blocked checklist gate (unchecked items). The override itself is logged in the same audit trail as regular checklist checks — who triggered it, when, and which items were still unchecked at the time — so CHK-04's "no step can be silently skipped" guarantee holds even when the gate is bypassed. Resolved 2026-07-29 via `/gsd:plan-phase 3` (was flagged as a genuine open question, not decided silently).
+
 ### Claude's Discretion
 - Exact schema shape for cards/sub-cards (e.g. self-referencing `parent_card_id` vs. a separate `card_pieces` table) — D-01/D-02 lock the *behavior* (independent sub-card advancement, per-sub-card checklist), not the table design.
 - How a package's aggregate status is rolled up and displayed on the board (e.g., "3/5 pieces em revisão interna" summary badge on the parent) — D-02 only locks that there's no package-level checklist gate, not how the parent visually summarizes its children.
 - Exact checklist template data model (e.g., template + template_items tables, and how the "snapshot at entry" from D-04 is implemented — copy rows vs. a frozen JSON blob on the card).
 - Regex/validation pattern for "looks like a Google Drive link" (D-09) — any reasonable match against known Drive URL shapes (`drive.google.com`, `docs.google.com`) is acceptable; not a hard security boundary, just a paste-mistake catcher.
 - Exact Kanban column/board visual layout, card summary fields shown on the board vs. only on the card detail view.
-- Whether admin has a manual override to force-advance a card past a blocked checklist gate (e.g., "esse item não se aplica dessa vez") — not discussed; if this comes up during planning, treat as a genuine open question to flag back to the user rather than deciding silently, since it directly affects the audit-trail guarantee (CHK-04) the phase's own success criteria promise.
+- Exact UI/wording for the admin override action (D-11) — e.g. a confirmation modal requiring a reason string vs. a plain confirm — and whether override is scoped to Admin only or also available to PMs (default: Admin only, per CHK-01/CHK-02's admin-configures-checklists precedent, unless planner finds a reason otherwise).
 
 </decisions>
 
@@ -104,7 +107,6 @@ No external specs/ADRs beyond the above — requirements fully captured in decis
 <deferred>
 ## Deferred Ideas
 
-- Admin manual override to force-advance a card past a blocked checklist gate — not discussed; flagged under Claude's Discretion above as a genuine open question for planning, not a deferred-to-later-phase idea, but noted here so it isn't silently decided either way.
 - Real Google Drive API integration (OAuth, file picker, embedded previews/thumbnails) — explicitly deferred by D-07/D-08; the current phase only needs link-paste + format validation. Revisit if the "no preview" experience proves insufficient in practice.
 
 ### Reviewed Todos (not folded)
