@@ -27,7 +27,7 @@ export function PageShell({
   return (
     <div
       className={cn(
-        "mx-auto w-full px-6 py-8",
+        "mx-auto w-full px-page py-page",
         WIDTH_CLASSES[width],
         className
       )}
@@ -51,13 +51,8 @@ type PageTitleProps = {
 export function PageTitle({ children, className, action }: PageTitleProps) {
   if (action) {
     return (
-      <div className="mb-8 flex items-center justify-between gap-4">
-        <h1
-          className={cn(
-            "text-[28px] font-semibold leading-[1.2] tracking-tight",
-            className
-          )}
-        >
+      <div className="mb-section flex items-center justify-between gap-4">
+        <h1 className={cn("text-display font-semibold", className)}>
           {children}
         </h1>
         {action}
@@ -66,12 +61,7 @@ export function PageTitle({ children, className, action }: PageTitleProps) {
   }
 
   return (
-    <h1
-      className={cn(
-        "mb-8 text-[28px] font-semibold leading-[1.2] tracking-tight",
-        className
-      )}
-    >
+    <h1 className={cn("mb-section text-display font-semibold", className)}>
       {children}
     </h1>
   );
@@ -88,9 +78,7 @@ type SectionTitleProps = {
  */
 export function SectionTitle({ children, className }: SectionTitleProps) {
   return (
-    <h2 className={cn("text-xl font-semibold leading-[1.2]", className)}>
-      {children}
-    </h2>
+    <h2 className={cn("text-title font-semibold", className)}>{children}</h2>
   );
 }
 
@@ -98,18 +86,21 @@ type EmptyStateProps = {
   title: string;
   description: ReactNode;
   action?: ReactNode;
+  icon?: ReactNode;
   className?: string;
 };
 
 /**
  * Standardized empty-state block — replaces the repeated inline
  * `flex flex-col items-center gap-2 py-12 text-center` + h2 + muted p
- * pattern.
+ * pattern. Optional `icon` slot renders above the title inside a discreet
+ * circular container; layout is unchanged when `icon` is omitted.
  */
 export function EmptyState({
   title,
   description,
   action,
+  icon,
   className,
 }: EmptyStateProps) {
   return (
@@ -119,6 +110,11 @@ export function EmptyState({
         className
       )}
     >
+      {icon && (
+        <div className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
+          {icon}
+        </div>
+      )}
       <div className="flex flex-col gap-2">
         <SectionTitle>{title}</SectionTitle>
         <div className="text-sm text-muted-foreground">{description}</div>
