@@ -1,8 +1,9 @@
 import Link from "next/link";
+import { PlusIcon, UsersIcon, ChevronRightIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { resolvePmNames } from "@/lib/actions/clients";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import {
   Table,
   TableHeader,
@@ -11,6 +12,11 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
+import {
+  PageShell,
+  PageTitle,
+  EmptyState,
+} from "@/components/layout/page-shell";
 
 type ClientRow = {
   id: string;
@@ -46,29 +52,34 @@ export default async function AdminClientsPage() {
   const pmNames = await resolvePmNames(pmIds);
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-8">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-[28px] font-semibold leading-[1.2]">Clientes</h1>
-        <Button asChild>
-          <Link href="/admin/clients/new">Criar cliente</Link>
-        </Button>
-      </div>
+    <PageShell width="wide">
+      <PageTitle
+        action={
+          <Button asChild>
+            <Link href="/admin/clients/new">
+              <PlusIcon className="size-4" />
+              Criar cliente
+            </Link>
+          </Button>
+        }
+      >
+        Clientes
+      </PageTitle>
 
       {clients.length === 0 ? (
-        <div className="flex flex-col items-center gap-6 py-12 text-center">
-          <div>
-            <h2 className="text-xl font-semibold leading-[1.2]">
-              Nenhum cliente cadastrado ainda
-            </h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Crie o primeiro cliente para organizar produção de conteúdo e
-              RAG isolado por cliente.
-            </p>
-          </div>
-          <Button asChild>
-            <Link href="/admin/clients/new">Criar cliente</Link>
-          </Button>
-        </div>
+        <EmptyState
+          icon={<UsersIcon className="size-5" />}
+          title="Nenhum cliente cadastrado ainda"
+          description="Crie o primeiro cliente para organizar produção de conteúdo e RAG isolado por cliente."
+          action={
+            <Button asChild>
+              <Link href="/admin/clients/new">
+                <PlusIcon className="size-4" />
+                Criar cliente
+              </Link>
+            </Button>
+          }
+        />
       ) : (
         <Table>
           <TableHeader>
@@ -76,6 +87,9 @@ export default async function AdminClientsPage() {
               <TableHead>Nome</TableHead>
               <TableHead>PMs atribuídos</TableHead>
               <TableHead>Briefing</TableHead>
+              <TableHead>
+                <span className="sr-only">Abrir</span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -96,7 +110,7 @@ export default async function AdminClientsPage() {
                   <TableCell>
                     <Link
                       href={`/admin/clients/${client.id}`}
-                      className="hover:underline"
+                      className="flex items-center gap-2 font-medium hover:text-primary"
                     >
                       {client.name}
                     </Link>
@@ -104,10 +118,15 @@ export default async function AdminClientsPage() {
                   <TableCell>{assignedPmEmails || "—"}</TableCell>
                   <TableCell>
                     {briefingEmpty ? (
-                      <Badge variant="outline">Vazio</Badge>
+                      <StatusBadge tone="neutral">Vazio</StatusBadge>
                     ) : (
-                      <Badge variant="secondary">Preenchido</Badge>
+                      <StatusBadge tone="success">Preenchido</StatusBadge>
                     )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Link href={`/admin/clients/${client.id}`}>
+                      <ChevronRightIcon className="size-4 text-muted-foreground" />
+                    </Link>
                   </TableCell>
                 </TableRow>
               );
@@ -115,6 +134,6 @@ export default async function AdminClientsPage() {
           </TableBody>
         </Table>
       )}
-    </div>
+    </PageShell>
   );
 }

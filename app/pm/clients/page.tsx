@@ -1,8 +1,9 @@
 import Link from "next/link";
+import { PlusIcon, UsersIcon, ChevronRightIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { resolvePmNames } from "@/lib/actions/clients";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import {
   Table,
   TableHeader,
@@ -55,7 +56,10 @@ export default async function PmClientsPage() {
       <PageTitle
         action={
           <Button asChild>
-            <Link href="/pm/clients/new">Criar cliente</Link>
+            <Link href="/pm/clients/new">
+              <PlusIcon className="size-4" />
+              Criar cliente
+            </Link>
           </Button>
         }
       >
@@ -64,11 +68,15 @@ export default async function PmClientsPage() {
 
       {clients.length === 0 ? (
         <EmptyState
+          icon={<UsersIcon className="size-5" />}
           title="Nenhum cliente cadastrado ainda"
           description="Crie o primeiro cliente para organizar produção de conteúdo e RAG isolado por cliente."
           action={
             <Button asChild>
-              <Link href="/pm/clients/new">Criar cliente</Link>
+              <Link href="/pm/clients/new">
+                <PlusIcon className="size-4" />
+                Criar cliente
+              </Link>
             </Button>
           }
         />
@@ -79,6 +87,9 @@ export default async function PmClientsPage() {
               <TableHead>Nome</TableHead>
               <TableHead>PMs atribuídos</TableHead>
               <TableHead>Briefing</TableHead>
+              <TableHead>
+                <span className="sr-only">Abrir</span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -99,7 +110,7 @@ export default async function PmClientsPage() {
                   <TableCell>
                     <Link
                       href={`/pm/clients/${client.id}`}
-                      className="hover:underline"
+                      className="flex items-center gap-2 font-medium hover:text-primary"
                     >
                       {client.name}
                     </Link>
@@ -107,10 +118,15 @@ export default async function PmClientsPage() {
                   <TableCell>{assignedPmEmails || "—"}</TableCell>
                   <TableCell>
                     {briefingEmpty ? (
-                      <Badge variant="outline">Vazio</Badge>
+                      <StatusBadge tone="neutral">Vazio</StatusBadge>
                     ) : (
-                      <Badge variant="secondary">Preenchido</Badge>
+                      <StatusBadge tone="success">Preenchido</StatusBadge>
                     )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Link href={`/pm/clients/${client.id}`}>
+                      <ChevronRightIcon className="size-4 text-muted-foreground" />
+                    </Link>
                   </TableCell>
                 </TableRow>
               );
