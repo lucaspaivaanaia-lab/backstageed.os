@@ -49,7 +49,7 @@ key-decisions:
 requirements-completed: [KAN-01, KAN-02, KAN-03]
 
 # Metrics
-duration: ~1h10min (Tasks 1-3)
+duration: ~1h10min (Tasks 1-3) + human verification
 completed: 2026-07-31
 ---
 
@@ -57,17 +57,11 @@ completed: 2026-07-31
 
 **Self-referencing `cards` table (single/package/piece) with non-recursive per-client RLS proven by pgTAP, a pure `nextStage` stage-progression module, and the `/pm/board` screen where a PM creates a single-post card and advances it through five fixed stages via an explicit "Avançar" button (no drag-and-drop).**
 
-## Status: 3 of 4 tasks complete — PAUSED at Task 4 (human verification checkpoint)
+## Status: COMPLETE (4 of 4 tasks)
 
-Tasks 1-3 completed by the executor, committed, and automated-verified. Task 4 (`checkpoint:human-verify`, `gate="blocking"`) requires the developer to walk through the board in a running app — this executor runs in an isolated git worktree and cannot itself drive a browser session or receive the developer's sign-off. Per the plan's own instruction ("Pause and hand the running app to the developer... do not self-approve"), this plan stops here and returns control to the orchestrator.
+Tasks 1-3 completed by the executor, committed, and automated-verified. Task 4 (`checkpoint:human-verify`, `gate="blocking"`) was walked through by the developer against the merged `main` branch on 2026-07-31 — all 9 verification steps confirmed correct ("approved"). Plan closed.
 
-## Performance
-
-- **Duration:** ~1h10min (Tasks 1-3)
-- **Started:** 2026-07-31T14:46:00Z (approx, worktree HEAD correction + context load)
-- **Paused:** 2026-07-31T15:59:00Z (approx, after Task 3 commit)
-- **Tasks:** 3 of 4 complete (Task 4 is a human checkpoint, not yet run)
-- **Files modified:** 10 (2 new migrations/tests, 6 new application files, 2 modified)
+**Post-approval feedback (not part of this plan's scope):** the developer also requested drag-and-drop stage advancement and Trello-style rich cards (description, assignees, column-scoped creation) after approving. These directly revisit locked decision D-05 (explicit button, no DnD) and introduce fields outside Phase 3's requirements (KAN/CHK). Phase 3 execution is paused pending re-discussion/re-planning — see `.planning/phases/03-content-production-kanban/03-CONTEXT.md` for the pending decision reversal.
 
 ## Accomplishments
 
@@ -85,7 +79,7 @@ Tasks 1-3 completed by the executor, committed, and automated-verified. Task 4 (
 1. **Task 1: Ship the cards schema with its RLS proof and the pure stage module, then push it live** — `d681d24` (feat)
 2. **Task 2: Build createCard and advanceStage Server Actions** — `a77a0bf` (feat)
 3. **Task 3: Build the /pm/board screen and wire it into the PM sidebar** — `e75cc91` (feat)
-4. **Task 4: Human verification** — NOT YET RUN (checkpoint, requires a running app + developer sign-off; see "Next Steps" below)
+4. **Task 4: Human verification** — CONFIRMED by developer 2026-07-31 (all 9 steps passed; no commit, verification only)
 
 ## Files Created/Modified
 - `supabase/migrations/0015_cards.sql` - self-referencing `cards` table, `card_type`/`card_stage` enums, non-recursive RLS + GRANT
