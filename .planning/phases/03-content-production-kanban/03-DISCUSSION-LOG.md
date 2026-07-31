@@ -114,3 +114,133 @@ Asked whether any other gray area needed discussion before writing CONTEXT.md. U
 ## Deferred Ideas
 
 - Real Google Drive API integration (OAuth, file picker, embedded previews/thumbnails) — explicitly out of scope per the Drive-attachment decisions; link-paste + format validation only for this phase.
+
+---
+---
+
+# Re-discussion: 2026-07-31 (mid-execution re-scope)
+
+> Triggered after the developer used the shipped 03-01/03-02 board (Wave 1 and 2 executed and human-verified) and asked for drag-and-drop plus a more Trello-like card experience. This reverses D-05 above (kept in CONTEXT.md, marked superseded, not deleted) and adds new scope beyond the original KAN/CHK requirements.
+
+**Date:** 2026-07-31
+**Phase:** 3-Content Production Kanban
+**Areas discussed:** Drag-and-drop mechanism, Card creation entry point, Card description field, Card assignees
+
+---
+
+## Drag-and-drop mechanism
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| dnd-kit | Modern, maintained, accessible — current standard for React Kanban | ✓ |
+| react-beautiful-dnd | Trello-like feel, but archived/unmaintained since 2022 | |
+| You decide | Planner picks at plan time | |
+
+**User's choice:** dnd-kit (recommended option)
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Keep both | Avançar button stays as accessible fallback; drag is additional | ✓ |
+| Drag-and-drop only | Remove Avançar entirely | |
+
+**User's choice:** Keep both (recommended option)
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Snap back, same error as Avançar | Gate applies identically regardless of trigger | ✓ |
+| Drag disabled entirely while blocked | Card can't be picked up at all | |
+
+**User's choice:** Snap back, same error as Avançar (recommended option)
+
+---
+
+## Card creation entry point
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Any column, no restriction | Per-column "+" on all 5 stages, matches Trello screenshot | ✓ |
+| Only Briefing/Produção | Restricts per-column "+" to pre-gate stages | |
+| Any column, gate applies retroactively | Flexible but consistent | |
+
+**User's choice:** Any column, no restriction (matches the Trello reference screenshot)
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Yes, keep both | Top-level button (always Briefing) + per-column "+" | ✓ |
+| No, replace it entirely | Only per-column "+" | |
+
+**User's choice:** Yes, keep both (recommended option)
+
+**Follow-up (not originally offered as a discrete option, asked to close a gap the "any column" answer opened):** If a card is created directly in revisão interna or later, does it get the checklist snapshot immediately?
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Yes, snapshot immediately | Same gating as a card arriving normally, preserves CHK-04 | ✓ |
+| No, no checklist required | Faster but breaks the audit-trail guarantee | |
+
+**User's choice:** Yes, snapshot taken immediately (recommended option)
+**Notes:** This closes a gap the "any column, no restriction" choice would otherwise leave open — without it, a directly-created card in revisão interna could bypass the checklist entirely.
+
+---
+
+## Card description field
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Plain text, multi-line | No formatting, matches project's zero-rich-text convention | ✓ |
+| Markdown-rendered | Needs a new markdown rendering dependency | |
+
+**User's choice:** Plain text, multi-line (recommended option)
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Detail view only | Board face stays compact | ✓ |
+| Preview on board face too | Needs a new DataCard text-preview slot | |
+
+**User's choice:** Detail view only (recommended option)
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Optional | Can be added/edited later | ✓ |
+| Required at creation | Must fill in before creating | |
+
+**User's choice:** Optional (recommended option)
+
+---
+
+## Card assignees
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Yes — scoped to client's assigned PMs (pm_clients) | Can't assign to a PM outside that client's team | ✓ |
+| Something else | Free-text alternative | |
+
+**User's choice:** Yes — assignee = which of the client's assigned PMs owns this card
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Single assignee | One PM at a time, simpler UI (Select) | ✓ |
+| Multiple assignees | Needs multi-select + join table | |
+
+**User's choice:** Single assignee (recommended option)
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Optional | Can be unassigned, picked up later | ✓ |
+| Required at creation | Must pick before creating | |
+
+**User's choice:** Optional (recommended option)
+
+---
+
+## Wrap-up check
+
+Asked whether anything else was unclear, referencing the user's earlier message which trailed off after "...informações que seja" — user confirmed "I'm ready for context," no additional areas raised.
+
+## Superseded Decisions
+
+- **D-05** ("Avançar button only, no drag-and-drop") — superseded by D-12/D-13. Kept in CONTEXT.md marked superseded rather than deleted, since 03-02 was already built and merged under the original decision.
+
+## Deferred Ideas
+
+- None this round — all four areas the developer raised were folded directly into CONTEXT.md as new locked decisions (D-12 through D-19), per their explicit choice to expand Phase 3's scope rather than defer to a future phase.

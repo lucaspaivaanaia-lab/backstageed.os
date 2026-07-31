@@ -1,12 +1,15 @@
 # Phase 3: Content Production Kanban - Context
 
 **Gathered:** 2026-07-29
-**Status:** Ready for planning
+**Re-discussed:** 2026-07-31 — mid-execution re-scope (see below)
+**Status:** Ready for planning (re-plan required for waves 3-6 and a revision to already-merged 03-02)
 
 <domain>
 ## Phase Boundary
 
 PM can take a content idea from briefing through internal review: create a card for a client (single post or a package of related pieces), attach Google Drive links, move it through the stages briefing → produção → revisão interna, and be structurally blocked from advancing past revisão interna until that client's checklist is fully checked off — with a full audit trail of who checked what and when. This phase does NOT include client-facing approval or the adjustment loop (that's Phase 4 — aprovação do cliente and agendamento are terminal-looking stages this phase's board displays, but the interactions at those stages belong to Phase 4), and does NOT include Phase 6's cross-client admin overview.
+
+**Added 2026-07-31 (mid-execution re-scope, after the developer used the shipped 03-01/03-02 board and asked for a more Trello-like experience):** the board also supports drag-and-drop stage advancement (alongside the existing Avançar button), per-column card creation, and two new card fields — a plain-text description and a single optional PM assignee. See the new decisions section below; D-05 is superseded, not deleted.
 
 </domain>
 
@@ -22,8 +25,8 @@ PM can take a content idea from briefing through internal review: create a card 
 - **D-04:** A card's checklist is snapshotted (copied) at the moment it enters revisão interna, not live-bound to the template. Editing a template afterward only affects cards that enter revisão interna after the edit — in-progress cards keep the item list they started with. This prevents a template edit from silently un-checking or adding items to a card mid-review.
 
 ### Stage advancement (KAN-02, KAN-03, CHK-03)
-- **D-05:** Advancing a card to the next stage is an explicit "Avançar" button on the card, not drag-and-drop on the board. No new drag-and-drop dependency needed.
-- **D-06:** Leaving revisão interna, the "Avançar" button is disabled (not clickable-then-erroring) while any checklist item on that card/sub-card is unchecked — the PM sees at a glance what's blocking, never gets a rejected click.
+- **D-05 (SUPERSEDED 2026-07-31 — see D-12/D-13):** ~~Advancing a card to the next stage is an explicit "Avançar" button on the board, not drag-and-drop. No new drag-and-drop dependency needed.~~ Kept for history — 03-02 was built and merged under this decision before the reversal. See D-12 for the current rule.
+- **D-06:** Leaving revisão interna, the "Avançar" button is disabled (not clickable-then-erroring) while any checklist item on that card/sub-card is unchecked — the PM sees at a glance what's blocking, never gets a rejected click. **Still in force** — D-13 extends this same rule to drag-and-drop.
 
 ### Google Drive attachments (KAN-05)
 - **D-07:** Attachments are links, not uploaded files or an embedded picker — no Google Drive API/OAuth integration in this phase (ROADMAP.md's own success criterion says "links", not files; this also matches PROJECT.md's split of Drive-for-heavy-media / Supabase-for-structured-data without requiring live Drive API access).
@@ -35,6 +38,22 @@ PM can take a content idea from briefing through internal review: create a card 
 
 ### Admin checklist override (CHK-04)
 - **D-11:** Admin has a manual override to force-advance a card past a blocked checklist gate (unchecked items). The override itself is logged in the same audit trail as regular checklist checks — who triggered it, when, and which items were still unchecked at the time — so CHK-04's "no step can be silently skipped" guarantee holds even when the gate is bypassed. Resolved 2026-07-29 via `/gsd:plan-phase 3` (was flagged as a genuine open question, not decided silently).
+
+### Drag-and-drop stage advancement (added 2026-07-31 — supersedes D-05)
+- **D-12:** The board adds drag-and-drop card movement using **dnd-kit** (modern, maintained, keyboard/screen-reader accessible — no DnD library existed in the codebase before this). The explicit "Avançar" button from D-05 **stays** as an accessible fallback; dragging is an additional way to advance a card, not a replacement.
+- **D-13:** The checklist gate applies identically regardless of trigger. Dragging a card out of revisão interna with unchecked items is rejected client-side (the card snaps back to its column) with the same blocked-checklist message the Avançar button already shows (D-06) — there is no separate DnD-only gate bypass.
+
+### Card creation entry point (added 2026-07-31)
+- **D-14:** Each of the 5 stage columns gets its own "+" create-card trigger (Trello-style), in addition to the existing top-level "Criar card" button (which always creates in Briefing). A card can be created directly in ANY column, including revisão interna or later — no restriction to Briefing/Produção.
+- **D-15:** A card created directly in revisão interna (or later) gets its checklist snapshot taken immediately, exactly as if it had just arrived there via Avançar or drag — CHK-04's audit-trail guarantee applies to directly-created cards too, not just cards that transitioned normally.
+
+### Card description field (added 2026-07-31)
+- **D-16:** Cards get a new plain-text, multi-line description field (no markdown/rich-text — matches the project's existing zero-rich-text-editor convention for briefing fields and chat).
+- **D-17:** The description is shown only in the card detail view, not on the board face — the board card stays compact (title + badges), matching the already-built `DataCard` primitive.
+- **D-18:** The description is optional at card creation — can be added or edited later from the card detail view, same as the current title-only creation flow.
+
+### Card assignee field (added 2026-07-31)
+- **D-19:** Cards get a new single, optional assignee field — one PM "owns" the card at a time. The assignee picker is scoped to that client's already-assigned PMs (`pm_clients`), not all PMs in the system — you can't assign a card to a PM who isn't on that client's team. Optional at creation, matches description's optional pattern.
 
 ### Claude's Discretion
 - Exact schema shape for cards/sub-cards (e.g. self-referencing `parent_card_id` vs. a separate `card_pieces` table) — D-01/D-02 lock the *behavior* (independent sub-card advancement, per-sub-card checklist), not the table design.
@@ -77,7 +96,7 @@ No external specs/ADRs beyond the above — requirements fully captured in decis
 ## Existing Code Insights
 
 ### Reusable Assets
-- `components/ui/data-card.tsx` (`DataCard`) — generic card with slots for title/badge/meta/actions, built in the 260728-uab design-system task explicitly as a Kanban-ready primitive (no drag-and-drop, no column/lane concept baked in yet — D-05 above means that's fine, this phase doesn't need DnD).
+- `components/ui/data-card.tsx` (`DataCard`) — generic card with slots for title/badge/meta/actions, built in the 260728-uab design-system task as a Kanban-ready primitive. **Update 2026-07-31:** now needs a dnd-kit `useSortable`/draggable wrapper per D-12 — the underlying DataCard visual/slot structure stays, only the interaction layer around it changes.
 - `components/ui/status-badge.tsx` (`StatusBadge`) — tone-based badge (success/warning/danger/neutral/info) already used for briefing/RAG-file/access status elsewhere; a natural fit for stage labels and checklist-complete indicators.
 - `components/layout/app-sidebar.tsx` — persistent nav; a new "Cards"/"Board" entry needs to be added to the PM (and possibly Admin) nav item list.
 - `components/ui/table.tsx` (refined in 260728-uab) — if any Kanban-adjacent list view (e.g., admin's checklist template management) ends up tabular rather than card-based.
@@ -101,6 +120,7 @@ No external specs/ADRs beyond the above — requirements fully captured in decis
 
 - ROADMAP.md's Phase 3 deadline (2026-07-28) has already passed as of this discussion (2026-07-29) — worth flagging to the user during `/gsd:plan-phase` so the roadmap can be updated, not something to silently ignore.
 - The success criteria explicitly list stages through "agendamento" as board columns/states the card can reach, but the actual PM-facing interactions at "aprovação do cliente" and "agendamento" belong to Phase 4 (client approval) — this phase just needs the card's stage field to be able to reach and display those states, not build UI for what happens there.
+- **Added 2026-07-31:** the developer referenced a Trello board screenshot (columns per goal/category, cards with title + labels + assignee avatars, "+ Add another card" per column) as the visual/interaction model to match for D-12/D-14 — column-per-stage layout with per-column card creation and drag-and-drop, not the current button-only flow.
 
 </specifics>
 
@@ -118,3 +138,4 @@ None — no pending todos matched this phase (`todo.match-phase` returned 0 matc
 
 *Phase: 3-Content Production Kanban*
 *Context gathered: 2026-07-29*
+*Re-discussed: 2026-07-31 (mid-execution re-scope — D-12 through D-19)*
