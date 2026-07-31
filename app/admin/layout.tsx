@@ -1,4 +1,4 @@
-import { UsersIcon, ClipboardCheckIcon } from "lucide-react";
+import { UsersIcon, ClipboardCheckIcon, ListChecksIcon } from "lucide-react";
 
 import { AppSidebar } from "@/components/layout/app-sidebar";
 
@@ -20,6 +20,11 @@ export default function AdminLayout({
             href: "/admin/approvals",
             label: "Aprovações",
             icon: <ClipboardCheckIcon />,
+          },
+          {
+            href: "/admin/checklist-templates",
+            label: "Checklists",
+            icon: <ListChecksIcon />,
           },
         ]}
       />
