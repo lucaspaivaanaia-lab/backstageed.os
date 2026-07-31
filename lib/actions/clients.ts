@@ -114,6 +114,49 @@ export async function resolvePmNames(
   return map;
 }
 
+/**
+ * Read-only roster of a specific client's assigned PMs, used by plan
+ * 03-09's assignee picker (D-19). Closes the same RLS gap listPmRoster/
+ * resolvePmNames close -- `pm_clients_select_own_or_admin` lets a PM read
+ * only their OWN assignment rows, so the roster of a client's OTHER PMs is
+ * unreachable through RLS -- but scoped to one client and, unlike
+ * listPmRoster (which takes no scoping argument at all), gated by an
+ * RLS-scoped visibility check FIRST: a caller not assigned to `clientId`
+ * gets an empty list, never a roster, so this cannot become a cross-client
+ * membership oracle. Display-only, never used for a write.
+ */
+export async function listClientPmRoster(
+  clientId: string
+): Promise<{ id: string; email: string }[]> {
+  const supabase = await createClient();
+  const { data: client } = await supabase
+    .from("clients")
+    .select("id")
+    .eq("id", clientId)
+    .single();
+  if (!client) return [];
+
+  const admin = createAdminClient();
+
+  const { data: rows } = await admin
+    .from("pm_clients")
+    .select("pm_id")
+    .eq("client_id", clientId);
+  const ids = (rows ?? []).map((r) => r.pm_id);
+  if (ids.length === 0) return [];
+
+  const { data: profiles } = await admin
+    .from("profiles")
+    .select("id, email")
+    .in("id", ids)
+    .eq("role", "pm")
+    .eq("status", "approved");
+
+  return (profiles ?? [])
+    .map((p) => ({ id: p.id, email: p.email ?? "" }))
+    .sort((a, b) => a.email.localeCompare(b.email));
+}
+
 type ActionResult = { success: true } | { error: string };
 
 /**

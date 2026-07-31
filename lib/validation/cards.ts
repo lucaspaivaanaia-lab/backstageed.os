@@ -7,23 +7,6 @@ import { z } from "zod";
  * avoid a file-ownership conflict between plans. Enforced BEFORE any
  * privileged Supabase call (Security Domain V5 input validation).
  */
-export const createCardSchema = z.object({
-  clientId: z.string().uuid({ message: "Cliente inválido." }),
-  title: z
-    .string()
-    .trim()
-    .min(1, { message: "Título obrigatório." })
-    .max(200),
-  cardType: z.enum(["single", "package"]),
-});
-
-export type CreateCardInput = z.infer<typeof createCardSchema>;
-
-export const advanceStageSchema = z.object({
-  cardId: z.string().uuid(),
-});
-
-export type AdvanceStageInput = z.infer<typeof advanceStageSchema>;
 
 // `CARD_STAGE_VALUES` exists only because `z.enum` needs a literal tuple.
 // `lib/cards/stages.ts`'s `STAGE_ORDER` remains the single source of truth
@@ -37,6 +20,34 @@ export const CARD_STAGE_VALUES = [
   "agendamento",
 ] as const;
 
+export const createCardSchema = z.object({
+  clientId: z.string().uuid({ message: "Cliente inválido." }),
+  title: z
+    .string()
+    .trim()
+    .min(1, { message: "Título obrigatório." })
+    .max(200),
+  cardType: z.enum(["single", "package"]),
+  // D-14: a card may be created directly in ANY of the five columns, not
+  // only Briefing. Ignored for cardType "package" (D-02: a package row has
+  // no stage of its own -- cards_package_has_no_stage enforces it).
+  stage: z.enum(CARD_STAGE_VALUES).optional(),
+  // D-16/D-18: optional plain text, multi-line, no markdown.
+  description: z.string().trim().max(5000).optional(),
+  // D-19: optional single assignee; membership in the client's pm_clients
+  // rows is enforced by the cards_assignee_membership_trg trigger, not
+  // here.
+  assigneeId: z.string().uuid().optional(),
+});
+
+export type CreateCardInput = z.infer<typeof createCardSchema>;
+
+export const advanceStageSchema = z.object({
+  cardId: z.string().uuid(),
+});
+
+export type AdvanceStageInput = z.infer<typeof advanceStageSchema>;
+
 /**
  * moveCard's input (KAN-02, D-12): unlike advanceStageSchema, this carries a
  * caller-supplied target stage, because drag-and-drop is inherently "put it
@@ -49,6 +60,19 @@ export const moveCardSchema = z.object({
   toStage: z.enum(CARD_STAGE_VALUES),
 });
 export type MoveCardInput = z.infer<typeof moveCardSchema>;
+
+/**
+ * updateCardDetails' input (KAN-01, D-16/D-19): edits the two fields
+ * createCard can also set at creation time. Both fields are nullable rather
+ * than optional -- the form always submits a value (possibly null) to
+ * explicitly clear a description or unassign a card, never omits the key.
+ */
+export const updateCardDetailsSchema = z.object({
+  cardId: z.string().uuid(),
+  description: z.string().trim().max(5000).nullable(),
+  assigneeId: z.string().uuid().nullable(),
+});
+export type UpdateCardDetailsInput = z.infer<typeof updateCardDetailsSchema>;
 
 export const toggleChecklistItemSchema = z.object({
   itemId: z.string().uuid(),

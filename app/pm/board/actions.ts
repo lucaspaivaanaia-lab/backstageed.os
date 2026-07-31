@@ -11,10 +11,12 @@ import {
   advanceStageSchema,
   toggleChecklistItemSchema,
   moveCardSchema,
+  updateCardDetailsSchema,
   type CreateCardInput,
   type AdvanceStageInput,
   type ToggleChecklistItemInput,
   type MoveCardInput,
+  type UpdateCardDetailsInput,
 } from "@/lib/validation/cards";
 
 const CARD_CREATE_ERROR = "Não foi possível criar o card. Tente novamente.";
@@ -22,6 +24,21 @@ const CARD_NOT_FOUND_ERROR = "Card não encontrado.";
 const LAST_STAGE_ERROR = "Este card já está na última etapa.";
 const NOT_AUTHENTICATED_ERROR = "Não autenticado.";
 const MOVE_FAILED_ERROR = "Não foi possível mover o card. Tente novamente.";
+const ASSIGNEE_NOT_ON_CLIENT_ERROR =
+  "Este PM não está atribuído a este cliente.";
+const CARD_ROLLBACK_FAILED_ERROR =
+  "O card foi criado mas o checklist falhou e não foi possível desfazer. Avise o administrador antes de usar este card.";
+const CARD_SAVE_ERROR = "Não foi possível salvar o card. Tente novamente.";
+
+/**
+ * Maps migration 0017's deliberate `assignee_not_assigned_to_client`
+ * exception token (cards_assignee_membership_trg) to user-facing
+ * Portuguese. The trigger — not this mapping — is the actual boundary
+ * (D-19); this function only translates its failure for display.
+ */
+function isAssigneeMembershipError(error: { message?: string } | null): boolean {
+  return Boolean(error?.message?.includes("assignee_not_assigned_to_client"));
+}
 
 export type CreateCardResult =
   | { success: true; cardId: string }
@@ -62,6 +79,16 @@ export async function createCard(
     return { error: CARD_CREATE_ERROR };
   }
 
+  // D-14: a card may be created directly in any of the five columns, not
+  // only Briefing. Defaulting to "briefing" preserves the pre-D-14
+  // behaviour of the top-level "Criar card" button, which simply omits
+  // `stage`. A package card never has a stage of its own (D-02) —
+  // cards_package_has_no_stage enforces this at the database layer too.
+  const targetStage =
+    parsed.data.cardType === "package"
+      ? null
+      : parsed.data.stage ?? "briefing";
+
   const { data: card, error: insertError } = await supabase
     .from("cards")
     .insert({
@@ -71,13 +98,59 @@ export async function createCard(
       created_by: user.id,
       // The cards_package_has_no_stage check constraint enforces this at
       // the database layer as well — never leave stage to convention.
-      stage: parsed.data.cardType === "single" ? "briefing" : null,
+      stage: targetStage,
+      description:
+        parsed.data.description && parsed.data.description.length > 0
+          ? parsed.data.description
+          : null,
+      assignee_id: parsed.data.assigneeId ?? null,
     })
     .select("id")
     .single();
 
   if (insertError || !card) {
+    if (isAssigneeMembershipError(insertError)) {
+      return { error: ASSIGNEE_NOT_ON_CLIENT_ERROR };
+    }
     return { error: CARD_CREATE_ERROR };
+  }
+
+  // D-15 snapshot-on-create with a result-checked compensating delete. The
+  // card row and its checklist cannot be written in one transaction through
+  // the Supabase JS client, and D-15 requires that a card created directly
+  // in revisão interna or later ALWAYS carries its snapshot — so the only
+  // fail-safe outcome is "no card at all", never "a card sitting in a
+  // gated column with no checklist and therefore a vacuously-passing gate".
+  if (
+    targetStage !== null &&
+    STAGE_ORDER.indexOf(targetStage) >= STAGE_ORDER.indexOf("revisao_interna")
+  ) {
+    const snap = await snapshotChecklistForCard(supabase, card.id, client.id);
+    if (!snap.ok) {
+      // The delete works because migration 0017 (Task 1 of this plan)
+      // ships `grant delete on public.cards to authenticated` plus the
+      // `cards_delete_scoped` policy; pgTAP 0009 assertions 5–7 prove it.
+      const { error: rollbackError } = await supabase
+        .from("cards")
+        .delete()
+        .eq("id", card.id);
+
+      if (rollbackError) {
+        // The fail-safe itself failed: a card is now sitting in a gated
+        // column with no checklist, so isGateBlocked([]) would pass
+        // vacuously. This must never be silent (CHK-04) -- log the full
+        // picture and tell the user the card is not safe to use.
+        console.error("[createCard] D-15 compensating delete failed", {
+          cardId: card.id,
+          stage: targetStage,
+          snapshotError: snap.error,
+          rollbackError,
+        });
+        return { error: CARD_ROLLBACK_FAILED_ERROR };
+      }
+
+      return { error: snap.error };
+    }
   }
 
   revalidatePath("/pm/board");
@@ -295,6 +368,60 @@ export async function moveCard(input: MoveCardInput): Promise<MoveCardResult> {
 
   if (updateError) {
     return { error: MOVE_FAILED_ERROR };
+  }
+
+  revalidatePath("/pm/board");
+  return {};
+}
+
+export type UpdateCardDetailsResult = { error?: string };
+
+/**
+ * Edit a card's description and/or assignee (KAN-01, D-16, D-19). This
+ * action never accepts a `clientId` — the assignee's legality is decided by
+ * cards_assignee_membership_trg against the card's OWN client_id, which the
+ * browser cannot influence.
+ */
+export async function updateCardDetails(
+  input: UpdateCardDetailsInput
+): Promise<UpdateCardDetailsResult> {
+  const parsed = updateCardDetailsSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: NOT_AUTHENTICATED_ERROR };
+
+  // Re-read the card through RLS — never trust that cardId belongs to a
+  // client the caller can reach; cards_update_scoped is the real boundary.
+  const { data: card } = await supabase
+    .from("cards")
+    .select("id")
+    .eq("id", parsed.data.cardId)
+    .single();
+  if (!card) return { error: CARD_NOT_FOUND_ERROR };
+
+  const { error } = await supabase
+    .from("cards")
+    .update({
+      description:
+        parsed.data.description && parsed.data.description.length > 0
+          ? parsed.data.description
+          : null,
+      assignee_id: parsed.data.assigneeId,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", parsed.data.cardId);
+
+  if (error) {
+    if (isAssigneeMembershipError(error)) {
+      return { error: ASSIGNEE_NOT_ON_CLIENT_ERROR };
+    }
+    return { error: CARD_SAVE_ERROR };
   }
 
   revalidatePath("/pm/board");
