@@ -3,16 +3,21 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { nextStage } from "@/lib/cards/stages";
+import { isGateBlocked, GATE_BLOCKED_MESSAGE } from "@/lib/cards/checklist-gate";
+import { snapshotChecklistForCard } from "@/lib/cards/checklist-snapshot";
 import {
   createCardSchema,
   advanceStageSchema,
+  toggleChecklistItemSchema,
   type CreateCardInput,
   type AdvanceStageInput,
+  type ToggleChecklistItemInput,
 } from "@/lib/validation/cards";
 
 const CARD_CREATE_ERROR = "Não foi possível criar o card. Tente novamente.";
 const CARD_NOT_FOUND_ERROR = "Card não encontrado.";
 const LAST_STAGE_ERROR = "Este card já está na última etapa.";
+const NOT_AUTHENTICATED_ERROR = "Não autenticado.";
 
 export type CreateCardResult =
   | { success: true; cardId: string }
@@ -110,10 +115,91 @@ export async function advanceStage(
     return { error: LAST_STAGE_ERROR };
   }
 
+  // Block A — the gate (CHK-03, T-03-12): re-read the card's own checklist
+  // rows server-side, never accept a completion claim from the caller (the
+  // client never sends one). Evaluated BEFORE computing/applying the
+  // update, only when the card is currently in revisão interna.
+  //
+  // (a) The Admin override lives in a separate exported action (plan
+  //     03-05's `forceAdvanceOverride`).
+  // (b) The drag-triggered path lives in a separate exported action (plan
+  //     03-07's `moveCard`), which re-runs this same predicate.
+  // (c) This function must never gain a bypass parameter — a second
+  //     bypass path here would defeat the CHK-04 audit guarantee.
+  if (card.stage === "revisao_interna") {
+    const { data: items } = await supabase
+      .from("card_checklist_items")
+      .select("completed_at")
+      .eq("card_id", card.id);
+
+    if (isGateBlocked(items ?? [])) {
+      return { error: GATE_BLOCKED_MESSAGE };
+    }
+  }
+
+  // Block B — the snapshot (D-04), executed when the card is ENTERING
+  // revisão interna, BEFORE the stage update. Order matters and is
+  // deliberate (03-RESEARCH.md Pitfall 3): the snapshot insert runs FIRST
+  // and its error is checked; only on success does the stage update run.
+  // The Supabase JS client offers no multi-statement transaction, so this
+  // ordering is what makes a mid-request failure fail safe — worst case
+  // the card stays put with an inert item list, never advances with an
+  // unguarded empty one.
+  if (target === "revisao_interna") {
+    const snap = await snapshotChecklistForCard(
+      supabase,
+      card.id,
+      card.client_id
+    );
+    if (!snap.ok) {
+      return { error: snap.error };
+    }
+  }
+
   const { error } = await supabase
     .from("cards")
     .update({ stage: target, updated_at: new Date().toISOString() })
     .eq("id", parsed.data.cardId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/pm/board");
+  return {};
+}
+
+export type ToggleChecklistItemResult = { error?: string };
+
+/**
+ * Records who checked/unchecked a checklist item and when (CHK-03, CHK-04,
+ * T-03-13). The RLS write policy from Task 1
+ * (`card_checklist_items_write_scoped`) is what scopes this to the
+ * caller's assigned clients — no `card_id`/`client_id` argument is ever
+ * accepted from the browser, so an item id belonging to another client's
+ * card simply matches no row (T-03-14).
+ */
+export async function toggleChecklistItem(
+  input: ToggleChecklistItemInput
+): Promise<ToggleChecklistItemResult> {
+  const parsed = toggleChecklistItemSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: NOT_AUTHENTICATED_ERROR };
+
+  const { error } = await supabase
+    .from("card_checklist_items")
+    .update({
+      completed_at: parsed.data.completed ? new Date().toISOString() : null,
+      completed_by: parsed.data.completed ? user.id : null,
+    })
+    .eq("id", parsed.data.itemId);
 
   if (error) {
     return { error: error.message };

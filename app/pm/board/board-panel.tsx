@@ -7,15 +7,26 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { PlusIcon } from "lucide-react";
 
-import { createCard, advanceStage } from "./actions";
+import { createCard, advanceStage, toggleChecklistItem } from "./actions";
 import { createCardSchema, type CreateCardInput } from "@/lib/validation/cards";
-import { STAGE_LABELS } from "@/lib/cards/stages";
-import type { BoardCard, BoardClient, BoardColumn } from "./page";
+import { STAGE_LABELS, STAGE_ORDER } from "@/lib/cards/stages";
+import {
+  checklistProgress,
+  isGateBlocked,
+  GATE_BLOCKED_MESSAGE,
+} from "@/lib/cards/checklist-gate";
+import type {
+  BoardCard,
+  BoardChecklistItem,
+  BoardClient,
+  BoardColumn,
+} from "./page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataCard } from "@/components/ui/data-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ErrorBox } from "@/components/ui/error-box";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -39,7 +50,12 @@ import {
   FormControl,
   FormMessage,
 } from "@/components/ui/form";
-import { PageShell, PageTitle, EmptyState } from "@/components/layout/page-shell";
+import {
+  PageShell,
+  PageTitle,
+  SectionTitle,
+  EmptyState,
+} from "@/components/layout/page-shell";
 
 type BoardPanelProps = {
   clients: BoardClient[];
@@ -50,6 +66,14 @@ type BoardPanelProps = {
   // Pitfall 4). Accepted here only so page.tsx's shape stays stable across
   // plans; this panel does not read it.
   packages: BoardCard[];
+  // completed_by id -> display email, resolved server-side (page.tsx) via
+  // the privileged resolvePmNames helper — this panel never resolves names
+  // itself.
+  pmNames: Record<string, string>;
+  // Whether the active client has a checklist template assigned. Drives
+  // the "Nenhum checklist configurado" informational notice — never used
+  // to disable "Avançar" (that stays gated by isGateBlocked alone).
+  hasChecklistTemplate: boolean;
 };
 
 const CARD_CREATED_TOAST = "Card criado.";
@@ -58,6 +82,13 @@ function formatCreatedAt(iso: string): string {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium" }).format(
     new Date(iso)
   );
+}
+
+function formatCompletedAt(iso: string): string {
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(iso));
 }
 
 /**
@@ -140,15 +171,83 @@ function CreateCardButton({ clientId }: { clientId: string | null }) {
 }
 
 /**
- * A single Kanban card + its detail Dialog (KAN-02, D-05). "Avançar" is a
- * plain Server Action call inside useTransition — no client-side stage
- * computation, `nextStage` runs only on the server (app/pm/board/actions.ts).
- * Server errors render verbatim inside ErrorBox, never paraphrased.
+ * Checklist item row (CHK-03/CHK-04): a Checkbox + label, toggled via the
+ * `toggleChecklistItem` Server Action inside `useTransition`. Interactive
+ * only while the owning card's stage is exactly `revisao_interna` — in
+ * later stages the checkbox renders `disabled` so the record stays
+ * readable but immutable. The checked state and audit line always derive
+ * from the server-supplied `item`, never local-only state.
  */
-function BoardCardItem({ card }: { card: BoardCard }) {
+function ChecklistItemRow({
+  item,
+  pmNames,
+  interactive,
+}: {
+  item: BoardChecklistItem;
+  pmNames: Record<string, string>;
+  interactive: boolean;
+}) {
+  const [isPending, startTransition] = useTransition();
+  const checked = item.completed_at !== null;
+
+  function handleCheckedChange(next: boolean) {
+    startTransition(async () => {
+      await toggleChecklistItem({ itemId: item.id, completed: next });
+    });
+  }
+
+  const completedByName = item.completed_by
+    ? (pmNames[item.completed_by] ?? item.completed_by)
+    : null;
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-1">
+        <Checkbox
+          checked={checked}
+          disabled={!interactive || isPending}
+          onCheckedChange={(next) => handleCheckedChange(next === true)}
+        />
+        <span className="text-body">{item.label}</span>
+      </div>
+      {checked && item.completed_at ? (
+        <span className="text-meta text-muted-foreground">
+          Marcado por {completedByName} em {formatCompletedAt(item.completed_at)}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * A single Kanban card + its detail Dialog (KAN-02, D-05, CHK-03). "Avançar"
+ * is a plain Server Action call inside useTransition — no client-side
+ * stage computation, `nextStage` runs only on the server
+ * (app/pm/board/actions.ts). Server errors render verbatim inside
+ * ErrorBox, never paraphrased. The checklist section and the "Avançar"
+ * disabled attribute derive entirely from the server-supplied
+ * `card.checklistItems` via the shared `checklistProgress`/`isGateBlocked`
+ * predicates — never recomputed from local-only state.
+ */
+function BoardCardItem({
+  card,
+  pmNames,
+  hasChecklistTemplate,
+}: {
+  card: BoardCard;
+  pmNames: Record<string, string>;
+  hasChecklistTemplate: boolean;
+}) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const isLastStage = card.stage === "agendamento";
+
+  const progress = checklistProgress(card.checklistItems);
+  const gateBlocked = card.stage === "revisao_interna" && isGateBlocked(card.checklistItems);
+  const showChecklistSection =
+    card.stage !== null &&
+    STAGE_ORDER.indexOf(card.stage) >= STAGE_ORDER.indexOf("revisao_interna");
+  const isInRevisaoInterna = card.stage === "revisao_interna";
 
   function handleAdvance() {
     setError(null);
@@ -167,6 +266,15 @@ function BoardCardItem({ card }: { card: BoardCard }) {
           <DataCard
             title={card.title}
             meta={`Criado em ${formatCreatedAt(card.created_at)}`}
+            badge={
+              card.stage === "revisao_interna" ? (
+                <StatusBadge
+                  tone={progress.checked === progress.total ? "success" : "warning"}
+                >
+                  {progress.checked}/{progress.total} concluídos
+                </StatusBadge>
+              ) : undefined
+            }
           />
         </div>
       </DialogTrigger>
@@ -174,14 +282,45 @@ function BoardCardItem({ card }: { card: BoardCard }) {
         <DialogHeader>
           <DialogTitle>{card.title}</DialogTitle>
         </DialogHeader>
-        <StatusBadge tone="neutral">
-          {card.stage ? STAGE_LABELS[card.stage] : "—"}
-        </StatusBadge>
+        <div className="flex flex-col gap-4">
+          <StatusBadge tone="neutral">
+            {card.stage ? STAGE_LABELS[card.stage] : "—"}
+          </StatusBadge>
+
+          {showChecklistSection ? (
+            <div className="flex flex-col gap-2">
+              <SectionTitle>Checklist de revisão</SectionTitle>
+              {card.checklistItems.length === 0 && !hasChecklistTemplate ? (
+                <EmptyState
+                  title="Nenhum checklist configurado"
+                  description="Este cliente ainda não tem um checklist de revisão atribuído. Peça a um Admin para configurar um em Checklists."
+                />
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {card.checklistItems.map((item) => (
+                    <ChecklistItemRow
+                      key={item.id}
+                      item={item}
+                      pmNames={pmNames}
+                      interactive={isInRevisaoInterna}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : null}
+        </div>
+
+        {gateBlocked ? (
+          <span className="text-meta text-muted-foreground">
+            {GATE_BLOCKED_MESSAGE}
+          </span>
+        ) : null}
         {error ? <ErrorBox>{error}</ErrorBox> : null}
         <DialogFooter>
           <Button
             type="button"
-            disabled={isLastStage || isPending}
+            disabled={isLastStage || isPending || gateBlocked}
             onClick={handleAdvance}
           >
             {isPending ? "Avançando..." : "Avançar"}
@@ -199,7 +338,13 @@ function BoardCardItem({ card }: { card: BoardCard }) {
  * No drag-and-drop, no drop targets (D-05): columns are static, ordered by
  * STAGE_ORDER server-side in page.tsx.
  */
-export function BoardPanel({ clients, activeClientId, columns }: BoardPanelProps) {
+export function BoardPanel({
+  clients,
+  activeClientId,
+  columns,
+  pmNames,
+  hasChecklistTemplate,
+}: BoardPanelProps) {
   const router = useRouter();
 
   const activeClient = clients.find((c) => c.id === activeClientId) ?? null;
@@ -259,7 +404,12 @@ export function BoardPanel({ clients, activeClientId, columns }: BoardPanelProps
               </div>
               <div className="flex flex-col gap-4">
                 {column.cards.map((card) => (
-                  <BoardCardItem key={card.id} card={card} />
+                  <BoardCardItem
+                    key={card.id}
+                    card={card}
+                    pmNames={pmNames}
+                    hasChecklistTemplate={hasChecklistTemplate}
+                  />
                 ))}
               </div>
             </div>
