@@ -130,7 +130,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1)*
 
-- [ ] 03-02-PLAN.md — cards table (self-referencing, non-recursive RLS) + /pm/board five-column board, card creation, Avançar (KAN-01, KAN-02, KAN-03)
+- [x] 03-02-PLAN.md — cards table (self-referencing, non-recursive RLS) + /pm/board five-column board, card creation, Avançar (KAN-01, KAN-02, KAN-03)
 
 **Wave 3** *(blocked on Wave 2)*
 
@@ -220,7 +220,7 @@ Plans:
 |-------|----------|----------------|--------|-----------|
 | 1. Client Records & Isolated RAG Setup | 2026-07-11 | 4/4 | Complete   | 2026-07-13 |
 | 2. Client-Isolated AI Chat | 2026-07-18 | 5/6 | In Progress|  |
-| 3. Content Production Kanban | 2026-08-05 | 1/6 | In Progress|  |
+| 3. Content Production Kanban | 2026-08-05 | 2/6 | In Progress|  |
 | 4. Client Approval & Scheduling | 2026-08-07 | 0/? | Not started | - |
 | 5. Access & Roles | 2026-08-12 | 6/6 | Complete   | 2026-07-16 |
 | 6. Admin Oversight Dashboard | 2026-08-15 | 0/? | Not started | - |
