@@ -2,22 +2,26 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { nextStage } from "@/lib/cards/stages";
+import { nextStage, STAGE_ORDER } from "@/lib/cards/stages";
 import { isGateBlocked, GATE_BLOCKED_MESSAGE } from "@/lib/cards/checklist-gate";
 import { snapshotChecklistForCard } from "@/lib/cards/checklist-snapshot";
+import { evaluateMove } from "@/lib/cards/move-rules";
 import {
   createCardSchema,
   advanceStageSchema,
   toggleChecklistItemSchema,
+  moveCardSchema,
   type CreateCardInput,
   type AdvanceStageInput,
   type ToggleChecklistItemInput,
+  type MoveCardInput,
 } from "@/lib/validation/cards";
 
 const CARD_CREATE_ERROR = "Não foi possível criar o card. Tente novamente.";
 const CARD_NOT_FOUND_ERROR = "Card não encontrado.";
 const LAST_STAGE_ERROR = "Este card já está na última etapa.";
 const NOT_AUTHENTICATED_ERROR = "Não autenticado.";
+const MOVE_FAILED_ERROR = "Não foi possível mover o card. Tente novamente.";
 
 export type CreateCardResult =
   | { success: true; cardId: string }
@@ -203,6 +207,94 @@ export async function toggleChecklistItem(
 
   if (error) {
     return { error: error.message };
+  }
+
+  revalidatePath("/pm/board");
+  return {};
+}
+
+export type MoveCardResult = { error?: string };
+
+/**
+ * Place a card in an arbitrary column (KAN-02, D-12, plan 03-08's drag
+ * handler). Unlike advanceStage above, this action DOES accept a
+ * caller-supplied target stage, because drag-and-drop is inherently "put it
+ * here" rather than "go one step forward" -- that makes the target an
+ * untrusted input. Three things make it safe: (a) the zod enum in
+ * moveCardSchema, which bounds it to the five real stages, (b) evaluateMove
+ * re-run server-side over a server-side re-read of the checklist, and (c)
+ * cards_update_scoped, which bounds the write to the caller's assigned
+ * clients. The browser's own copy of evaluateMove (03-08) is a UX
+ * affordance only, never the security boundary.
+ */
+export async function moveCard(input: MoveCardInput): Promise<MoveCardResult> {
+  const parsed = moveCardSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: CARD_NOT_FOUND_ERROR };
+  }
+
+  const supabase = await createClient();
+
+  const { data: card } = await supabase
+    .from("cards")
+    .select("id, client_id, stage, card_type")
+    .eq("id", parsed.data.cardId)
+    .single();
+
+  // A package parent has no stage of its own (D-02) — it is never movable,
+  // same rule advanceStage already applies.
+  if (!card || !card.stage) {
+    return { error: CARD_NOT_FOUND_ERROR };
+  }
+
+  // A drop back onto the origin column is a silent no-op, not an error.
+  if (card.stage === parsed.data.toStage) {
+    return {};
+  }
+
+  // Never accept a completion claim from the caller — re-read the
+  // checklist server-side, exactly like advanceStage does.
+  const { data: items } = await supabase
+    .from("card_checklist_items")
+    .select("completed_at")
+    .eq("card_id", card.id);
+
+  const decision = evaluateMove(card.stage, parsed.data.toStage, items ?? []);
+  if (!decision.allowed) {
+    // Returning decision.reason verbatim is what makes the drag path show
+    // the identical GATE_BLOCKED_MESSAGE / MOVE_SKIPS_REVIEW_MESSAGE the
+    // button path (or the skip rule) already shows (D-13).
+    return { error: decision.reason };
+  }
+
+  // Snapshot BEFORE the stage update, same Pitfall 3 ordering advanceStage
+  // uses — a mid-request failure must leave the card where it was, never
+  // move it into a gated stage with no checklist. snapshotChecklistForCard
+  // is idempotent, so dragging a card back and forth across revisão interna
+  // never duplicates or resets its items. Unlike createCard, moveCard needs
+  // no compensating delete: the card already existed before this request,
+  // so the fail-safe here is simply "do not move it".
+  if (
+    STAGE_ORDER.indexOf(parsed.data.toStage) >=
+    STAGE_ORDER.indexOf("revisao_interna")
+  ) {
+    const snap = await snapshotChecklistForCard(
+      supabase,
+      card.id,
+      card.client_id
+    );
+    if (!snap.ok) {
+      return { error: snap.error };
+    }
+  }
+
+  const { error: updateError } = await supabase
+    .from("cards")
+    .update({ stage: parsed.data.toStage, updated_at: new Date().toISOString() })
+    .eq("id", card.id);
+
+  if (updateError) {
+    return { error: MOVE_FAILED_ERROR };
   }
 
   revalidatePath("/pm/board");

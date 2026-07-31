@@ -25,6 +25,31 @@ export const advanceStageSchema = z.object({
 
 export type AdvanceStageInput = z.infer<typeof advanceStageSchema>;
 
+// `CARD_STAGE_VALUES` exists only because `z.enum` needs a literal tuple.
+// `lib/cards/stages.ts`'s `STAGE_ORDER` remains the single source of truth
+// for stage ORDER -- this tuple is a validation-surface mirror of the
+// Postgres `card_stage` enum, never a second ordering.
+export const CARD_STAGE_VALUES = [
+  "briefing",
+  "producao",
+  "revisao_interna",
+  "aprovacao_cliente",
+  "agendamento",
+] as const;
+
+/**
+ * moveCard's input (KAN-02, D-12): unlike advanceStageSchema, this carries a
+ * caller-supplied target stage, because drag-and-drop is inherently "put it
+ * here" rather than "go one step forward". `toStage` is bounded to the five
+ * real stages by the enum below; the moveCard Server Action re-decides
+ * legality server-side via evaluateMove regardless of this validation.
+ */
+export const moveCardSchema = z.object({
+  cardId: z.string().uuid(),
+  toStage: z.enum(CARD_STAGE_VALUES),
+});
+export type MoveCardInput = z.infer<typeof moveCardSchema>;
+
 export const toggleChecklistItemSchema = z.object({
   itemId: z.string().uuid(),
   completed: z.boolean(),
