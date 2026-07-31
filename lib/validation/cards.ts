@@ -24,3 +24,12 @@ export const advanceStageSchema = z.object({
 });
 
 export type AdvanceStageInput = z.infer<typeof advanceStageSchema>;
+
+export const toggleChecklistItemSchema = z.object({
+  itemId: z.string().uuid(),
+  completed: z.boolean(),
+});
+
+export type ToggleChecklistItemInput = z.infer<
+  typeof toggleChecklistItemSchema
+>;
