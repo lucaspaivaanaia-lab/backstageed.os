@@ -1,4 +1,4 @@
-import { UsersIcon, MessageSquareIcon } from "lucide-react";
+import { UsersIcon, MessageSquareIcon, LayoutDashboardIcon } from "lucide-react";
 
 import { AppSidebar } from "@/components/layout/app-sidebar";
 
@@ -17,6 +17,7 @@ export default function PmLayout({
         items={[
           { href: "/pm/clients", label: "Clientes", icon: <UsersIcon /> },
           { href: "/pm/chat", label: "Chat", icon: <MessageSquareIcon /> },
+          { href: "/pm/board", label: "Produção", icon: <LayoutDashboardIcon /> },
         ]}
       />
       <main className="flex min-w-0 flex-1 flex-col overflow-y-auto">
