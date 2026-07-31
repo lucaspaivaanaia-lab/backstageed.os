@@ -140,7 +140,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3)*
 
-- [ ] 03-07-PLAN.md — re-scope server half: cards.description + cards.assignee_id with a pm_clients membership trigger, pure move-rules module, moveCard / updateCardDetails / snapshot-on-create (KAN-01, KAN-02, CHK-03 — D-12..D-19)
+- [x] 03-07-PLAN.md — re-scope server half: cards.description + cards.assignee_id with a pm_clients membership trigger, pure move-rules module, moveCard / updateCardDetails / snapshot-on-create (KAN-01, KAN-02, CHK-03 — D-12..D-19)
 
 **Wave 5** *(blocked on Wave 4)*
 
@@ -234,7 +234,7 @@ Plans:
 |-------|----------|----------------|--------|-----------|
 | 1. Client Records & Isolated RAG Setup | 2026-07-11 | 4/4 | Complete   | 2026-07-13 |
 | 2. Client-Isolated AI Chat | 2026-07-18 | 5/6 | In Progress|  |
-| 3. Content Production Kanban | 2026-08-05 | 3/9 | In Progress|  |
+| 3. Content Production Kanban | 2026-08-05 | 4/9 | In Progress|  |
 | 4. Client Approval & Scheduling | 2026-08-07 | 0/? | Not started | - |
 | 5. Access & Roles | 2026-08-12 | 6/6 | Complete   | 2026-07-16 |
 | 6. Admin Oversight Dashboard | 2026-08-15 | 0/? | Not started | - |
