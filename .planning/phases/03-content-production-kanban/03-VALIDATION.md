@@ -1,9 +1,9 @@
 ---
 phase: 03
 slug: content-production-kanban
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: planned
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-07-29
 ---
 
@@ -52,9 +52,11 @@ created: 2026-07-29
 
 ## Wave 0 Requirements
 
-- [ ] `supabase/tests/0XXX_cards_rls_test.sql` — covers KAN-01/KAN-03 (RLS select/insert scoping; regression test asserting a piece row's own `client_id` — not its parent's — governs access)
-- [ ] `supabase/tests/0XXX_checklist_rls_test.sql` — covers CHK-01/CHK-02 (admin-only template writes, PM read-only)
-- [ ] `supabase/tests/0XXX_card_checklist_items_rls_test.sql` — covers CHK-03/CHK-04 (scoped read/write through `cards.client_id`, override rows visible to admin)
+Satisfied per-plan rather than as a standalone wave — each plan's own Task 1 embeds the corresponding pgTAP test alongside its migration:
+
+- [x] `supabase/tests/0007_rls_cards_scoping_test.sql` (03-02-PLAN.md) — covers KAN-01/KAN-03 (RLS select/insert scoping; regression test asserting a piece row's own `client_id` — not its parent's — governs access)
+- [x] `supabase/tests/0008_rls_card_checklist_items_scoping_test.sql` (03-03-PLAN.md) — covers CHK-03/CHK-04 (scoped read/write through `cards.client_id`, override rows visible to admin)
+- [x] Checklist template RLS test (03-01-PLAN.md) — covers CHK-01/CHK-02 (admin-only template writes, PM read-only)
 
 ---
 
@@ -76,6 +78,6 @@ created: 2026-07-29
 - [ ] Wave 0 covers all MISSING references (3 new pgTAP test files above)
 - [ ] No watch-mode flags
 - [ ] Feedback latency < 20s
-- [ ] `nyquist_compliant: true` set in frontmatter once Wave 0 tests exist
+- [x] `nyquist_compliant: true` set in frontmatter — Wave-0-equivalent tests confirmed embedded per-plan by /gsd:plan-phase 3's gsd-plan-checker pass (2026-07-31)
 
-**Approval:** pending
+**Approval:** approved 2026-07-31 (plan-checker verification, no blockers)

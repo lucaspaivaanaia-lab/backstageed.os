@@ -716,17 +716,19 @@ export const attachDriveLinkSchema = z.object({
 
 **If this table is empty:** N/A — see entries above.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should the "Avançar" gate re-validation and checklist snapshot be one atomic RPC or two sequential client calls?**
    - What we know: Supabase JS client calls are independent round-trips; this codebase has zero precedent for a Postgres function/RPC anywhere (no triggers, no stored procedures exist in any migration reviewed).
    - What's unclear: Whether the added complexity of introducing the codebase's first Postgres function (for atomicity) is worth it at this phase's scale, versus accepting the fail-safe-but-imperfect sequential-writes approach (Pitfall 3, option b).
    - Recommendation: Start with sequential writes (option b) for MVP — it fails safe (stuck-in-place, not falsely-advanced) and needs no new schema patterns. Revisit only if the "stuck in revisão interna with a phantom empty checklist" edge case is observed in practice.
+   - **RESOLVED (2026-07-31, /gsd:plan-phase 3):** Sequential writes (option b) implemented as recommended — see 03-03-PLAN.md.
 
 2. **Is a single Kanban board screen with 5 fixed columns going to fit comfortably given `card_type = 'package'` parents need their own visual treatment (Pitfall 4)?**
    - What we know: D-10 confirms the dedicated-screen-with-client-switcher pattern from Phase 2. The 5 stages are fixed per KAN-02.
    - What's unclear: Exact visual treatment for package parents (a separate "campaigns" section above/beside the column board vs. inline per-column grouping of just that package's pieces) — left to planner/UX discretion per CONTEXT.md.
    - Recommendation: For the MVP slice, defer package visual treatment entirely — ship single-card flow first (see Validation Architecture "Sampling Rate" and the vertical-slice guidance below), then design the package rollup UI once the single-card mechanic is proven end-to-end.
+   - **RESOLVED (2026-07-31, /gsd:plan-phase 3):** This research recommendation was superseded by D-01/D-02's locked behavior (independent per-piece advancement) — the planner delivered package/piece support this phase (03-06-PLAN.md) rather than deferring it, since the locked CONTEXT.md decision takes precedence over a non-binding research suggestion.
 
 ## Environment Availability
 
