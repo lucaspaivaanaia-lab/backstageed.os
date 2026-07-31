@@ -268,11 +268,15 @@ function BoardCardItem({
             meta={`Criado em ${formatCreatedAt(card.created_at)}`}
             badge={
               card.stage === "revisao_interna" ? (
-                <StatusBadge
-                  tone={progress.checked === progress.total ? "success" : "warning"}
-                >
-                  {progress.checked}/{progress.total} concluídos
-                </StatusBadge>
+                hasChecklistTemplate ? (
+                  <StatusBadge
+                    tone={progress.checked === progress.total ? "success" : "warning"}
+                  >
+                    {progress.checked}/{progress.total} concluídos
+                  </StatusBadge>
+                ) : (
+                  <StatusBadge tone="neutral">Sem checklist</StatusBadge>
+                )
               ) : undefined
             }
           />
