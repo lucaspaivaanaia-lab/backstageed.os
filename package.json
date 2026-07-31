@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test lib/security/*.test.ts lib/chat/*.test.ts lib/extract/*.test.ts"
+    "test": "node --test lib/security/*.test.ts lib/chat/*.test.ts lib/extract/*.test.ts lib/cards/*.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.112.4",
