@@ -121,7 +121,9 @@ Plans:
   5. PM must check off that client's checklist items on a card during revisão interna before the card can advance to aprovação do cliente
   6. Admin can open any card and see exactly which checklist items were completed and when — no step can be silently skipped
 
-**Plans**: 6 plans
+**Plans**: 9 plans
+
+> Re-planned 2026-07-31 after a mid-execution re-scope (`03-CONTEXT.md` D-12 through D-19: dnd-kit drag-and-drop, per-column card creation, card description, card assignee). D-05 (no drag-and-drop) is superseded. Plans 03-07/03-08/03-09 were inserted at waves 4/5/6, pushing the previously-planned 03-04/03-05/03-06 to waves 7/8/9. Every wave holds a single plan because all of them modify `app/pm/board/board-panel.tsx`. Migrations were renumbered to follow execution order (0016 → 03-03, 0017 → 03-07, 0018 → 03-04, 0019 → 03-05).
 
 Plans:
 **Wave 1**
@@ -134,17 +136,29 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2)*
 
-- [ ] 03-03-PLAN.md — checklist snapshot on entry to revisão interna + per-item who/when + disabled-Avançar gate (CHK-03)
+- [ ] 03-03-PLAN.md — checklist snapshot on entry to revisão interna + per-item who/when + disabled-Avançar gate, snapshot extracted as a reusable routine (CHK-03, KAN-02)
 
 **Wave 4** *(blocked on Wave 3)*
 
-- [ ] 03-04-PLAN.md — Google Drive link attachments with shared client+server URL validation (KAN-05)
+- [ ] 03-07-PLAN.md — re-scope server half: cards.description + cards.assignee_id with a pm_clients membership trigger, pure move-rules module, moveCard / updateCardDetails / snapshot-on-create (KAN-01, KAN-02, CHK-03 — D-12..D-19)
 
 **Wave 5** *(blocked on Wave 4)*
 
-- [ ] 03-05-PLAN.md — /admin/cards audit trail + Admin-only force-advance override with append-only audit row (CHK-04)
+- [ ] 03-08-PLAN.md — dnd-kit drag-and-drop on the board: pointer + keyboard, snap-back on a blocked move with the identical gate message (KAN-02, KAN-03 — D-12, D-13)
 
 **Wave 6** *(blocked on Wave 5)*
+
+- [ ] 03-09-PLAN.md — per-column "+" creation in any stage, plus the description and assignee fields in the card detail dialog (KAN-01, KAN-03 — D-14..D-19)
+
+**Wave 7** *(blocked on Wave 6)*
+
+- [ ] 03-04-PLAN.md — Google Drive link attachments with shared client+server URL validation (KAN-05)
+
+**Wave 8** *(blocked on Wave 7)*
+
+- [ ] 03-05-PLAN.md — /admin/cards audit trail + Admin-only force-advance override with append-only audit row (CHK-04)
+
+**Wave 9** *(blocked on Wave 8)*
 
 - [ ] 03-06-PLAN.md — content packages: parent card + independently-advancing peças, each with its own checklist gate (KAN-01 package path)
 

@@ -570,3 +570,90 @@ These schema files follow RESEARCH.md's authoritative DDL (not an existing codeb
 **Analog search scope:** `app/`, `components/`, `lib/`, `supabase/migrations/`, `supabase/tests/` (full read of every `.ts`/`.tsx`/`.sql` file directly relevant to Phase 3's file list; confirmed via `find` that no other Kanban/checklist/card-related code exists anywhere in the tree yet)
 **Files scanned:** 24 read in full (6 migrations, 4 tests/RLS-helper files, 10 app routes/actions/components, 4 lib modules)
 **Pattern extraction date:** 2026-07-31
+
+---
+
+# Amendment: 2026-07-31 mid-execution re-scope (D-12 through D-19)
+
+> Added after plans 03-01 and 03-02 shipped and `03-CONTEXT.md` was re-discussed. D-05 (no drag-and-drop) is superseded by D-12/D-13; D-14 through D-19 add per-column creation, a description field, and an assignee field. Everything above this line remains valid — this amendment only covers files the original map did not anticipate. The `## Metadata` block above is superseded by the one at the end of this amendment.
+
+## Concrete file numbering (supersedes the `00XX` placeholders above)
+
+Migrations must be numbered in EXECUTION order, because `supabase db push` applies them in filename order and rejects an out-of-order push against remote history.
+
+| Migration | pgTAP test | Plan | Wave |
+|---|---|---|---|
+| `0013_checklist_templates.sql`, `0014_clients_checklist_template.sql` | `0006_rls_checklist_templates_scoping_test.sql` | 03-01 | 1 (shipped) |
+| `0015_cards.sql` | `0007_rls_cards_scoping_test.sql` | 03-02 | 2 (shipped) |
+| `0016_card_checklist_items.sql` | `0008_rls_card_checklist_items_scoping_test.sql` | 03-03 | 3 |
+| `0017_cards_description_assignee.sql` | `0009_cards_assignee_membership_test.sql` | 03-07 | 4 |
+| — (no migration) | — | 03-08, 03-09 | 5, 6 |
+| `0018_card_attachments.sql` | `0010_rls_card_attachments_scoping_test.sql` | 03-04 | 7 |
+| `0019_card_checklist_overrides.sql` | `0011_rls_card_checklist_overrides_scoping_test.sql` | 03-05 | 8 |
+| — (no migration) | — | 03-06 | 9 |
+
+## New file classification
+
+| New/Modified File | Role | Data Flow | Closest Analog | Match Quality |
+|---|---|---|---|---|
+| `supabase/migrations/0017_cards_description_assignee.sql` | migration | CRUD (ALTER + trigger) | `supabase/migrations/0006_clients_full_record.sql` (ALTER shape) + `0004_rls_policies.sql` (`security definer` + `set search_path = ''` function convention) | role-match (a constraint-enforcing trigger is new territory — see below) |
+| `lib/cards/checklist-snapshot.ts` | utility (server-side routine, RLS client injected) | CRUD (multi-row copy) | `lib/actions/clients.ts` (`createClientRecord`'s insert-parent-then-bulk-insert-children shape) | partial (a non-`"use server"` module that RECEIVES a Supabase client is new — see below) |
+| `lib/cards/move-rules.ts` | utility (pure function, shared client+server) | transform | `lib/cards/checklist-gate.ts` / `lib/chat/stale-response-guard.ts` | exact |
+| `lib/cards/package-rollup.ts` | utility (pure function) | transform | `lib/chat/stale-response-guard.ts` | exact |
+| `app/pm/board/draggable-card.tsx` | component (Client Component, interaction wrapper) | — | none in this codebase (first DnD surface) | new territory — see below |
+| `app/pm/board/droppable-column.tsx` | component (Client Component, drop target) | — | none in this codebase | new territory — see below |
+| `app/admin/cards/page.tsx` | route (Server Component) | request-response | `app/pm/clients/page.tsx` (`PageShell width="wide"` + `Table` + `EmptyState`) | exact |
+| `app/admin/cards/card-audit-panel.tsx` | component (Client Component) | request-response | `app/admin/checklist-templates/template-list.tsx` (Table + per-row dialog) + `app/pm/board/board-panel.tsx` (audit-line rendering) | role-match |
+| `lib/actions/card-overrides.ts` | controller (Server Action, Admin-only) | event-driven (audit insert) | `lib/actions/clients.ts` (`assignPms`'s Admin-only authorization block) | role-match |
+
+## `components/ui/data-card.tsx` — DO NOT MODIFY
+
+`03-CONTEXT.md`'s Existing Code Insights says `DataCard` "now needs a dnd-kit `useSortable`/draggable wrapper per D-12 — the underlying DataCard visual/slot structure stays, only the interaction layer around it changes." Resolved concretely:
+
+**`components/ui/data-card.tsx` gains nothing.** It stays the generic, board-agnostic primitive the 260728-uab design-system task shipped (its own doc-comment says so explicitly, citing that task's D-02), and it is also rendered by `/pm/clients`, `/admin/clients`, and `components/clients/client-detail-form.tsx` — coupling it to dnd-kit would put a drag library in the bundle of three unrelated screens.
+
+The interaction layer lives in `app/pm/board/draggable-card.tsx`, which wraps `DataCard` from the outside:
+
+```tsx
+// app/pm/board/draggable-card.tsx  — board-local, never components/ui/
+const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: `card:${cardId}` });
+
+<div ref={setNodeRef} style={{ transform: CSS.Translate.toString(transform) }}
+     className={cn("relative touch-none", isDragging && "opacity-40")}>
+  {children}                                {/* the existing Dialog-wrapped DataCard, untouched */}
+  <CardDragHandle title={title} attributes={attributes} listeners={listeners} />
+</div>
+```
+
+Three structural rules the plans enforce with grep gates:
+- The drag handle is a **sibling** of `children`, never nested inside the `DialogTrigger`'s `role="button"` wrapper — that is what keeps click-to-open-dialog and keyboard-drag from fighting over the same key events.
+- `useDraggable` (not `useSortable`) is correct here: cards move BETWEEN columns, and no within-column ordering exists anywhere in this phase (columns are ordered server-side by `created_at`). Only `@dnd-kit/core@6.3.1` and `@dnd-kit/utilities@3.2.2` are installed; `@dnd-kit/sortable` is deliberately absent.
+- Package parent rows (`stage = null`) are rendered OUTSIDE `DndContext` and are never wrapped in `DraggableCard` — there is no legal drop target for a stageless row.
+
+## New territory (no analog in this codebase)
+
+| File | Role | Reason |
+|---|---|---|
+| `app/pm/board/draggable-card.tsx` / `droppable-column.tsx` | component | First drag-and-drop surface in the project — no DnD library existed before D-12. dnd-kit's own `useDraggable`/`useDroppable` docs are the reference, not an internal file. Pattern to establish: namespaced ids (`card:<uuid>` / `column:<stage>`) with parser helpers that return `null` on a non-matching prefix, so a malformed drag event no-ops instead of writing garbage. |
+| `supabase/migrations/0017_cards_description_assignee.sql` (trigger half) | migration | First constraint-enforcing TRIGGER in this schema — every prior rule is a `check` constraint or an RLS policy. Needed because D-19's rule ("assignee must be in this client's `pm_clients`") requires a subquery, which a `check` cannot do, and because `pm_clients_select_own_or_admin` hides other PMs' rows from an invoking PM, which forces `security definer`. Follow `is_admin()`'s exact convention: `security definer` + `set search_path = ''` + every reference schema-qualified. Inline the membership `exists(...)` inside the trigger function rather than exposing a callable helper — a standalone "is this PM on this client" function would be an authenticated-callable membership oracle. |
+| `lib/cards/checklist-snapshot.ts` | utility | First module that performs Supabase writes without being a Server Action itself — it takes an already-constructed RLS-scoped client as its first argument. That shape exists so `advanceStage` (03-03), `moveCard` (03-07), and `createCard` (03-07) share ONE snapshot implementation; a second copy would be a CHK-04 regression. Type the parameter as `Awaited<ReturnType<typeof import("@/lib/supabase/server").createClient>>` so no runtime import is introduced. |
+
+## Additional shared patterns established by the re-scope
+
+### Shared predicate module imported by BOTH the Client Component and the Server Action
+**Source:** `lib/attachments/drive-url.ts` (the original instance) — now also `lib/cards/checklist-gate.ts` and `lib/cards/move-rules.ts`.
+**Apply to:** every rule the browser needs for instant feedback AND the server needs as a boundary. The browser copy is always the affordance; the server copy is always the boundary. Grep gates in the plans assert the Client Component never retypes the message string, only imports the constant.
+
+### `listClientPmRoster` — a scoped privileged read
+**Source:** `lib/actions/clients.ts` (`listPmRoster`, `resolvePmNames`) established the privileged display-only `createAdminClient()` read that closes an RLS visibility gap.
+**Apply to:** `listClientPmRoster(clientId)` (03-07), with one hardening the predecessors lack: an RLS-scoped `clients` visibility check runs BEFORE the privileged read and returns `[]` on failure, so the helper cannot be used as a cross-client membership oracle.
+
+### Board card `meta` built as a segments array
+**Source:** introduced in 03-09, extended by 03-04 and 03-06.
+**Apply to:** `app/pm/board/board-panel.tsx`. Push optional segments (`Responsável: …`, `N anexos`, `Pacote: …`) into an array and `join(" · ")` rather than nesting ternaries — three separate plans append to this same line.
+
+## Metadata (amended)
+
+**Analog search scope:** unchanged from the original map, plus a re-read of `components/ui/data-card.tsx`, `lib/actions/clients.ts`, `supabase/migrations/0003_pm_clients.sql`, and `supabase/migrations/0004_rls_policies.sql` against the merged `main` branch as it stands after 03-01/03-02.
+**Pattern extraction date:** 2026-07-31
+**Amended:** 2026-07-31 (mid-execution re-scope — dnd-kit wrapper placement, migration renumbering, three new-territory files)
