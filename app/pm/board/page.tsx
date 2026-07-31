@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { STAGE_ORDER, type CardStage } from "@/lib/cards/stages";
-import { resolvePmNames } from "@/lib/actions/clients";
+import { resolvePmNames, listClientPmRoster } from "@/lib/actions/clients";
 import { BoardPanel } from "./board-panel";
 
 export type BoardCardType = "single" | "package" | "piece";
@@ -20,6 +20,8 @@ export type BoardCard = {
   card_type: BoardCardType;
   stage: CardStage | null;
   parent_card_id: string | null;
+  description: string | null;
+  assignee_id: string | null;
   created_at: string;
   checklistItems: BoardChecklistItem[];
 };
@@ -30,6 +32,8 @@ export type BoardColumn = {
 };
 
 export type BoardClient = { id: string; name: string };
+
+export type BoardPmRosterEntry = { id: string; email: string };
 
 /**
  * PM Kanban board loader (KAN-01, KAN-02, KAN-03, CHK-03). D-10: the active
@@ -50,9 +54,13 @@ export type BoardClient = { id: string; name: string };
  * Checklist completion (CHK-03/D-06) is computed here, server-side, and is
  * the ONLY source of truth for the "Avançar" disabled attribute — the
  * panel must not recompute it from its own state (03-RESEARCH.md
- * Anti-Patterns, first bullet). `resolvePmNames` (lib/actions/clients.ts)
- * resolves each checked item's `completed_by` id to a display email for
- * the per-item audit line.
+ * Anti-Patterns, first bullet). A single combined id-resolution call turns
+ * both each checked item's `completed_by` id AND each card's `assignee_id`
+ * (D-19) into display emails for the per-item audit line and the board
+ * card's meta line respectively — `listClientPmRoster` (lib/actions/
+ * clients.ts) covers the normal assignee-picker case, this combined call is
+ * only the fallback for a card whose assignee has since been unassigned
+ * from the client and therefore no longer appears in the roster.
  */
 export default async function PmBoardPage({
   searchParams,
@@ -62,7 +70,7 @@ export default async function PmBoardPage({
   const { client: clientId } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: clients }, { data: cards }, { data: activeClient }] =
+  const [{ data: clients }, { data: cards }, { data: activeClient }, pmRoster] =
     await Promise.all([
       supabase
         .from("clients")
@@ -71,7 +79,9 @@ export default async function PmBoardPage({
       clientId
         ? supabase
             .from("cards")
-            .select("id, title, card_type, stage, parent_card_id, created_at")
+            .select(
+              "id, title, card_type, stage, parent_card_id, description, assignee_id, created_at"
+            )
             .eq("client_id", clientId)
             .order("created_at", { ascending: true })
         : Promise.resolve({ data: [] as Omit<BoardCard, "checklistItems">[] }),
@@ -82,6 +92,9 @@ export default async function PmBoardPage({
             .eq("id", clientId)
             .single()
         : Promise.resolve({ data: null as { checklist_template_id: string | null } | null }),
+      clientId
+        ? listClientPmRoster(clientId)
+        : Promise.resolve([] as BoardPmRosterEntry[]),
     ]);
 
   const cardIds = (cards ?? []).map((c) => c.id);
@@ -95,14 +108,14 @@ export default async function PmBoardPage({
           .order("sort_order", { ascending: true })
       : { data: [] as BoardChecklistItem[] };
 
-  const completedByIds = Array.from(
-    new Set(
-      (checklistItems ?? [])
-        .map((item) => item.completed_by)
-        .filter((id): id is string => Boolean(id))
-    )
-  );
-  const pmNames = await resolvePmNames(completedByIds);
+  const completedByIds = (checklistItems ?? [])
+    .map((item) => item.completed_by)
+    .filter((id): id is string => Boolean(id));
+  const assigneeIds = (cards ?? [])
+    .map((card) => card.assignee_id)
+    .filter((id): id is string => Boolean(id));
+  const idsToResolve = Array.from(new Set([...completedByIds, ...assigneeIds]));
+  const pmNames = await resolvePmNames(idsToResolve);
 
   const itemsByCardId = new Map<string, BoardChecklistItem[]>();
   for (const item of checklistItems ?? []) {
@@ -129,6 +142,7 @@ export default async function PmBoardPage({
       columns={columns}
       packages={packages}
       pmNames={pmNames}
+      pmRoster={pmRoster}
       hasChecklistTemplate={Boolean(activeClient?.checklist_template_id)}
     />
   );

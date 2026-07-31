@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useOptimistic, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -17,7 +18,13 @@ import {
 } from "@dnd-kit/core";
 import type { Announcements, DragEndEvent, DragStartEvent } from "@dnd-kit/core";
 
-import { createCard, advanceStage, toggleChecklistItem, moveCard } from "./actions";
+import {
+  createCard,
+  advanceStage,
+  toggleChecklistItem,
+  moveCard,
+  updateCardDetails,
+} from "./actions";
 import { createCardSchema, type CreateCardInput } from "@/lib/validation/cards";
 import { STAGE_LABELS, STAGE_ORDER, type CardStage } from "@/lib/cards/stages";
 import {
@@ -36,9 +43,12 @@ import type {
   BoardChecklistItem,
   BoardClient,
   BoardColumn,
+  BoardPmRosterEntry,
 } from "./page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { DataCard } from "@/components/ui/data-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ErrorBox } from "@/components/ui/error-box";
@@ -56,6 +66,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
@@ -82,10 +93,14 @@ type BoardPanelProps = {
   // Pitfall 4). Accepted here only so page.tsx's shape stays stable across
   // plans; this panel does not read it.
   packages: BoardCard[];
-  // completed_by id -> display email, resolved server-side (page.tsx) via
-  // the privileged resolvePmNames helper — this panel never resolves names
-  // itself.
+  // completed_by id / assignee_id -> display email, resolved server-side
+  // (page.tsx) via the privileged resolvePmNames helper — this panel never
+  // resolves names itself.
   pmNames: Record<string, string>;
+  // The active client's own assigned PMs (lib/actions/clients.ts,
+  // listClientPmRoster), used to scope the assignee picker (D-19). Empty
+  // array when no client is active.
+  pmRoster: BoardPmRosterEntry[];
   // Whether the active client has a checklist template assigned. Drives
   // the "Nenhum checklist configurado" informational notice — never used
   // to disable "Avançar" (that stays gated by isGateBlocked alone).
@@ -93,6 +108,12 @@ type BoardPanelProps = {
 };
 
 const CARD_CREATED_TOAST = "Card criado.";
+const CARD_DETAILS_SAVED_TOAST = "Card atualizado.";
+// Radix `SelectItem` cannot carry an empty-string `value` (03-01-SUMMARY.md
+// solved the identical nullable-FK case) -- this sentinel represents "no
+// assignee" in both the create Dialog and the detail Dialog's Responsável
+// Select, mapped to `undefined`/`null` only at submit time.
+const NONE_VALUE = "none";
 
 function formatCreatedAt(iso: string): string {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium" }).format(
@@ -108,34 +129,65 @@ function formatCompletedAt(iso: string): string {
 }
 
 /**
- * "Criar card" trigger + Dialog (KAN-01, single-post path this plan — the
- * package option is added to this same selector by plan 03-06, so cardType
- * is fixed to "single" here rather than exposed as a field). Reused as-is
- * for both the PageTitle action slot and the "no cards yet" EmptyState
- * action.
+ * "Criar card" Dialog (KAN-01, single-post path this plan — the package
+ * option is added to this same selector by plan 03-06, so cardType is fixed
+ * to "single" here rather than exposed as a field). Generalized from a
+ * PageTitle-only button (03-02/03-03) into a reusable Dialog three call
+ * sites share via an injected `trigger` element (D-14): the top-level
+ * PageTitle action and the "no cards yet" EmptyState action (both omit
+ * `stage`, so they keep creating in Briefing, unchanged), and a new
+ * per-column "+" trigger with `stage` set to that column's own stage. The
+ * assignee is deliberately NOT a react-hook-form field — it lives in local
+ * state (see `NONE_VALUE` above) and is mapped to `undefined` only at
+ * submit time, matching plan 03-01's nullable-FK Select pattern.
  */
-function CreateCardButton({ clientId }: { clientId: string | null }) {
+function CreateCardDialog({
+  clientId,
+  stage,
+  pmRoster,
+  trigger,
+}: {
+  clientId: string | null;
+  stage?: CardStage;
+  pmRoster: BoardPmRosterEntry[];
+  trigger: ReactNode;
+}) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [assigneeValue, setAssigneeValue] = useState(NONE_VALUE);
+
+  const defaultValues: CreateCardInput = {
+    clientId: clientId ?? "",
+    title: "",
+    cardType: "single",
+    stage: stage ?? "briefing",
+    description: "",
+  };
 
   const form = useForm<CreateCardInput>({
     resolver: zodResolver(createCardSchema),
-    defaultValues: { clientId: clientId ?? "", title: "", cardType: "single" },
+    defaultValues,
   });
 
   function handleOpenChange(next: boolean) {
     setOpen(next);
     if (next) {
       setServerError(null);
-      form.reset({ clientId: clientId ?? "", title: "", cardType: "single" });
+      form.reset(defaultValues);
+      setAssigneeValue(NONE_VALUE);
     }
   }
 
   function onSubmit(values: CreateCardInput) {
     setServerError(null);
+    const assigneeId = assigneeValue === NONE_VALUE ? undefined : assigneeValue;
     startTransition(async () => {
-      const result = await createCard(values);
+      const result = await createCard({
+        ...values,
+        stage: stage ?? "briefing",
+        assigneeId,
+      });
       if ("error" in result) {
         setServerError(result.error);
         return;
@@ -147,15 +199,15 @@ function CreateCardButton({ clientId }: { clientId: string | null }) {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button type="button" disabled={!clientId}>
-          <PlusIcon className="size-4" />
-          Criar card
-        </Button>
-      </DialogTrigger>
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Criar card</DialogTitle>
+          {stage && stage !== "briefing" ? (
+            <DialogDescription>
+              O card será criado na etapa {STAGE_LABELS[stage]}.
+            </DialogDescription>
+          ) : null}
         </DialogHeader>
         <Form {...form}>
           <form
@@ -175,6 +227,49 @@ function CreateCardButton({ clientId }: { clientId: string | null }) {
                 </FormItem>
               )}
             />
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Descrição</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      {...field}
+                      rows={4}
+                      placeholder="Opcional — contexto, briefing rápido, referências."
+                      disabled={isPending}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="flex flex-col gap-1">
+              <Label>Responsável</Label>
+              <Select
+                value={assigneeValue}
+                onValueChange={setAssigneeValue}
+                disabled={isPending}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Sem responsável" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE_VALUE}>Sem responsável</SelectItem>
+                  {pmRoster.map((pm) => (
+                    <SelectItem key={pm.id} value={pm.id}>
+                      {pm.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {pmRoster.length === 0 ? (
+                <span className="text-meta text-muted-foreground">
+                  Nenhum PM atribuído a este cliente.
+                </span>
+              ) : null}
+            </div>
             {serverError ? <ErrorBox>{serverError}</ErrorBox> : null}
             <Button type="submit" disabled={isPending} className="w-fit">
               {isPending ? "Criando..." : "Criar card"}
@@ -248,10 +343,12 @@ function ChecklistItemRow({
 function BoardCardItem({
   card,
   pmNames,
+  pmRoster,
   hasChecklistTemplate,
 }: {
   card: BoardCard;
   pmNames: Record<string, string>;
+  pmRoster: BoardPmRosterEntry[];
   hasChecklistTemplate: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
@@ -265,6 +362,33 @@ function BoardCardItem({
     STAGE_ORDER.indexOf(card.stage) >= STAGE_ORDER.indexOf("revisao_interna");
   const isInRevisaoInterna = card.stage === "revisao_interna";
 
+  // D-16/D-18/D-19: the description/assignee draft always seeds from the
+  // server-supplied card, never from a form default it has to reconcile —
+  // there is no separate read-mode/edit-mode toggle, the Textarea and
+  // Select are always editable (Task 2, action C.1).
+  const [draftDescription, setDraftDescription] = useState(card.description ?? "");
+  const [draftAssignee, setDraftAssignee] = useState(card.assignee_id ?? NONE_VALUE);
+  const [detailsError, setDetailsError] = useState<string | null>(null);
+  const [isSavingDetails, startDetailsTransition] = useTransition();
+
+  // T-03-55: if the card's current assignee has since been unassigned from
+  // the client, `pmRoster` no longer contains it — append it explicitly so
+  // the Select can still represent (and round-trip) the current value
+  // instead of silently collapsing to "Sem responsável" on the next save.
+  const assigneeOptions =
+    card.assignee_id && !pmRoster.some((pm) => pm.id === card.assignee_id)
+      ? [
+          ...pmRoster,
+          { id: card.assignee_id, email: pmNames[card.assignee_id] ?? card.assignee_id },
+        ]
+      : pmRoster;
+
+  const normalizedDraftDescription = draftDescription.trim();
+  const currentAssigneeValue = card.assignee_id ?? NONE_VALUE;
+  const hasDetailChanges =
+    normalizedDraftDescription !== (card.description ?? "") ||
+    draftAssignee !== currentAssigneeValue;
+
   function handleAdvance() {
     setError(null);
     startTransition(async () => {
@@ -275,13 +399,36 @@ function BoardCardItem({
     });
   }
 
+  function handleSaveDetails() {
+    setDetailsError(null);
+    startDetailsTransition(async () => {
+      const result = await updateCardDetails({
+        cardId: card.id,
+        description:
+          normalizedDraftDescription.length > 0 ? normalizedDraftDescription : null,
+        assigneeId: draftAssignee === NONE_VALUE ? null : draftAssignee,
+      });
+      if (result.error) {
+        setDetailsError(result.error);
+        return;
+      }
+      toast.success(CARD_DETAILS_SAVED_TOAST);
+    });
+  }
+
+  const cardMeta = card.assignee_id
+    ? `Criado em ${formatCreatedAt(card.created_at)} · Responsável: ${
+        pmNames[card.assignee_id] ?? card.assignee_id
+      }`
+    : `Criado em ${formatCreatedAt(card.created_at)}`;
+
   return (
     <Dialog>
       <DialogTrigger asChild>
         <div role="button" tabIndex={0} className="cursor-pointer text-left">
           <DataCard
             title={card.title}
-            meta={`Criado em ${formatCreatedAt(card.created_at)}`}
+            meta={cardMeta}
             badge={
               card.stage === "revisao_interna" ? (
                 hasChecklistTemplate ? (
@@ -306,6 +453,52 @@ function BoardCardItem({
           <StatusBadge tone="neutral">
             {card.stage ? STAGE_LABELS[card.stage] : "—"}
           </StatusBadge>
+
+          <div className="flex flex-col gap-2">
+            <SectionTitle>Descrição</SectionTitle>
+            <Textarea
+              value={draftDescription}
+              onChange={(event) => setDraftDescription(event.target.value)}
+              rows={5}
+              placeholder="Sem descrição."
+              disabled={isSavingDetails}
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <SectionTitle>Responsável</SectionTitle>
+            <Select
+              value={draftAssignee}
+              onValueChange={setDraftAssignee}
+              disabled={isSavingDetails}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Sem responsável" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NONE_VALUE}>Sem responsável</SelectItem>
+                {assigneeOptions.map((pm) => (
+                  <SelectItem key={pm.id} value={pm.id}>
+                    {pm.email}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {pmRoster.length === 0 ? (
+              <span className="text-meta text-muted-foreground">
+                Nenhum PM atribuído a este cliente.
+              </span>
+            ) : null}
+            <Button
+              type="button"
+              onClick={handleSaveDetails}
+              disabled={isSavingDetails || !hasDetailChanges}
+              className="w-fit"
+            >
+              {isSavingDetails ? "Salvando..." : "Salvar alterações"}
+            </Button>
+            {detailsError ? <ErrorBox>{detailsError}</ErrorBox> : null}
+          </div>
 
           {showChecklistSection ? (
             <div className="flex flex-col gap-2">
@@ -387,6 +580,7 @@ export function BoardPanel({
   activeClientId,
   columns,
   pmNames,
+  pmRoster,
   hasChecklistTemplate,
 }: BoardPanelProps) {
   const router = useRouter();
@@ -516,7 +710,20 @@ export function BoardPanel({
 
   return (
     <PageShell width="wide">
-      <PageTitle action={<CreateCardButton clientId={activeClientId} />}>
+      <PageTitle
+        action={
+          <CreateCardDialog
+            clientId={activeClientId}
+            pmRoster={pmRoster}
+            trigger={
+              <Button type="button" disabled={!activeClientId}>
+                <PlusIcon className="size-4" />
+                Criar card
+              </Button>
+            }
+          />
+        }
+      >
         Produção
       </PageTitle>
 
@@ -547,7 +754,18 @@ export function BoardPanel({
         <EmptyState
           title="Nenhum card ainda"
           description="Crie o primeiro card deste cliente para começar a organizar a produção."
-          action={<CreateCardButton clientId={activeClientId} />}
+          action={
+            <CreateCardDialog
+              clientId={activeClientId}
+              pmRoster={pmRoster}
+              trigger={
+                <Button type="button" disabled={!activeClientId}>
+                  <PlusIcon className="size-4" />
+                  Criar card
+                </Button>
+              }
+            />
+          }
         />
       ) : (
         <DndContext
@@ -574,7 +792,26 @@ export function BoardPanel({
                   <span className="text-body font-medium">
                     {STAGE_LABELS[column.stage]}
                   </span>
-                  <StatusBadge tone="neutral">{column.cards.length}</StatusBadge>
+                  <div className="flex items-center gap-2">
+                    <StatusBadge tone="neutral">{column.cards.length}</StatusBadge>
+                    <CreateCardDialog
+                      clientId={activeClientId}
+                      stage={column.stage}
+                      pmRoster={pmRoster}
+                      trigger={
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-8"
+                          aria-label={`Criar card em ${STAGE_LABELS[column.stage]}`}
+                          disabled={!activeClientId}
+                        >
+                          <PlusIcon className="size-4" />
+                        </Button>
+                      }
+                    />
+                  </div>
                 </div>
                 <DroppableColumn stage={column.stage}>
                   {column.cards.map((card) => (
@@ -582,6 +819,7 @@ export function BoardPanel({
                       <BoardCardItem
                         card={card}
                         pmNames={pmNames}
+                        pmRoster={pmRoster}
                         hasChecklistTemplate={hasChecklistTemplate}
                       />
                     </DraggableCard>
