@@ -4,8 +4,8 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 3 UI-SPEC approved
-last_updated: "2026-07-31T13:49:23.298Z"
-last_activity: 2026-07-31 -- Phase 03 planning complete
+last_updated: "2026-07-31T14:05:28.304Z"
+last_activity: 2026-07-31 -- Phase 03 execution started
 progress:
   total_phases: 6
   completed_phases: 3
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-08)
 
 **Core value:** Um PM consegue produzir conteúdo para um cliente específico com IA que só conhece aquele cliente (RAG isolado, zero vazamento de contexto), levar esse conteúdo do briefing até a aprovação do cliente dentro da própria plataforma, e o Juliano consegue ver o status real de qualquer card, de qualquer cliente, a qualquer momento.
-**Current focus:** Phase 02 — client-isolated-ai-chat
+**Current focus:** Phase 03 — content-production-kanban
 
 ## Current Position
 
-Phase: 02 (client-isolated-ai-chat) — EXECUTING
+Phase: 03 (content-production-kanban) — EXECUTING
 Plan: 1 of 6
-Status: Ready to execute
-Last activity: 2026-07-31 -- Phase 03 planning complete
+Status: Executing Phase 03
+Last activity: 2026-07-31 -- Phase 03 execution started
 
 Progress: [██████████] 100% (plans this phase) — 10/10 plans complete, Phase 5 fully closed
 
@@ -55,6 +55,10 @@ Progress: [██████████] 100% (plans this phase) — 10/10 pla
 *Updated after each plan completion*
 
 ## Accumulated Context
+
+### Roadmap Evolution
+
+- Phase 3 edited: edited fields: deadline (2026-07-28 -> 2026-08-05, was past-due; removed resolved flag note)
 
 ### Decisions
 
