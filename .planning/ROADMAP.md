@@ -121,7 +121,34 @@ Plans:
   5. PM must check off that client's checklist items on a card during revisão interna before the card can advance to aprovação do cliente
   6. Admin can open any card and see exactly which checklist items were completed and when — no step can be silently skipped
 
-**Plans**: TBD
+**Plans**: 6 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 03-01-PLAN.md — Admin checklist templates: reusable templates + per-client assignment (CHK-01, CHK-02)
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 03-02-PLAN.md — cards table (self-referencing, non-recursive RLS) + /pm/board five-column board, card creation, Avançar (KAN-01, KAN-02, KAN-03)
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 03-03-PLAN.md — checklist snapshot on entry to revisão interna + per-item who/when + disabled-Avançar gate (CHK-03)
+
+**Wave 4** *(blocked on Wave 3)*
+
+- [ ] 03-04-PLAN.md — Google Drive link attachments with shared client+server URL validation (KAN-05)
+
+**Wave 5** *(blocked on Wave 4)*
+
+- [ ] 03-05-PLAN.md — /admin/cards audit trail + Admin-only force-advance override with append-only audit row (CHK-04)
+
+**Wave 6** *(blocked on Wave 5)*
+
+- [ ] 03-06-PLAN.md — content packages: parent card + independently-advancing peças, each with its own checklist gate (KAN-01 package path)
+
+> **Deadline note (flagged 2026-07-31):** the 2026-07-28 deadline above has already passed. It needs re-dating before execution starts — planning did not silently ignore it.
 
 ### Phase 4: Client Approval & Scheduling
 
@@ -195,7 +222,7 @@ Plans:
 |-------|----------|----------------|--------|-----------|
 | 1. Client Records & Isolated RAG Setup | 2026-07-11 | 4/4 | Complete   | 2026-07-13 |
 | 2. Client-Isolated AI Chat | 2026-07-18 | 5/6 | In Progress|  |
-| 3. Content Production Kanban | 2026-07-28 | 0/? | Not started | - |
+| 3. Content Production Kanban | 2026-07-28 | 0/6 | Planned | - |
 | 4. Client Approval & Scheduling | 2026-08-07 | 0/? | Not started | - |
 | 5. Access & Roles | 2026-08-12 | 6/6 | Complete   | 2026-07-16 |
 | 6. Admin Oversight Dashboard | 2026-08-15 | 0/? | Not started | - |
