@@ -4,12 +4,12 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: "Phase 3 context re-gathered (mid-execution re-scope: DnD + rich cards)"
-last_updated: "2026-07-31T15:29:46.658Z"
-last_activity: 2026-07-31 -- Phase 03 execution started
+last_updated: "2026-07-31T16:21:08.740Z"
+last_activity: 2026-07-31 -- Phase 03 planning complete
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 22
+  total_plans: 25
   completed_plans: 18
   percent: 50
 ---
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-07-08)
 
 Phase: 03 (content-production-kanban) — EXECUTING
 Plan: 1 of 6
-Status: Executing Phase 03
-Last activity: 2026-07-31 -- Phase 03 execution started
+Status: Ready to execute
+Last activity: 2026-07-31 -- Phase 03 planning complete
 
 Progress: [██████████] 100% (plans this phase) — 10/10 plans complete, Phase 5 fully closed
 
