@@ -136,7 +136,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2)*
 
-- [ ] 03-03-PLAN.md — checklist snapshot on entry to revisão interna + per-item who/when + disabled-Avançar gate, snapshot extracted as a reusable routine (CHK-03, KAN-02)
+- [x] 03-03-PLAN.md — checklist snapshot on entry to revisão interna + per-item who/when + disabled-Avançar gate, snapshot extracted as a reusable routine (CHK-03, KAN-02)
 
 **Wave 4** *(blocked on Wave 3)*
 
@@ -234,7 +234,7 @@ Plans:
 |-------|----------|----------------|--------|-----------|
 | 1. Client Records & Isolated RAG Setup | 2026-07-11 | 4/4 | Complete   | 2026-07-13 |
 | 2. Client-Isolated AI Chat | 2026-07-18 | 5/6 | In Progress|  |
-| 3. Content Production Kanban | 2026-08-05 | 2/6 | In Progress|  |
+| 3. Content Production Kanban | 2026-08-05 | 3/9 | In Progress|  |
 | 4. Client Approval & Scheduling | 2026-08-07 | 0/? | Not started | - |
 | 5. Access & Roles | 2026-08-12 | 6/6 | Complete   | 2026-07-16 |
 | 6. Admin Oversight Dashboard | 2026-08-15 | 0/? | Not started | - |
