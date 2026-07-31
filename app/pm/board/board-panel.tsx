@@ -1,20 +1,36 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useOptimistic, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { PlusIcon } from "lucide-react";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  closestCorners,
+} from "@dnd-kit/core";
+import type { Announcements, DragEndEvent, DragStartEvent } from "@dnd-kit/core";
 
-import { createCard, advanceStage, toggleChecklistItem } from "./actions";
+import { createCard, advanceStage, toggleChecklistItem, moveCard } from "./actions";
 import { createCardSchema, type CreateCardInput } from "@/lib/validation/cards";
-import { STAGE_LABELS, STAGE_ORDER } from "@/lib/cards/stages";
+import { STAGE_LABELS, STAGE_ORDER, type CardStage } from "@/lib/cards/stages";
 import {
   checklistProgress,
   isGateBlocked,
   GATE_BLOCKED_MESSAGE,
 } from "@/lib/cards/checklist-gate";
+import { evaluateMove } from "@/lib/cards/move-rules";
+import {
+  DraggableCard,
+  cardIdFromDraggableId,
+} from "./draggable-card";
+import { DroppableColumn, stageFromDroppableId } from "./droppable-column";
 import type {
   BoardCard,
   BoardChecklistItem,
@@ -336,11 +352,35 @@ function BoardCardItem({
 }
 
 /**
- * Client switcher + five-column Kanban board (KAN-03, D-10). The active
- * client lives in the URL (`?client=<id>`) so it survives a reload and a
- * revalidate — switching pushes a new URL rather than holding local state.
- * No drag-and-drop, no drop targets (D-05): columns are static, ordered by
- * STAGE_ORDER server-side in page.tsx.
+ * Finds a card by id across every column's `cards` array. Returns `null`
+ * when the id is not found (e.g. a stale draggable id after a revalidate) —
+ * every caller of this helper must treat that as a silent no-op, never a
+ * crash.
+ */
+function findCard(cols: BoardColumn[], cardId: string): BoardCard | null {
+  for (const column of cols) {
+    const found = column.cards.find((c) => c.id === cardId);
+    if (found) return found;
+  }
+  return null;
+}
+
+const SCREEN_READER_INSTRUCTIONS = {
+  draggable:
+    "Para mover um card com o teclado, foque a alça de arrastar e pressione espaço. Use as setas para escolher a coluna e pressione espaço novamente para soltar. Pressione Escape para cancelar.",
+};
+
+/**
+ * Client switcher + five-column Kanban board (KAN-03, D-10, D-12, D-13). The
+ * active client lives in the URL (`?client=<id>`) so it survives a reload
+ * and a revalidate — switching pushes a new URL rather than holding local
+ * state. D-12 (supersedes D-05): the board now supports drag-and-drop card
+ * movement, in addition to the unchanged "Avançar" button — dnd-kit's
+ * `DndContext` wraps only the five-column region, with pointer + keyboard
+ * sensors, Portuguese screen-reader announcements, an optimistic move via
+ * `useOptimistic`, and a client-side `evaluateMove` pre-check for instant
+ * snap-back feedback (D-13) before the `moveCard` Server Action — the real
+ * security boundary — re-validates and writes.
  */
 export function BoardPanel({
   clients,
@@ -353,6 +393,122 @@ export function BoardPanel({
 
   const activeClient = clients.find((c) => c.id === activeClientId) ?? null;
   const hasCards = columns.some((column) => column.cards.length > 0);
+
+  // Optimistic layer only — removes the round-trip flicker while `moveCard`
+  // is in flight. `moveCard`'s own `revalidatePath("/pm/board")` is the
+  // authority; React discards this optimistic state automatically once the
+  // transition settles, whether the server accepted or rejected the move.
+  const [optimisticColumns, applyOptimisticMove] = useOptimistic(
+    columns,
+    (state: BoardColumn[], move: { cardId: string; toStage: CardStage }) => {
+      const movingCard = findCard(state, move.cardId);
+      if (!movingCard) return state;
+      return state.map((column) => {
+        if (column.stage === move.toStage) {
+          return {
+            ...column,
+            cards: [
+              ...column.cards.filter((c) => c.id !== move.cardId),
+              { ...movingCard, stage: move.toStage },
+            ],
+          };
+        }
+        return {
+          ...column,
+          cards: column.cards.filter((c) => c.id !== move.cardId),
+        };
+      });
+    }
+  );
+
+  const sensors = useSensors(
+    // 8px activation distance lets a plain click on the card body still
+    // open the detail Dialog instead of starting a drag.
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    // KeyboardSensor makes D-12's accessibility requirement real.
+    useSensor(KeyboardSensor)
+  );
+
+  const [activeCard, setActiveCard] = useState<BoardCard | null>(null);
+  const [isMoving, startMoveTransition] = useTransition();
+
+  function handleDragStart(event: DragStartEvent) {
+    const cardId = cardIdFromDraggableId(String(event.active.id));
+    if (!cardId) return;
+    setActiveCard(findCard(optimisticColumns, cardId));
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    setActiveCard(null);
+
+    const cardId = cardIdFromDraggableId(String(event.active.id));
+    if (!cardId) return;
+
+    const toStage = event.over
+      ? stageFromDroppableId(String(event.over.id))
+      : null;
+    // Dropped outside any column — the card snaps back on its own, nothing
+    // to call.
+    if (!toStage) return;
+
+    const card = findCard(optimisticColumns, cardId);
+    if (!card || !card.stage) return;
+
+    // Dropping back on the origin column is a silent no-op.
+    if (card.stage === toStage) return;
+
+    // D-13: the client-side pre-check for instant snap-back feedback. No
+    // optimistic update is applied on a rejection — the card simply stays
+    // where it visually is, and the toast carries the shared constant
+    // verbatim, never a locally retyped string.
+    const decision = evaluateMove(card.stage, toStage, card.checklistItems);
+    if (!decision.allowed) {
+      toast.error(decision.reason);
+      return;
+    }
+
+    startMoveTransition(async () => {
+      applyOptimisticMove({ cardId, toStage });
+      const result = await moveCard({ cardId, toStage });
+      if (result.error) toast.error(result.error);
+    });
+  }
+
+  function handleDragCancel() {
+    setActiveCard(null);
+  }
+
+  const announcements: Announcements = {
+    onDragStart({ active }) {
+      const cardId = cardIdFromDraggableId(String(active.id));
+      const card = cardId ? findCard(optimisticColumns, cardId) : null;
+      if (!card) return undefined;
+      return `Card ${card.title} selecionado. Use as setas para escolher a coluna.`;
+    },
+    onDragOver({ active, over }) {
+      const cardId = cardIdFromDraggableId(String(active.id));
+      const card = cardId ? findCard(optimisticColumns, cardId) : null;
+      const stage = over ? stageFromDroppableId(String(over.id)) : null;
+      if (!card || !stage) return undefined;
+      return `Card ${card.title} sobre a coluna ${STAGE_LABELS[stage]}.`;
+    },
+    onDragEnd({ active, over }) {
+      const cardId = cardIdFromDraggableId(String(active.id));
+      const card = cardId ? findCard(optimisticColumns, cardId) : null;
+      if (!card) return undefined;
+      const stage = over ? stageFromDroppableId(String(over.id)) : null;
+      if (!stage) {
+        return `Card ${card.title} solto fora de uma coluna. Nada foi alterado.`;
+      }
+      return `Card ${card.title} solto na coluna ${STAGE_LABELS[stage]}.`;
+    },
+    onDragCancel({ active }) {
+      const cardId = cardIdFromDraggableId(String(active.id));
+      const card = cardId ? findCard(optimisticColumns, cardId) : null;
+      if (!card || !card.stage) return undefined;
+      return `Movimentação cancelada. O card ${card.title} permanece em ${STAGE_LABELS[card.stage]}.`;
+    },
+  };
 
   function handleSwitchClient(clientId: string) {
     router.push(`/pm/board?client=${clientId}`);
@@ -394,31 +550,52 @@ export function BoardPanel({
           action={<CreateCardButton clientId={activeClientId} />}
         />
       ) : (
-        <div className="flex gap-6 overflow-x-auto pb-4">
-          {columns.map((column) => (
-            <div
-              key={column.stage}
-              className="flex w-[280px] shrink-0 flex-col gap-2"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-body font-medium">
-                  {STAGE_LABELS[column.stage]}
-                </span>
-                <StatusBadge tone="neutral">{column.cards.length}</StatusBadge>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          accessibility={{
+            announcements,
+            screenReaderInstructions: SCREEN_READER_INSTRUCTIONS,
+          }}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
+        >
+          <div
+            className="flex gap-6 overflow-x-auto pb-4"
+            aria-busy={isMoving}
+          >
+            {optimisticColumns.map((column) => (
+              <div
+                key={column.stage}
+                className="flex w-[280px] shrink-0 flex-col gap-2"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-body font-medium">
+                    {STAGE_LABELS[column.stage]}
+                  </span>
+                  <StatusBadge tone="neutral">{column.cards.length}</StatusBadge>
+                </div>
+                <DroppableColumn stage={column.stage}>
+                  {column.cards.map((card) => (
+                    <DraggableCard key={card.id} cardId={card.id} title={card.title}>
+                      <BoardCardItem
+                        card={card}
+                        pmNames={pmNames}
+                        hasChecklistTemplate={hasChecklistTemplate}
+                      />
+                    </DraggableCard>
+                  ))}
+                </DroppableColumn>
               </div>
-              <div className="flex flex-col gap-4">
-                {column.cards.map((card) => (
-                  <BoardCardItem
-                    key={card.id}
-                    card={card}
-                    pmNames={pmNames}
-                    hasChecklistTemplate={hasChecklistTemplate}
-                  />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+          <DragOverlay>
+            {activeCard ? (
+              <DataCard title={activeCard.title} className="cursor-grabbing shadow-lg" />
+            ) : null}
+          </DragOverlay>
+        </DndContext>
       )}
     </PageShell>
   );
