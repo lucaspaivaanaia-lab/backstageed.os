@@ -47,7 +47,7 @@ patterns-established:
 requirements-completed: [CHK-01, CHK-02]
 
 # Metrics
-duration: ~35min (Tasks 1-3; Task 4 checkpoint still pending human sign-off)
+duration: ~35min (Tasks 1-3) + human verification
 completed: 2026-07-31
 ---
 
@@ -55,16 +55,16 @@ completed: 2026-07-31
 
 **Reusable checklist-template CRUD (name + ordered item list) with per-client 1:1 assignment, both migrations live on the hosted database and pgTAP-proven at the RLS layer — PM read, admin-only write.**
 
-## Status: PAUSED AT CHECKPOINT (Task 4 of 4)
+## Status: COMPLETE (4 of 4 tasks)
 
-Tasks 1-3 are complete, committed, and automated-verified. Task 4 is a `checkpoint:human-verify` (`gate="blocking"`) requiring a human to walk through the running app — this cannot be completed by an autonomous agent and has NOT been auto-approved (workflow config `auto_advance: false`). The plan is not yet fully done; this SUMMARY documents what was built and verified so far, ahead of the worktree being merged and the checkpoint being handed to the developer.
+Tasks 1-3 completed by the executor, committed, and automated-verified. Task 4 (`checkpoint:human-verify`, `gate="blocking"`) was walked through by the developer against the merged `main` branch on 2026-07-31 — all 7 verification steps confirmed correct ("check! everything correct"). Plan closed.
 
 ## Performance
 
-- **Duration:** ~35 min (Tasks 1-3)
+- **Duration:** ~35 min (Tasks 1-3) + human verification pass
 - **Started:** 2026-07-31T13:49:39Z
-- **Completed:** Tasks 1-3 done 2026-07-31T14:23:59Z; Task 4 pending
-- **Tasks:** 3 of 4 complete (Task 4 is the pending checkpoint)
+- **Completed:** Tasks 1-3 done 2026-07-31T14:23:59Z; Task 4 (human sign-off) confirmed 2026-07-31
+- **Tasks:** 4 of 4 complete
 - **Files modified:** 10 (3 new migrations/tests, 7 new/modified application files)
 
 ## Accomplishments
@@ -80,7 +80,7 @@ Tasks 1-3 are complete, committed, and automated-verified. Task 4 is a `checkpoi
 1. **Task 1: Ship the checklist-template schema and its RLS proof** - `e332956` (feat)
 2. **Task 2: Apply the migrations to the live database and run the RLS suite** - no commit (no source files changed — see Deviations for the migration-history repair performed as part of this task)
 3. **Task 3: Build the admin checklist-template screen end to end** - `396002f` (feat)
-4. **Task 4: Human verification** - PENDING (checkpoint, not started — see below)
+4. **Task 4: Human verification** - CONFIRMED by developer 2026-07-31 (all 7 steps passed; no commit, verification only)
 
 ## Files Created/Modified
 - `supabase/migrations/0013_checklist_templates.sql` - checklist_templates + checklist_template_items tables, RLS, GRANTs
@@ -138,11 +138,15 @@ None - no new external service configuration required. (The migration-history re
 ## Next Phase Readiness
 
 - `public.checklist_templates`, `public.checklist_template_items`, and `public.clients.checklist_template_id` are live on the hosted database, ready for Plan 03-03's card-checklist-gate snapshot logic to read (D-04: snapshot-at-entry into `card_checklist_items`, not built here).
-- **Blocker for full plan closure:** Task 4 (human-verify checkpoint) has not been run. Per the plan's own `<verification>` section, the plan's success criteria require this sign-off. The next step is for the merged worktree to be exercised in a real running app per the plan's `<how-to-verify>` steps (create two templates, edit one, assign both to different clients, confirm PM cannot see "Checklists" in the sidebar and is redirected from `/admin/checklist-templates` — this last part is already covered structurally by the existing `middleware.ts` role-routing, not new code from this plan).
+- Plan fully closed — no blockers for Wave 2 (03-02).
+
+## Execution Note (orchestrator deviation)
+
+Task 4's checkpoint asked the developer to run `npm run dev` and verify — but the executor ran in an isolated git worktree not yet merged to `main`, so the developer's existing dev server (on `main`) didn't show the new UI. The orchestrator merged the worktree's Task 1-3 commits into `main` (via `git merge --no-ff`, no conflicts, no new dependencies) *before* the human-verify step, so the developer could test against their normal running app. This is earlier than the standard post-wave merge point but was necessary for a mid-plan human-verify checkpoint under worktree isolation to be testable at all.
 
 ---
 *Phase: 03-content-production-kanban*
-*Completed: 2026-07-31 (Tasks 1-3; Task 4 pending)*
+*Completed: 2026-07-31 (all 4 tasks)*
 
 ## Self-Check: PASSED
 
