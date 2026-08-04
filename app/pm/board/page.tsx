@@ -14,6 +14,15 @@ export type BoardChecklistItem = {
   completed_by: string | null;
 };
 
+export type BoardAttachment = {
+  id: string;
+  card_id: string;
+  url: string;
+  label: string | null;
+  link_type: "image" | "video" | "pdf" | "other";
+  created_at: string;
+};
+
 export type BoardCard = {
   id: string;
   title: string;
@@ -24,6 +33,7 @@ export type BoardCard = {
   assignee_id: string | null;
   created_at: string;
   checklistItems: BoardChecklistItem[];
+  attachments: BoardAttachment[];
 };
 
 export type BoardColumn = {
@@ -108,6 +118,15 @@ export default async function PmBoardPage({
           .order("sort_order", { ascending: true })
       : { data: [] as BoardChecklistItem[] };
 
+  const { data: attachments } =
+    cardIds.length > 0
+      ? await supabase
+          .from("card_attachments")
+          .select("id, card_id, url, label, link_type, created_at")
+          .in("card_id", cardIds)
+          .order("created_at", { ascending: true })
+      : { data: [] as BoardAttachment[] };
+
   const completedByIds = (checklistItems ?? [])
     .map((item) => item.completed_by)
     .filter((id): id is string => Boolean(id));
@@ -124,9 +143,17 @@ export default async function PmBoardPage({
     itemsByCardId.set(item.card_id, existing);
   }
 
+  const attachmentsByCardId = new Map<string, BoardAttachment[]>();
+  for (const attachment of attachments ?? []) {
+    const existing = attachmentsByCardId.get(attachment.card_id) ?? [];
+    existing.push(attachment);
+    attachmentsByCardId.set(attachment.card_id, existing);
+  }
+
   const allCards: BoardCard[] = (cards ?? []).map((card) => ({
     ...card,
     checklistItems: itemsByCardId.get(card.id) ?? [],
+    attachments: attachmentsByCardId.get(card.id) ?? [],
   }));
   const packages = allCards.filter((c) => c.stage === null);
 

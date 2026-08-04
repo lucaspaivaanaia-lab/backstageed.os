@@ -6,7 +6,14 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { PlusIcon } from "lucide-react";
+import {
+  PlusIcon,
+  XIcon,
+  ImageIcon,
+  VideoIcon,
+  FileTextIcon,
+  LinkIcon,
+} from "lucide-react";
 import {
   DndContext,
   DragOverlay,
@@ -24,8 +31,15 @@ import {
   toggleChecklistItem,
   moveCard,
   updateCardDetails,
+  addAttachment,
+  removeAttachment,
 } from "./actions";
-import { createCardSchema, type CreateCardInput } from "@/lib/validation/cards";
+import {
+  createCardSchema,
+  attachDriveLinkSchema,
+  type CreateCardInput,
+  type AttachDriveLinkInput,
+} from "@/lib/validation/cards";
 import { STAGE_LABELS, STAGE_ORDER, type CardStage } from "@/lib/cards/stages";
 import {
   checklistProgress,
@@ -34,11 +48,18 @@ import {
 } from "@/lib/cards/checklist-gate";
 import { evaluateMove } from "@/lib/cards/move-rules";
 import {
+  isLikelyDriveLink,
+  driveLinkType,
+  INVALID_DRIVE_LINK_MESSAGE,
+  type DriveLinkType,
+} from "@/lib/attachments/drive-url";
+import {
   DraggableCard,
   cardIdFromDraggableId,
 } from "./draggable-card";
 import { DroppableColumn, stageFromDroppableId } from "./droppable-column";
 import type {
+  BoardAttachment,
   BoardCard,
   BoardChecklistItem,
   BoardClient,
@@ -51,8 +72,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { DataCard } from "@/components/ui/data-card";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { Badge } from "@/components/ui/badge";
 import { ErrorBox } from "@/components/ui/error-box";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 import {
   Select,
   SelectContent,
@@ -109,6 +142,21 @@ type BoardPanelProps = {
 
 const CARD_CREATED_TOAST = "Card criado.";
 const CARD_DETAILS_SAVED_TOAST = "Card atualizado.";
+const ATTACHMENT_ADDED_TOAST = "Link anexado.";
+
+// D-08: icon + Portuguese type word only, never a thumbnail/preview.
+const ATTACHMENT_TYPE_ICONS: Record<DriveLinkType, typeof ImageIcon> = {
+  image: ImageIcon,
+  video: VideoIcon,
+  pdf: FileTextIcon,
+  other: LinkIcon,
+};
+const ATTACHMENT_TYPE_LABELS: Record<DriveLinkType, string> = {
+  image: "Imagem",
+  video: "Vídeo",
+  pdf: "PDF",
+  other: "Outro",
+};
 // Radix `SelectItem` cannot carry an empty-string `value` (03-01-SUMMARY.md
 // solved the identical nullable-FK case) -- this sentinel represents "no
 // assignee" in both the create Dialog and the detail Dialog's Responsável
@@ -331,6 +379,173 @@ function ChecklistItemRow({
 }
 
 /**
+ * One "Anexos" row (KAN-05, D-07/D-08). No thumbnail/preview is ever
+ * fetched (D-08) — icon-by-type + label only. The remove trigger opens an
+ * `AlertDialog` using the UI-SPEC copy verbatim; confirming calls
+ * `removeAttachment` inside `useTransition`. `rel="noopener noreferrer"`
+ * on the link is the reverse-tabnabbing mitigation (T-03-20) — the opened
+ * Drive tab never gets a `window.opener` handle back to the board.
+ */
+function AttachmentRow({ attachment }: { attachment: BoardAttachment }) {
+  const [isPending, startTransition] = useTransition();
+  const Icon = ATTACHMENT_TYPE_ICONS[attachment.link_type];
+
+  function handleRemove() {
+    startTransition(async () => {
+      await removeAttachment({ attachmentId: attachment.id });
+    });
+  }
+
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <div className="flex min-w-0 items-center gap-xs">
+        <Icon className="size-4 shrink-0 text-muted-foreground" />
+        <a
+          href={attachment.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="truncate text-body underline-offset-4 hover:underline"
+        >
+          {attachment.label && attachment.label.length > 0
+            ? attachment.label
+            : attachment.url}
+        </a>
+        <Badge variant="outline">
+          {ATTACHMENT_TYPE_LABELS[attachment.link_type]}
+        </Badge>
+      </div>
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-8 shrink-0"
+            aria-label="Remover anexo"
+            disabled={isPending}
+          >
+            <XIcon className="size-4" />
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover anexo</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esse link será removido do card. Deseja continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={handleRemove}>
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+/**
+ * The "Anexar link" form (KAN-05, D-07/D-09). `driveLinkType` seeds the
+ * type Select as the URL is typed, but the PM can freely override it — a
+ * Drive share link's opaque file id carries no extension, so inference
+ * alone is unreliable (03-RESEARCH.md). `isLikelyDriveLink` runs on blur
+ * for instant feedback; the Server Action re-runs the SAME check
+ * server-side (Pitfall 5) as the actual boundary.
+ */
+function AttachDriveLinkForm({ cardId }: { cardId: string }) {
+  const [url, setUrl] = useState("");
+  const [label, setLabel] = useState("");
+  const [linkType, setLinkType] = useState<DriveLinkType>("other");
+  const [touchedUrl, setTouchedUrl] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  const trimmedUrl = url.trim();
+  const showInvalid = touchedUrl && trimmedUrl.length > 0 && !isLikelyDriveLink(trimmedUrl);
+
+  function handleUrlChange(next: string) {
+    setUrl(next);
+    if (next.trim().length > 0) {
+      setLinkType(driveLinkType(next));
+    }
+  }
+
+  function handleSubmit() {
+    setServerError(null);
+    const input: AttachDriveLinkInput = {
+      cardId,
+      url: trimmedUrl,
+      label: label.trim().length > 0 ? label.trim() : undefined,
+      linkType,
+    };
+    const parsed = attachDriveLinkSchema.safeParse(input);
+    if (!parsed.success) {
+      setServerError(parsed.error.issues[0]?.message ?? "Dados inválidos.");
+      return;
+    }
+    startTransition(async () => {
+      const result = await addAttachment(parsed.data);
+      if (result.error) {
+        setServerError(result.error);
+        return;
+      }
+      toast.success(ATTACHMENT_ADDED_TOAST);
+      setUrl("");
+      setLabel("");
+      setLinkType("other");
+      setTouchedUrl(false);
+    });
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <Input
+        value={url}
+        onChange={(event) => handleUrlChange(event.target.value)}
+        onBlur={() => setTouchedUrl(true)}
+        placeholder="https://drive.google.com/..."
+        disabled={isPending}
+      />
+      {showInvalid ? (
+        <span className="text-meta text-destructive">{INVALID_DRIVE_LINK_MESSAGE}</span>
+      ) : null}
+      <Input
+        value={label}
+        onChange={(event) => setLabel(event.target.value)}
+        placeholder="Rótulo (opcional)"
+        disabled={isPending}
+      />
+      <Select
+        value={linkType}
+        onValueChange={(next) => setLinkType(next as DriveLinkType)}
+        disabled={isPending}
+      >
+        <SelectTrigger className="w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="image">Imagem</SelectItem>
+          <SelectItem value="video">Vídeo</SelectItem>
+          <SelectItem value="pdf">PDF</SelectItem>
+          <SelectItem value="other">Outro</SelectItem>
+        </SelectContent>
+      </Select>
+      <Button
+        type="button"
+        onClick={handleSubmit}
+        disabled={isPending || trimmedUrl.length === 0 || showInvalid}
+        className="w-fit"
+      >
+        {isPending ? "Anexando..." : "Anexar link"}
+      </Button>
+      {serverError ? <ErrorBox>{serverError}</ErrorBox> : null}
+    </div>
+  );
+}
+
+/**
  * A single Kanban card + its detail Dialog (KAN-02, D-05, CHK-03). "Avançar"
  * is a plain Server Action call inside useTransition — no client-side
  * stage computation, `nextStage` runs only on the server
@@ -416,11 +631,18 @@ function BoardCardItem({
     });
   }
 
-  const cardMeta = card.assignee_id
-    ? `Criado em ${formatCreatedAt(card.created_at)} · Responsável: ${
-        pmNames[card.assignee_id] ?? card.assignee_id
-      }`
-    : `Criado em ${formatCreatedAt(card.created_at)}`;
+  const metaSegments = [`Criado em ${formatCreatedAt(card.created_at)}`];
+  if (card.assignee_id) {
+    metaSegments.push(
+      `Responsável: ${pmNames[card.assignee_id] ?? card.assignee_id}`
+    );
+  }
+  if (card.attachments.length === 1) {
+    metaSegments.push("1 anexo");
+  } else if (card.attachments.length > 1) {
+    metaSegments.push(`${card.attachments.length} anexos`);
+  }
+  const cardMeta = metaSegments.join(" · ");
 
   return (
     <Dialog>
@@ -498,6 +720,23 @@ function BoardCardItem({
               {isSavingDetails ? "Salvando..." : "Salvar alterações"}
             </Button>
             {detailsError ? <ErrorBox>{detailsError}</ErrorBox> : null}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <SectionTitle>Anexos</SectionTitle>
+            {card.attachments.length === 0 ? (
+              <EmptyState
+                title="Nenhum anexo"
+                description="Cole um link do Google Drive abaixo para anexar imagem, vídeo ou PDF a este card."
+              />
+            ) : (
+              <div className="flex flex-col gap-2">
+                {card.attachments.map((attachment) => (
+                  <AttachmentRow key={attachment.id} attachment={attachment} />
+                ))}
+              </div>
+            )}
+            <AttachDriveLinkForm cardId={card.id} />
           </div>
 
           {showChecklistSection ? (
