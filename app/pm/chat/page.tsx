@@ -20,6 +20,9 @@ export default async function PmChatPage() {
     supabase
       .from("clients")
       .select("id, name")
+      // P1 pivot 2026-08-04: excludes soft-deleted ("Excluir cliente")
+      // clients from the chat switcher roster.
+      .is("archived_at", null)
       .order("name", { ascending: true }),
     supabase.from("client_files").select("client_id"),
   ]);

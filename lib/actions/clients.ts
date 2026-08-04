@@ -370,3 +370,51 @@ export async function assignPms(
 
   return { success: true };
 }
+
+/**
+ * "Excluir cliente" (P1 pivot 2026-08-04) — Admin-only, and a SOFT delete:
+ * sets `archived_at`, never a real `DELETE FROM clients`. Decision, made
+ * explicitly by the user given a real client is about to go into
+ * production: an accidental hard delete would take that client's
+ * cards/messages/files/checklist history with it, irrecoverably; setting
+ * `archived_at` just removes it from active LIST queries (client lists,
+ * board/chat client switchers, checklist assignment) while every existing
+ * row stays intact and restorable (no restore UI yet — reverting is a
+ * direct `archived_at = null` update, tracked as a known gap, not built
+ * under the 2026-08-05 deadline).
+ *
+ * Uses the RLS-scoped `createClient()`, not `createAdminClient()` — the
+ * same admin-only app-layer check every other action in this file uses is
+ * the actual boundary; `clients_update_scoped` already permits an Admin to
+ * update any client row.
+ */
+export async function archiveClient(clientId: string): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Não autenticado." };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, status")
+    .eq("id", user.id)
+    .single();
+
+  const isAuthorized =
+    profile?.status === "approved" && profile.role === "admin";
+  if (!isAuthorized) {
+    return { error: "Sem permissão para excluir clientes." };
+  }
+
+  const { error } = await supabase
+    .from("clients")
+    .update({ archived_at: new Date().toISOString() })
+    .eq("id", clientId);
+
+  if (error) {
+    return { error: "Não foi possível excluir o cliente. Tente novamente." };
+  }
+
+  return { success: true };
+}

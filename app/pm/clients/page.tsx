@@ -40,7 +40,10 @@ export default async function PmClientsPage() {
     .from("clients")
     .select(
       "id, name, objective, tone_of_voice, target_audience, content_pillars, pm_clients(pm_id)"
-    );
+    )
+    // P1 pivot 2026-08-04: excludes soft-deleted ("Excluir cliente") clients
+    // from the active list — archived_at stays set, the row is untouched.
+    .is("archived_at", null);
 
   const clients = (data ?? []) as ClientRow[];
 

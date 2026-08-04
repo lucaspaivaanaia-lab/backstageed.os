@@ -43,6 +43,9 @@ export default async function ChecklistTemplatesPage() {
     supabase
       .from("clients")
       .select("id, name, checklist_template_id")
+      // P1 pivot 2026-08-04: excludes soft-deleted ("Excluir cliente")
+      // clients from the per-client checklist-assignment table.
+      .is("archived_at", null)
       .order("name", { ascending: true }),
   ]);
 

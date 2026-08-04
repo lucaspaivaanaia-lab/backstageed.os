@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { XIcon, PlusIcon, ArrowLeftIcon } from "lucide-react";
@@ -9,7 +10,7 @@ import {
   briefingSchema,
   type BriefingInput,
 } from "@/lib/validation/clients";
-import { updateBriefing, assignPms } from "@/lib/actions/clients";
+import { updateBriefing, assignPms, archiveClient } from "@/lib/actions/clients";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,6 +34,17 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 import { PageTitle } from "@/components/layout/page-shell";
 import { ClientFilesSection } from "@/components/clients/client-files-section";
 import { ClientChecklistSection } from "@/components/clients/client-checklist-section";
@@ -82,6 +94,24 @@ export function ClientDetailForm({
   checklistTemplate,
   backHref,
 }: ClientDetailFormProps) {
+  const router = useRouter();
+
+  // -- Excluir cliente (archiveClient), Admin-only, soft delete --
+  const [isArchivePending, startArchiveTransition] = useTransition();
+  const [archiveError, setArchiveError] = useState<string | null>(null);
+
+  function handleArchive() {
+    setArchiveError(null);
+    startArchiveTransition(async () => {
+      const result = await archiveClient(client.id);
+      if ("error" in result) {
+        setArchiveError(result.error);
+        return;
+      }
+      router.push(backHref);
+    });
+  }
+
   // -- Briefing form (updateBriefing) --
   const [isBriefingPending, startBriefingTransition] = useTransition();
   const [briefingServerError, setBriefingServerError] = useState<
@@ -427,6 +457,49 @@ export function ClientDetailForm({
           clientId={client.id}
           currentTemplate={checklistTemplate}
         />
+      ) : null}
+
+      {viewerIsAdmin ? (
+        <DataCard
+          title="Excluir cliente"
+          description="O cliente é removido das listas ativas (board, chat, checklists). Cards, conversas e arquivos já existentes são mantidos, não apagados."
+        >
+          <div className="flex flex-col gap-4">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={isArchivePending}
+                  className="w-fit"
+                >
+                  Excluir cliente
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Excluir cliente</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {client.name} será removido das listas ativas. Cards,
+                    conversas e arquivos deste cliente são mantidos e podem
+                    ser restaurados por um desenvolvedor, se necessário.
+                    Deseja continuar?
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    variant="destructive"
+                    onClick={handleArchive}
+                  >
+                    Excluir
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            {archiveError ? <ErrorBox>{archiveError}</ErrorBox> : null}
+          </div>
+        </DataCard>
       ) : null}
     </div>
   );

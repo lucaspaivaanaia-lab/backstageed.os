@@ -85,6 +85,9 @@ export default async function PmBoardPage({
       supabase
         .from("clients")
         .select("id, name")
+        // P1 pivot 2026-08-04: excludes soft-deleted ("Excluir cliente")
+        // clients from the board switcher roster.
+        .is("archived_at", null)
         .order("name", { ascending: true }),
       clientId
         ? supabase
