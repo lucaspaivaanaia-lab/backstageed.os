@@ -2,7 +2,12 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { clientCreateSchema, briefingSchema } from "@/lib/validation/clients";
+import {
+  clientCreateSchema,
+  briefingSchema,
+  type BriefingInput,
+} from "@/lib/validation/clients";
+import { runStructuredExtraction } from "@/lib/ai/structured-extraction";
 
 type CreateClientResult = { success: true; clientId: string } | { error: string };
 
@@ -205,6 +210,106 @@ export async function updateBriefing(
   }
 
   return { success: true };
+}
+
+const AUTOFILL_NO_FILES_ERROR =
+  "Nenhum arquivo de referência encontrado para este cliente. Envie um arquivo primeiro.";
+const AUTOFILL_INVALID_RESULT_ERROR =
+  "A IA retornou um resultado inesperado. Preencha o briefing manualmente.";
+
+export type AutofillBriefingResult =
+  | { success: true; briefing: BriefingInput }
+  | { error: string };
+
+/**
+ * AI auto-fill for the strategic briefing (P0 pivot 2026-08-04, item 5).
+ * Triggered client-side right after a successful client_files upload
+ * (components/clients/client-files-section.tsx) — reads ALL of this
+ * client's files (not just the newly uploaded one, so the proposal
+ * reflects the client's full available context), proposes briefing field
+ * values, and returns them WITHOUT writing to the database. The PM/Admin
+ * reviews the pre-filled form and clicks "Salvar briefing" (updateBriefing,
+ * above) themselves — this action never persists anything on its own,
+ * matching the same "AI proposes, human confirms" pattern as checklist
+ * generation (lib/actions/checklist-templates.ts's generateChecklistFromFiles).
+ *
+ * Reuses the SAME shared engine (lib/ai/structured-extraction.ts) that
+ * checklist generation and card validation use — never a second
+ * Anthropic-calling implementation for this feature.
+ */
+export async function autofillBriefingFromFiles(
+  clientId: string
+): Promise<AutofillBriefingResult> {
+  const supabase = await createClient();
+
+  // Re-read the client through RLS — never trust that clientId belongs to
+  // a client the caller can reach; clients_select_scoped is the real
+  // boundary, this call is also where the client's name for the prompt
+  // comes from.
+  const { data: client } = await supabase
+    .from("clients")
+    .select("id, name")
+    .eq("id", clientId)
+    .single();
+  if (!client) {
+    return { error: "Cliente não encontrado ou sem permissão." };
+  }
+
+  const { data: files } = await supabase
+    .from("client_files")
+    .select("filename, content")
+    .eq("client_id", clientId);
+
+  if (!files || files.length === 0) {
+    return { error: AUTOFILL_NO_FILES_ERROR };
+  }
+
+  const result = await runStructuredExtraction({
+    clientName: client.name,
+    files,
+    instruction:
+      "Leia os arquivos de referência acima e proponha o briefing estratégico " +
+      "deste cliente para uma operação de social media. Preencha: Objetivo " +
+      "(o que o cliente quer alcançar nas redes sociais, 1-2 frases), Tom de " +
+      "voz (como a marca se comunica, 1-2 frases), Público-alvo (quem o " +
+      "conteúdo busca atingir, 1-2 frases), e Pilares de conteúdo (uma lista " +
+      "curta de 3 a 6 temas/categorias recorrentes de conteúdo, cada um como " +
+      "uma frase curta, não um parágrafo). Se um arquivo não trouxer " +
+      "informação suficiente para algum campo, retorne uma string vazia " +
+      "para ele em vez de inventar conteúdo.",
+    toolName: "propose_briefing",
+    toolDescription:
+      "Registra a proposta de briefing estratégico extraída dos arquivos do cliente.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        objective: { type: "string", description: "Objetivo do cliente nas redes sociais." },
+        toneOfVoice: { type: "string", description: "Tom de voz da marca." },
+        targetAudience: { type: "string", description: "Público-alvo do conteúdo." },
+        contentPillars: {
+          type: "array",
+          items: { type: "string" },
+          description: "3 a 6 pilares/temas de conteúdo recorrentes, cada um curto.",
+        },
+      },
+      required: ["objective", "toneOfVoice", "targetAudience", "contentPillars"],
+    },
+  });
+
+  if (!result.ok) {
+    return { error: result.error };
+  }
+
+  const parsed = briefingSchema.safeParse(result.data);
+  if (!parsed.success) {
+    console.error(
+      "[autofillBriefingFromFiles] AI output failed briefingSchema validation",
+      parsed.error
+    );
+    return { error: AUTOFILL_INVALID_RESULT_ERROR };
+  }
+
+  return { success: true, briefing: parsed.data };
 }
 
 /**

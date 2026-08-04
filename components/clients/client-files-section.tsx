@@ -1,12 +1,15 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
+import { toast } from "sonner";
 import {
   uploadClientFile,
   deleteClientFile,
   listClientFiles,
   type ClientFileRow,
 } from "@/lib/actions/client-files";
+import { autofillBriefingFromFiles } from "@/lib/actions/clients";
+import type { BriefingInput } from "@/lib/validation/clients";
 import { FILE_LIMIT, atFileLimit } from "@/lib/client-files/limit";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,9 +18,17 @@ import { ErrorBox } from "@/components/ui/error-box";
 import { DataCard } from "@/components/ui/data-card";
 import { EmptyState } from "@/components/layout/page-shell";
 
+const BRIEFING_AUTOFILLED_TOAST =
+  "Briefing preenchido pela IA a partir do arquivo. Revise e clique em \"Salvar briefing\".";
+
 type ClientFilesSectionProps = {
   clientId: string;
   initialFiles: ClientFileRow[];
+  // Bubbles the AI's proposed briefing up to the parent so it can call
+  // form.setValue() for each field — this component never touches the
+  // briefing form's state directly (single source of truth stays in
+  // ClientDetailForm). Optional so this section stays usable standalone.
+  onBriefingAutofilled?: (briefing: BriefingInput) => void;
 };
 
 /**
@@ -29,6 +40,7 @@ type ClientFilesSectionProps = {
 export function ClientFilesSection({
   clientId,
   initialFiles,
+  onBriefingAutofilled,
 }: ClientFilesSectionProps) {
   const [files, setFiles] = useState<ClientFileRow[]>(initialFiles);
   const [isUploadPending, startUploadTransition] = useTransition();
@@ -48,6 +60,16 @@ export function ClientFilesSection({
       if (fileInputRef.current) fileInputRef.current.value = "";
       const updated = await listClientFiles(clientId);
       setFiles(updated);
+
+      // P0 pivot 2026-08-04, item 5: auto-fill the briefing right after a
+      // successful upload. A failure here is silent (no ErrorBox) — the
+      // upload itself already succeeded, and auto-fill is a convenience,
+      // not a required step; the PM can still fill the briefing by hand.
+      const autofill = await autofillBriefingFromFiles(clientId);
+      if ("success" in autofill) {
+        onBriefingAutofilled?.(autofill.briefing);
+        toast.success(BRIEFING_AUTOFILLED_TOAST);
+      }
     });
   }
 

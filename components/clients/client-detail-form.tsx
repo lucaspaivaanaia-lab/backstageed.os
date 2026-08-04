@@ -87,7 +87,7 @@ export function ClientDetailForm({
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, replace } = useFieldArray({
     control: form.control,
     name: "contentPillars" as never,
   });
@@ -99,6 +99,22 @@ export function ClientDetailForm({
     if (!value) return;
     append(value as never);
     setPillarInput("");
+  }
+
+  // P0 pivot 2026-08-04, item 5: bubbled up from ClientFilesSection after a
+  // successful upload + AI proposal. `replace` (not `append`/`setValue`) is
+  // useFieldArray's own array-safe bulk-update — it keeps `fields` (what
+  // the pillar Badge list below renders) in sync with form state, which a
+  // plain `form.setValue("contentPillars", ...)` is not guaranteed to do.
+  // The proposal only fills the form — it is NEVER submitted automatically;
+  // the PM/Admin still has to review and click "Salvar briefing".
+  function handleBriefingAutofilled(briefing: BriefingInput) {
+    form.setValue("objective", briefing.objective, { shouldDirty: true });
+    form.setValue("toneOfVoice", briefing.toneOfVoice, { shouldDirty: true });
+    form.setValue("targetAudience", briefing.targetAudience, {
+      shouldDirty: true,
+    });
+    replace(briefing.contentPillars as never[]);
   }
 
   function onSubmitBriefing(values: BriefingInput) {
@@ -364,7 +380,11 @@ export function ClientDetailForm({
         </div>
       </DataCard>
 
-      <ClientFilesSection clientId={client.id} initialFiles={initialFiles} />
+      <ClientFilesSection
+        clientId={client.id}
+        initialFiles={initialFiles}
+        onBriefingAutofilled={handleBriefingAutofilled}
+      />
     </div>
   );
 }
