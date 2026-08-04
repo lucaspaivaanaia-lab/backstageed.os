@@ -41,7 +41,12 @@ type TemplateFormProps = {
   mode: "create" | "edit";
   templateId?: string;
   defaultValues?: ChecklistTemplateInput;
-  onSuccess: () => void;
+  // Called with the saved template's id (the new id in "create" mode, the
+  // same `templateId` prop echoed back in "edit" mode) so callers that need
+  // to act on it afterwards (e.g. auto-assigning a freshly created
+  // template to the client it was generated for) don't have to re-fetch.
+  // Existing callers that only need "form closed" ignore the argument.
+  onSuccess: (templateId: string) => void;
 };
 
 /**
@@ -85,7 +90,11 @@ export function TemplateForm({
       if (mode === "create") {
         toast.success("Checklist criado.");
       }
-      onSuccess();
+      onSuccess(
+        mode === "create"
+          ? (result as { success: true; templateId: string }).templateId
+          : (templateId as string)
+      );
     });
   }
 

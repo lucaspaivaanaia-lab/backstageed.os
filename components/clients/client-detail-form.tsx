@@ -34,7 +34,9 @@ import {
 } from "@/components/ui/dialog";
 import { PageTitle } from "@/components/layout/page-shell";
 import { ClientFilesSection } from "@/components/clients/client-files-section";
+import { ClientChecklistSection } from "@/components/clients/client-checklist-section";
 import type { ClientFileRow } from "@/lib/actions/client-files";
+import type { ClientChecklistSummary } from "@/lib/actions/checklist-templates";
 
 type PmRosterEntry = { id: string; email: string };
 
@@ -52,6 +54,7 @@ type ClientDetailFormProps = {
   assignedPmNames: Record<string, string>;
   viewerIsAdmin: boolean;
   initialFiles: ClientFileRow[];
+  checklistTemplate: ClientChecklistSummary | null;
 };
 
 /**
@@ -69,6 +72,7 @@ export function ClientDetailForm({
   assignedPmNames,
   viewerIsAdmin,
   initialFiles,
+  checklistTemplate,
 }: ClientDetailFormProps) {
   // -- Briefing form (updateBriefing) --
   const [isBriefingPending, startBriefingTransition] = useTransition();
@@ -385,6 +389,13 @@ export function ClientDetailForm({
         initialFiles={initialFiles}
         onBriefingAutofilled={handleBriefingAutofilled}
       />
+
+      {viewerIsAdmin ? (
+        <ClientChecklistSection
+          clientId={client.id}
+          currentTemplate={checklistTemplate}
+        />
+      ) : null}
     </div>
   );
 }
