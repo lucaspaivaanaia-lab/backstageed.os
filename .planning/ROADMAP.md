@@ -152,7 +152,7 @@ Plans:
 
 **Wave 7** *(blocked on Wave 6)*
 
-- [ ] 03-04-PLAN.md — Google Drive link attachments with shared client+server URL validation (KAN-05)
+- [x] 03-04-PLAN.md — Google Drive link attachments with shared client+server URL validation (KAN-05)
 
 **Wave 8** *(blocked on Wave 7)*
 
@@ -234,7 +234,7 @@ Plans:
 |-------|----------|----------------|--------|-----------|
 | 1. Client Records & Isolated RAG Setup | 2026-07-11 | 4/4 | Complete   | 2026-07-13 |
 | 2. Client-Isolated AI Chat | 2026-07-18 | 5/6 | In Progress|  |
-| 3. Content Production Kanban | 2026-08-05 | 6/9 | In Progress|  |
+| 3. Content Production Kanban | 2026-08-05 | 7/9 | In Progress|  |
 | 4. Client Approval & Scheduling | 2026-08-07 | 0/? | Not started | - |
 | 5. Access & Roles | 2026-08-12 | 6/6 | Complete   | 2026-07-16 |
 | 6. Admin Oversight Dashboard | 2026-08-15 | 0/? | Not started | - |
