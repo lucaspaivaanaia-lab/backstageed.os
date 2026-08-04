@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Phase 3 context re-gathered (mid-execution re-scope: DnD + rich cards)"
-last_updated: "2026-07-31T16:22:49.085Z"
-last_activity: 2026-07-31 -- Phase 03 execution started
+stopped_at: "Phase 3 waves 8-9 paused — urgent P0 pivot to AI checklist gen/validation + briefing autofill ahead of 2026-08-05 Netuxa test"
+last_updated: "2026-08-04T00:00:00.000Z"
+last_activity: 2026-08-04 -- Post-meeting P0 pivot, building directly per Juliano's priority brief
 progress:
   total_phases: 6
   completed_phases: 3
@@ -72,10 +72,22 @@ Recent decisions affecting current work:
 - Memory curation is manual (PM selects conversation excerpts to save) — drives Phase 2 scope, no auto-save.
 - Supabase RLS is the multi-tenancy enforcement layer — already scaffolded in Phase 5's 05-01 migrations (`is_admin()`, `pm_assigned_clients()`); Phase 1 client-record work builds on the existing `clients`/`pm_clients` schema.
 - Scheduling v1 is registration-only (no publish API integration) — keeps Phase 4 scope small.
+- **2026-08-04: Post-meeting reprioritization (Juliano, 2026-07-31) — urgent P0 pivot ahead of a live test with client Netuxa, delivery due 2026-08-05.** Reorders what comes before Phase 4; bypassed `/gsd:discuss-phase` per explicit user instruction given the deadline — decisions below are locked, not open for discussion. Phase 3 waves 8-9 (03-05 admin audit+override, 03-06 packages/peças) are **paused mid-flight** (plans already exist and are unchanged, just not executed yet) to make room. User chose "build directly, no formal replanning" over inserting a new GSD-tracked phase, given repeated background-agent stalls earlier in this session made the full plan-phase→plan-checker pipeline too slow for the deadline. **P0 (blocks 2026-08-05 delivery), in dependency order:**
+  1. Investigate `/pm/clients/[id]` file-upload "No file chosen" report as a possible non-bug (validation catching an empty file select) before touching code.
+  2. Shared AI engine module (client_files + prompt → structured output) — reused by both checklist-generation and briefing-autofill, not duplicated.
+  3. Auto-fill do briefing estratégico (Objetivo/Tom de voz/Público-alvo/Pilares) ao subir um arquivo em `/pm/clients/[id]`, usando a engine acima.
+  4. Admin "Gerar/Atualizar checklist com IA" button on a client — reads that client's `client_files`, proposes `checklist_template_items`, Admin reviews/edits before saving; must be re-runnable when the base file changes.
+  5. "Importar conteúdo do chat" field on the PM board — pastes generated text, creates a card in that client's first Kanban column.
+  6. AI validation on create/revalidate: reads card text + client_files + checklist items, marks each `card_checklist_item` pass/fail with a short justification, shows a summary at the top of the card. No auto-advance — "Avançar" stays PM-only, no new state machine. **Waits on 03-04's human-verify approval** (touches the same card detail dialog) before starting.
+  Cliente de teste: Netuxa — base files (empresa + Netuxa) not yet received from Juliano; Lucas uploads to `client_files` once they arrive.
+- **P1 (same batch if time allows, else right after):** "Salvar briefing" button text changes to "Salvo" after success; back-arrow to the client list on client detail pages; Admin-only "Excluir cliente" with an AlertDialog confirmation matching the "Remover anexo" pattern — hard-delete vs. soft-delete/archive must be decided before building, since a real client will be in production soon.
+- **P2 (after 2026-08-05 test, non-blocking, tracked here rather than acted on now):** meeting-transcript → base-file update flow (paste transcript → AI summarizes/confirms → diffs against existing base file → identifies new/contradicting info → updates the file → discards the transcript); Chat and Produção remembering the last-selected client (shared state/URL, no route restructuring) — explicitly deferred past 2026-08-05 since it touches both Chat and Kanban at once.
 
 ### Pending Todos
 
 - Run `/gsd:discuss-phase` for the new Phase 1 (Client Records & Isolated RAG Setup) — including resolving the login/auth dependency gap noted above.
+- Resume Phase 3 waves 8-9 (03-05, 03-06) after the 2026-08-05 Netuxa test.
+- P1 items (briefing-save button text, client-list back arrow, Admin-only client deletion) — same batch as P0 if time allows, otherwise immediately after.
 
 ### Quick Tasks Completed
 
@@ -106,9 +118,11 @@ Items acknowledged and carried forward from previous milestone close:
 | Integration | WhatsApp channel per PM | Deferred to v2 | Project init |
 | Integration | Automatic publishing via social APIs | Deferred to v2 | Project init |
 | Notifications | Email notifications (approval, adjustment, preferences) | Deferred to v2 | Project init |
+| AI/UX | Meeting-transcript → base-file update flow (paste transcript, AI diffs against existing client_files base, updates it, discards transcript) | Deferred past 2026-08-05 test | 2026-08-04 |
+| UX | Chat/Produção remembering last-selected client (shared state/URL, no route restructuring) | Deferred past 2026-08-05 test | 2026-08-04 |
 
 ## Session Continuity
 
-Last session: 2026-07-31T15:29:46.652Z
-Stopped at: Phase 3 context re-gathered (mid-execution re-scope: DnD + rich cards)
-Resume file: .planning/phases/03-content-production-kanban/03-CONTEXT.md
+Last session: 2026-08-04T00:00:00.000Z
+Stopped at: Phase 3 waves 8-9 paused — urgent P0 pivot to AI checklist gen/validation + briefing autofill ahead of 2026-08-05 Netuxa test
+Resume file: .planning/STATE.md (see Decisions above for the full P0/P1/P2 brief)
