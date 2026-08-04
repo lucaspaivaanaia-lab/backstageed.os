@@ -13,6 +13,7 @@ import {
   VideoIcon,
   FileTextIcon,
   LinkIcon,
+  ClipboardPasteIcon,
 } from "lucide-react";
 import {
   DndContext,
@@ -324,6 +325,102 @@ function CreateCardDialog({
             </Button>
           </form>
         </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+const IMPORTED_TITLE_FALLBACK = "Conteúdo importado do chat";
+
+/**
+ * "Importar do chat" Dialog (P0 pivot 2026-08-04, item 2). A single paste
+ * box, not the structured title+description form `CreateCardDialog` above
+ * uses — the PM copies a block of AI-generated content straight from
+ * `/pm/chat` and drops it here without having to split it into fields
+ * themselves. The pasted text's first non-empty line becomes the card
+ * title (truncated to createCardSchema's 200-char limit; a blank paste
+ * falls back to a fixed label so the required-title validation never
+ * blocks the import), and the full text becomes the description. Always
+ * creates in Briefing (D-14's default, matching "primeira coluna" — this
+ * is the ONE entry point that does NOT accept a `stage` override, unlike
+ * the per-column "+" triggers). Reuses `createCard` directly — no new
+ * Server Action, since createCardSchema already covers this shape.
+ */
+function ImportFromChatDialog({ clientId }: { clientId: string | null }) {
+  const [open, setOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [pastedText, setPastedText] = useState("");
+
+  function handleOpenChange(next: boolean) {
+    setOpen(next);
+    if (next) {
+      setServerError(null);
+      setPastedText("");
+    }
+  }
+
+  function handleImport() {
+    if (!clientId) return;
+    setServerError(null);
+    const trimmed = pastedText.trim();
+    const firstLine = trimmed.split("\n")[0]?.trim() ?? "";
+    const title =
+      firstLine.length > 0
+        ? firstLine.slice(0, 200)
+        : IMPORTED_TITLE_FALLBACK;
+
+    startTransition(async () => {
+      const result = await createCard({
+        clientId,
+        title,
+        cardType: "single",
+        stage: "briefing",
+        description: trimmed.slice(0, 5000),
+      });
+      if ("error" in result) {
+        setServerError(result.error);
+        return;
+      }
+      toast.success(CARD_CREATED_TOAST);
+      setOpen(false);
+    });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild>
+        <Button type="button" variant="outline" disabled={!clientId}>
+          <ClipboardPasteIcon className="size-4" />
+          Importar do chat
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Importar conteúdo do chat</DialogTitle>
+          <DialogDescription>
+            Cole abaixo o conteúdo gerado no chat. O card será criado na
+            etapa Briefing — a primeira linha vira o título.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col gap-4">
+          <Textarea
+            value={pastedText}
+            onChange={(event) => setPastedText(event.target.value)}
+            rows={10}
+            placeholder="Cole aqui o conteúdo gerado no chat..."
+            disabled={isPending}
+          />
+          {serverError ? <ErrorBox>{serverError}</ErrorBox> : null}
+          <Button
+            type="button"
+            onClick={handleImport}
+            disabled={isPending || pastedText.trim().length === 0}
+            className="w-fit"
+          >
+            {isPending ? "Importando..." : "Importar e criar card"}
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -951,16 +1048,19 @@ export function BoardPanel({
     <PageShell width="wide">
       <PageTitle
         action={
-          <CreateCardDialog
-            clientId={activeClientId}
-            pmRoster={pmRoster}
-            trigger={
-              <Button type="button" disabled={!activeClientId}>
-                <PlusIcon className="size-4" />
-                Criar card
-              </Button>
-            }
-          />
+          <div className="flex items-center gap-2">
+            <ImportFromChatDialog clientId={activeClientId} />
+            <CreateCardDialog
+              clientId={activeClientId}
+              pmRoster={pmRoster}
+              trigger={
+                <Button type="button" disabled={!activeClientId}>
+                  <PlusIcon className="size-4" />
+                  Criar card
+                </Button>
+              }
+            />
+          </div>
         }
       >
         Produção
