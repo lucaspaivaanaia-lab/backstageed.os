@@ -6,17 +6,22 @@ import { nextStage, STAGE_ORDER } from "@/lib/cards/stages";
 import { isGateBlocked, GATE_BLOCKED_MESSAGE } from "@/lib/cards/checklist-gate";
 import { snapshotChecklistForCard } from "@/lib/cards/checklist-snapshot";
 import { evaluateMove } from "@/lib/cards/move-rules";
+import { isLikelyDriveLink, INVALID_DRIVE_LINK_MESSAGE } from "@/lib/attachments/drive-url";
 import {
   createCardSchema,
   advanceStageSchema,
   toggleChecklistItemSchema,
   moveCardSchema,
   updateCardDetailsSchema,
+  attachDriveLinkSchema,
+  removeAttachmentSchema,
   type CreateCardInput,
   type AdvanceStageInput,
   type ToggleChecklistItemInput,
   type MoveCardInput,
   type UpdateCardDetailsInput,
+  type AttachDriveLinkInput,
+  type RemoveAttachmentInput,
 } from "@/lib/validation/cards";
 
 const CARD_CREATE_ERROR = "Não foi possível criar o card. Tente novamente.";
@@ -422,6 +427,89 @@ export async function updateCardDetails(
       return { error: ASSIGNEE_NOT_ON_CLIENT_ERROR };
     }
     return { error: CARD_SAVE_ERROR };
+  }
+
+  revalidatePath("/pm/board");
+  return {};
+}
+
+export type AddAttachmentResult = { error?: string };
+
+/**
+ * Attach a Google Drive link to a card (KAN-05, D-07/D-08/D-09). The
+ * browser's own `isLikelyDriveLink` check (board-panel.tsx) is a UX
+ * affordance only — a stored URL is later rendered as a clickable new-tab
+ * link, so this re-run against the SAME shared module is the actual
+ * boundary (03-RESEARCH.md Pitfall 5, T-03-18).
+ */
+export async function addAttachment(
+  input: AttachDriveLinkInput
+): Promise<AddAttachmentResult> {
+  const parsed = attachDriveLinkSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+
+  if (!isLikelyDriveLink(parsed.data.url)) {
+    return { error: INVALID_DRIVE_LINK_MESSAGE };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: NOT_AUTHENTICATED_ERROR };
+
+  // Re-read the card through RLS — never trust that cardId belongs to a
+  // client the caller can reach; cards_select_scoped is the real boundary.
+  const { data: card } = await supabase
+    .from("cards")
+    .select("id")
+    .eq("id", parsed.data.cardId)
+    .single();
+  if (!card) return { error: CARD_NOT_FOUND_ERROR };
+
+  const { error } = await supabase.from("card_attachments").insert({
+    card_id: parsed.data.cardId,
+    url: parsed.data.url,
+    label: parsed.data.label && parsed.data.label.length > 0 ? parsed.data.label : null,
+    link_type: parsed.data.linkType,
+    created_by: user.id,
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/pm/board");
+  return {};
+}
+
+export type RemoveAttachmentResult = { error?: string };
+
+/**
+ * Remove a Drive attachment. No `cardId`/`clientId` is ever accepted from
+ * the browser — the `card_attachments_delete_scoped` RLS policy (migration
+ * 0018) is what scopes this to the caller's assigned clients, so a foreign
+ * attachment id simply matches no row.
+ */
+export async function removeAttachment(
+  input: RemoveAttachmentInput
+): Promise<RemoveAttachmentResult> {
+  const parsed = removeAttachmentSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("card_attachments")
+    .delete()
+    .eq("id", parsed.data.attachmentId);
+
+  if (error) {
+    return { error: error.message };
   }
 
   revalidatePath("/pm/board");

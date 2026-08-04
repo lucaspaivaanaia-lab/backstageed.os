@@ -82,3 +82,26 @@ export const toggleChecklistItemSchema = z.object({
 export type ToggleChecklistItemInput = z.infer<
   typeof toggleChecklistItemSchema
 >;
+
+/**
+ * addAttachment's input (KAN-05, D-07/D-08/D-09). `linkType` is the PM's
+ * (possibly overridden) choice from `driveLinkType`'s inference -- never
+ * re-inferred server-side, since the whole point of letting the PM override
+ * it is that inference from an opaque Drive file id is unreliable
+ * (03-RESEARCH.md). `url` shape validity is checked here; the actual
+ * Drive-domain boundary is `isLikelyDriveLink`, re-run inside the Server
+ * Action from the same shared module the browser uses (03-RESEARCH.md
+ * Pitfall 5).
+ */
+export const attachDriveLinkSchema = z.object({
+  cardId: z.string().uuid(),
+  url: z.string().trim().url({ message: "URL inválida." }).max(2000),
+  label: z.string().trim().max(200).optional(),
+  linkType: z.enum(["image", "video", "pdf", "other"]),
+});
+export type AttachDriveLinkInput = z.infer<typeof attachDriveLinkSchema>;
+
+export const removeAttachmentSchema = z.object({
+  attachmentId: z.string().uuid(),
+});
+export type RemoveAttachmentInput = z.infer<typeof removeAttachmentSchema>;
