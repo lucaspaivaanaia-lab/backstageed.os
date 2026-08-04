@@ -34,6 +34,8 @@ import {
   updateCardDetails,
   addAttachment,
   removeAttachment,
+  validateCardAgainstChecklist,
+  type ChecklistValidationItemResult,
 } from "./actions";
 import {
   createCardSchema,
@@ -701,6 +703,29 @@ function BoardCardItem({
     normalizedDraftDescription !== (card.description ?? "") ||
     draftAssignee !== currentAssigneeValue;
 
+  // P0 pivot 2026-08-04, item 3: "Revalidar" runs the AI checklist check on
+  // demand — purely advisory, never persisted (see validateCardAgainstChecklist's
+  // own doc comment). Resets to null on every open of a fresh Dialog instance
+  // since it lives in component state, not server data — a stale verdict
+  // from a previous edit never lingers silently.
+  const [aiValidation, setAiValidation] = useState<
+    ChecklistValidationItemResult[] | null
+  >(null);
+  const [isValidating, startValidateTransition] = useTransition();
+  const [validateError, setValidateError] = useState<string | null>(null);
+
+  function handleRevalidate() {
+    setValidateError(null);
+    startValidateTransition(async () => {
+      const result = await validateCardAgainstChecklist(card.id);
+      if ("error" in result) {
+        setValidateError(result.error);
+        return;
+      }
+      setAiValidation(result.results);
+    });
+  }
+
   function handleAdvance() {
     setError(null);
     startTransition(async () => {
@@ -773,6 +798,25 @@ function BoardCardItem({
             {card.stage ? STAGE_LABELS[card.stage] : "—"}
           </StatusBadge>
 
+          {aiValidation ? (
+            <div className="flex flex-col gap-2 rounded-md border p-3">
+              <span className="text-body font-medium">
+                Validação da IA: {aiValidation.filter((r) => r.passed).length}/
+                {aiValidation.length} itens aprovados
+              </span>
+              {aiValidation
+                .filter((r) => !r.passed)
+                .map((r) => (
+                  <div key={r.itemId} className="flex flex-col gap-0.5">
+                    <span className="text-body">Não passou: {r.label}</span>
+                    <span className="text-meta text-muted-foreground">
+                      {r.justification}
+                    </span>
+                  </div>
+                ))}
+            </div>
+          ) : null}
+
           <div className="flex flex-col gap-2">
             <SectionTitle>Descrição</SectionTitle>
             <Textarea
@@ -838,7 +882,20 @@ function BoardCardItem({
 
           {showChecklistSection ? (
             <div className="flex flex-col gap-2">
-              <SectionTitle>Checklist de revisão</SectionTitle>
+              <div className="flex items-center justify-between gap-2">
+                <SectionTitle>Checklist de revisão</SectionTitle>
+                {card.checklistItems.length > 0 ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRevalidate}
+                    disabled={isValidating}
+                  >
+                    {isValidating ? "Revalidando..." : "Revalidar com IA"}
+                  </Button>
+                ) : null}
+              </div>
               {card.checklistItems.length === 0 && !hasChecklistTemplate ? (
                 <EmptyState
                   title="Nenhum checklist configurado"
@@ -856,6 +913,7 @@ function BoardCardItem({
                   ))}
                 </div>
               )}
+              {validateError ? <ErrorBox>{validateError}</ErrorBox> : null}
             </div>
           ) : null}
         </div>

@@ -7,6 +7,7 @@ import { isGateBlocked, GATE_BLOCKED_MESSAGE } from "@/lib/cards/checklist-gate"
 import { snapshotChecklistForCard } from "@/lib/cards/checklist-snapshot";
 import { evaluateMove } from "@/lib/cards/move-rules";
 import { isLikelyDriveLink, INVALID_DRIVE_LINK_MESSAGE } from "@/lib/attachments/drive-url";
+import { runStructuredExtraction } from "@/lib/ai/structured-extraction";
 import {
   createCardSchema,
   advanceStageSchema,
@@ -514,4 +515,153 @@ export async function removeAttachment(
 
   revalidatePath("/pm/board");
   return {};
+}
+
+export type ChecklistValidationItemResult = {
+  itemId: string;
+  label: string;
+  passed: boolean;
+  justification: string;
+};
+
+export type ValidateCardResult =
+  | { success: true; results: ChecklistValidationItemResult[] }
+  | { error: string };
+
+const VALIDATE_NO_CHECKLIST_ERROR =
+  "Este card ainda não tem itens de checklist para validar.";
+const VALIDATE_INVALID_RESULT_ERROR =
+  "A IA retornou um resultado inesperado. Revise o checklist manualmente.";
+
+/**
+ * "Revalidar" (P0 pivot 2026-08-04, item 3). Purely advisory and NEVER
+ * persisted — no new table, no write to `card_checklist_items`. Every
+ * click re-reads the card's CURRENT title/description, the client's
+ * CURRENT `client_files`, and the card's CURRENT checklist items, and
+ * returns a fresh pass/fail-with-justification verdict per item. The
+ * result lives only in the calling component's local state for as long as
+ * the detail Dialog stays open — it does NOT touch `completed_at`/
+ * `completed_by` (the PM's own manual check-off, CHK-03/CHK-04's actual
+ * audit trail) and it does NOT gate "Avançar" in any way (explicit
+ * requirement: no new state machine, no auto-advance — the PM can ignore
+ * the AI's verdict and advance manually exactly as before).
+ *
+ * Items are matched to results BY ARRAY POSITION, not by asking the model
+ * to echo back a UUID — the instruction lists items as "1. label\n2.
+ * label...", the tool schema asks for a same-length, same-order results
+ * array, and this function zips index i's item back onto index i's
+ * result. A model that returns the wrong array length is treated as an
+ * invalid result (VALIDATE_INVALID_RESULT_ERROR), never partially applied.
+ *
+ * Reuses the SAME shared engine (lib/ai/structured-extraction.ts) that
+ * checklist generation and briefing auto-fill use.
+ */
+export async function validateCardAgainstChecklist(
+  cardId: string
+): Promise<ValidateCardResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: NOT_AUTHENTICATED_ERROR };
+
+  // Re-read the card through RLS — never trust that cardId belongs to a
+  // client the caller can reach; cards_select_scoped is the real boundary.
+  const { data: card } = await supabase
+    .from("cards")
+    .select("id, title, description, client_id")
+    .eq("id", cardId)
+    .single();
+  if (!card) return { error: CARD_NOT_FOUND_ERROR };
+
+  const { data: client } = await supabase
+    .from("clients")
+    .select("id, name")
+    .eq("id", card.client_id)
+    .single();
+  if (!client) return { error: CARD_NOT_FOUND_ERROR };
+
+  const { data: items } = await supabase
+    .from("card_checklist_items")
+    .select("id, label, sort_order")
+    .eq("card_id", cardId)
+    .order("sort_order", { ascending: true });
+
+  if (!items || items.length === 0) {
+    return { error: VALIDATE_NO_CHECKLIST_ERROR };
+  }
+
+  const { data: clientFiles } = await supabase
+    .from("client_files")
+    .select("filename, content")
+    .eq("client_id", card.client_id);
+
+  const cardContentFile = {
+    filename: "Conteúdo do card (título + descrição)",
+    content: `Título: ${card.title}\n\nDescrição: ${card.description ?? "(sem descrição)"}`,
+  };
+
+  const itemsList = items
+    .map((item, i) => `${i + 1}. ${item.label}`)
+    .join("\n");
+
+  const result = await runStructuredExtraction({
+    clientName: client.name,
+    files: [cardContentFile, ...(clientFiles ?? [])],
+    instruction:
+      "Avalie o conteúdo do card acima (arquivo 'Conteúdo do card') " +
+      "contra CADA item do checklist de revisão abaixo, usando também os " +
+      "demais arquivos de referência do cliente como critério (manual de " +
+      "marca, regras de conteúdo, etc.). Para cada item, NA MESMA ORDEM " +
+      "listada, diga se o conteúdo PASSA ou NÃO PASSA nesse critério, com " +
+      "uma justificativa curta (1 frase, em português). Retorne exatamente " +
+      `${items.length} resultado(s), um por item, na mesma ordem.\n\n` +
+      `Checklist:\n${itemsList}`,
+    toolName: "report_validation",
+    toolDescription:
+      "Registra o resultado da validação de cada item do checklist, na ordem dada.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        results: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              passed: { type: "boolean" },
+              justification: { type: "string" },
+            },
+            required: ["passed", "justification"],
+          },
+        },
+      },
+      required: ["results"],
+    },
+  });
+
+  if (!result.ok) {
+    return { error: result.error };
+  }
+
+  const raw = result.data as { results?: unknown };
+  if (!Array.isArray(raw.results) || raw.results.length !== items.length) {
+    console.error(
+      "[validateCardAgainstChecklist] AI result length mismatch",
+      raw
+    );
+    return { error: VALIDATE_INVALID_RESULT_ERROR };
+  }
+
+  const rawResults = raw.results as { passed?: unknown; justification?: unknown }[];
+  const results: ChecklistValidationItemResult[] = items.map((item, i) => ({
+    itemId: item.id,
+    label: item.label,
+    passed: rawResults[i]?.passed === true,
+    justification:
+      typeof rawResults[i]?.justification === "string"
+        ? (rawResults[i].justification as string)
+        : "",
+  }));
+
+  return { success: true, results };
 }
