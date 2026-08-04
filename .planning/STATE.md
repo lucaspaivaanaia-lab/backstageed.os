@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Phase 3 waves 8-9 paused — urgent P0 pivot to AI checklist gen/validation + briefing autofill ahead of 2026-08-05 Netuxa test"
+stopped_at: "P0/P1 pivot complete (AI checklist gen/validation, briefing autofill, chat import, client soft-delete) — waves 8-9 still paused, resume after 2026-08-05 Netuxa test"
 last_updated: "2026-08-04T00:00:00.000Z"
-last_activity: 2026-08-04 -- Post-meeting P0 pivot, building directly per Juliano's priority brief
+last_activity: 2026-08-04 -- All P0 + P1 items from the post-meeting pivot shipped and verified; waves 8-9 remain paused
 progress:
   total_phases: 6
   completed_phases: 3
@@ -80,7 +80,8 @@ Recent decisions affecting current work:
   5. "Importar conteúdo do chat" field on the PM board — pastes generated text, creates a card in that client's first Kanban column.
   6. AI validation on create/revalidate: reads card text + client_files + checklist items, marks each `card_checklist_item` pass/fail with a short justification, shows a summary at the top of the card. No auto-advance — "Avançar" stays PM-only, no new state machine. **Waits on 03-04's human-verify approval** (touches the same card detail dialog) before starting.
   Cliente de teste: Netuxa — base files (empresa + Netuxa) not yet received from Juliano; Lucas uploads to `client_files` once they arrive.
-- **P1 (same batch if time allows, else right after):** "Salvar briefing" button text changes to "Salvo" after success; back-arrow to the client list on client detail pages; Admin-only "Excluir cliente" with an AlertDialog confirmation matching the "Remover anexo" pattern — hard-delete vs. soft-delete/archive must be decided before building, since a real client will be in production soon.
+  **All 6 P0 items shipped 2026-08-04** — item 1 diagnosed as legitimate validation (not a bug), items 2-6 built and verified (tsc/lint/build/test/pgTAP green at every commit): shared engine (`lib/ai/`), briefing autofill, admin checklist generation, "Importar do chat", and "Revalidar com IA" (advisory-only, never persisted, never touches Avançar). Item 6 waited on 03-04's checkpoint as planned, unblocked once the developer approved it 2026-08-04.
+- **P1 — all 3 items shipped 2026-08-04, same session.** "Salvar briefing" → "Salvo" after success (reverts on next edit via `form.reset` + `isDirty`); back-arrow to the client list on both `/admin/clients/[id]` and `/pm/clients/[id]`; Admin-only "Excluir cliente" — **user decision: soft delete/archive**, not hard delete, given a real client is about to go into production. Migration 0019 adds `clients.archived_at` (nullable, null = active); `archiveClient` sets it (admin-only app-layer check, no RLS change); filtered into every active client LIST query (PM/Admin lists, board/chat switchers, checklist assignment) — direct-link access to an archived client's own pages is deliberately left working. No restore UI yet — a tracked gap, not built under the deadline; reverting today is a direct `archived_at = null` update.
 - **P2 (after 2026-08-05 test, non-blocking, tracked here rather than acted on now):** meeting-transcript → base-file update flow (paste transcript → AI summarizes/confirms → diffs against existing base file → identifies new/contradicting info → updates the file → discards the transcript); Chat and Produção remembering the last-selected client (shared state/URL, no route restructuring) — explicitly deferred past 2026-08-05 since it touches both Chat and Kanban at once.
 
 ### Pending Todos
