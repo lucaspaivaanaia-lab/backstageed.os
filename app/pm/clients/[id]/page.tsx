@@ -68,6 +68,7 @@ export default async function PmClientDetailPage({ params }: PageProps) {
         viewerIsAdmin={profile?.role === "admin"}
         initialFiles={initialFiles}
         checklistTemplate={checklistTemplate}
+        backHref="/pm/clients"
       />
     </PageShell>
   );

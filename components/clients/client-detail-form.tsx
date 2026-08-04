@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { XIcon, PlusIcon } from "lucide-react";
+import { XIcon, PlusIcon, ArrowLeftIcon } from "lucide-react";
 import {
   briefingSchema,
   type BriefingInput,
@@ -55,6 +56,12 @@ type ClientDetailFormProps = {
   viewerIsAdmin: boolean;
   initialFiles: ClientFileRow[];
   checklistTemplate: ClientChecklistSummary | null;
+  // P1 pivot 2026-08-04: "/admin/clients" or "/pm/clients" — passed by the
+  // route wrapper rather than derived from `viewerIsAdmin` here, since an
+  // Admin can browse a client via the PM route too and the back arrow must
+  // return to the list the caller actually navigated FROM, not to a list
+  // implied by role.
+  backHref: string;
 };
 
 /**
@@ -73,6 +80,7 @@ export function ClientDetailForm({
   viewerIsAdmin,
   initialFiles,
   checklistTemplate,
+  backHref,
 }: ClientDetailFormProps) {
   // -- Briefing form (updateBriefing) --
   const [isBriefingPending, startBriefingTransition] = useTransition();
@@ -80,6 +88,11 @@ export function ClientDetailForm({
     string | null
   >(null);
   const [pillarInput, setPillarInput] = useState("");
+  // P1 pivot 2026-08-04: "Salvo" only shows once a save has actually
+  // succeeded THIS session, gated together with `!form.formState.isDirty`
+  // below — without this flag, a freshly loaded (never-dirty) form would
+  // read as "Salvo" before the PM/Admin has saved anything at all.
+  const [justSavedBriefing, setJustSavedBriefing] = useState(false);
 
   const form = useForm<BriefingInput>({
     resolver: zodResolver(briefingSchema),
@@ -137,7 +150,15 @@ export function ClientDetailForm({
       const result = await updateBriefing(client.id, formData);
       if ("error" in result) {
         setBriefingServerError(result.error);
+        return;
       }
+      // P1 pivot 2026-08-04: re-baseline the form to the just-saved values
+      // so `isDirty` goes back to false — the "Salvo" label below reads
+      // off `isDirty` rather than a timer, so it reverts to "Salvar
+      // briefing" automatically the moment the PM/Admin edits anything
+      // again, no extra event wiring needed.
+      form.reset(values);
+      setJustSavedBriefing(true);
     });
   }
 
@@ -176,6 +197,13 @@ export function ClientDetailForm({
 
   return (
     <div className="flex flex-col gap-section">
+      <Link
+        href={backHref}
+        className="flex w-fit items-center gap-1 text-meta text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeftIcon className="size-4" />
+        Voltar para clientes
+      </Link>
       <PageTitle className="mb-0">{client.name}</PageTitle>
 
       <DataCard
@@ -301,7 +329,11 @@ export function ClientDetailForm({
               disabled={isBriefingPending}
               className="w-fit"
             >
-              {isBriefingPending ? "Salvando..." : "Salvar briefing"}
+              {isBriefingPending
+                ? "Salvando..."
+                : justSavedBriefing && !form.formState.isDirty
+                  ? "Salvo"
+                  : "Salvar briefing"}
             </Button>
           </form>
         </Form>
