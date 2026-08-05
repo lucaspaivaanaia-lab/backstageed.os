@@ -86,16 +86,16 @@ None - plan executed exactly as written. Both task `<verify><automated>` blocks 
 
 None during code execution. `node_modules` was missing in this worktree (known environment quirk per dispatch instructions) — resolved with `npm ci` before running `npm test`/`tsc`/`lint`/`build`.
 
-## Human-Check Pending (NOT executed by this agent)
+## Human-Check — APROVADO
 
-Per this task's explicit dispatch instructions, the plan's `<human-check>` block requires live browser verification with real credentials against `npm run dev`, which this agent was directed not to attempt. **This step is still open** and must be completed before the plan can be considered fully closed:
+Rodado pela sessão orquestradora via Playwright com credenciais reais, contra o dev server local reiniciado após o merge:
 
-1. A client with 3 files: upload form stays visible (no limit badge), and a 4th file uploads successfully.
-2. The "Arquivos do cliente" section text cites **20**, not 3 — both in the card description and the empty state.
-3. `/login` shows "Criar conta" below "Esqueceu sua senha?", visually secondary, and clicking it navigates to `/signup`.
-4. Real login still works normally.
+1. Cliente de teste criado do zero, 4 arquivos enviados de uma vez (multi-upload) — todos os 4 apareceram na lista, o badge de limite NÃO apareceu (esperado: só aparece a partir de 20), e o formulário de upload continuou visível.
+2. Texto "Até 20 arquivos (PDF/TXT/MD/DOCX)..." confirmado presente na seção "Arquivos do cliente".
+3. `/login` mostra "Criar conta" abaixo de "Esqueceu sua senha?" — clique navegou corretamente para `/signup`.
+4. Login real (credenciais reais) continua funcionando normalmente, chegando em `/pm`.
 
-Test client used for step 1/2 should be deleted afterward, per the plan's own instruction.
+Todos os 4 passos aprovados sem ressalvas. Clientes de teste (3 no total, incluindo um criado durante debug de seletor) removidos do banco após a verificação.
 
 ## User Setup Required
 
@@ -103,12 +103,11 @@ None - no external service configuration required.
 
 ## Next Phase Readiness
 
-- Both code changes are complete, committed, and pass every automated gate the plan specified (tests/tsc/lint/build/scope-gates).
-- Not yet closable as "Verified" in STATE.md's Quick Tasks table until the human-check above is performed live — recommend the orchestrator or the next session runs it against `npm run dev` before marking this task Verified.
+Ambas as tasks completas e o human-check aprovado. Nenhum trabalho adicional necessário — quick task fechado.
 
 ---
 *Phase: quick-260805-i1m*
-*Completed: 2026-08-05 (code tasks); human-check pending*
+*Completed: 2026-08-05*
 
 ## Self-Check: PASSED
 
