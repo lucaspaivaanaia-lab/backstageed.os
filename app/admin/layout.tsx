@@ -1,4 +1,9 @@
-import { UsersIcon, ClipboardCheckIcon, ListChecksIcon } from "lucide-react";
+import {
+  UsersIcon,
+  ClipboardCheckIcon,
+  ListChecksIcon,
+  KanbanIcon,
+} from "lucide-react";
 
 import { AppSidebar } from "@/components/layout/app-sidebar";
 
@@ -26,6 +31,7 @@ export default function AdminLayout({
             label: "Checklists",
             icon: <ListChecksIcon />,
           },
+          { href: "/admin/cards", label: "Cards", icon: <KanbanIcon /> },
         ]}
       />
       <main className="flex min-w-0 flex-1 flex-col overflow-y-auto">
