@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "P0/P1 pivot complete (AI checklist gen/validation, briefing autofill, chat import, client soft-delete) — waves 8-9 still paused, resume after 2026-08-05 Netuxa test"
-last_updated: "2026-08-04T00:00:00.000Z"
-last_activity: 2026-08-04 -- All P0 + P1 items from the post-meeting pivot shipped and verified; waves 8-9 remain paused
+stopped_at: "Phase 2 closed (02-06 live-verified); Phase 3 waves 8-9 resumed — wave 8 (03-05) code complete, human-verify checkpoint pending"
+last_updated: "2026-08-05T19:00:00.000Z"
+last_activity: 2026-08-05 -- Phase 2 (Client-Isolated AI Chat) closed via live production verification; Phase 3 wave 8 (03-05 admin audit + override) code complete, awaiting human-verify checkpoint
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 25
-  completed_plans: 18
+  total_plans: 26
+  completed_plans: 19
   percent: 50
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-07-08)
 Phase: 03 (content-production-kanban) — EXECUTING
 Plan: 1 of 9
 Status: Executing Phase 03
-Last activity: 2026-08-05 - Completed quick task 260805-kio: hardened pm_assigned_clients() RLS defense-in-depth, applied to production
+Last activity: 2026-08-05 - Phase 2 closed (02-06 live-verified against production); Phase 3 wave 8 (03-05) code complete, human-verify checkpoint pending
 
 Progress: [██████████] 100% (plans this phase) — 10/10 plans complete, Phase 5 fully closed
 
@@ -84,12 +84,13 @@ Recent decisions affecting current work:
 - **P1 — all 3 items shipped 2026-08-04, same session.** "Salvar briefing" → "Salvo" after success (reverts on next edit via `form.reset` + `isDirty`); back-arrow to the client list on both `/admin/clients/[id]` and `/pm/clients/[id]`; Admin-only "Excluir cliente" — **user decision: soft delete/archive**, not hard delete, given a real client is about to go into production. Migration 0019 adds `clients.archived_at` (nullable, null = active); `archiveClient` sets it (admin-only app-layer check, no RLS change); filtered into every active client LIST query (PM/Admin lists, board/chat switchers, checklist assignment) — direct-link access to an archived client's own pages is deliberately left working. No restore UI yet — a tracked gap, not built under the deadline; reverting today is a direct `archived_at = null` update.
 - **P2 — both items shipped 2026-08-04, ahead of the original "after 2026-08-05" plan (user explicitly asked to proceed early).** Chat/Produção last-selected-client persistence: `lib/client-selection.ts` (localStorage handoff, no route restructuring); chat-panel.tsx's `activeClientId` restructured to a derived value (`useSyncExternalStore`, not a setState-in-effect — this project's `react-hooks/set-state-in-effect` lint rule blocks that pattern outright); board-panel.tsx restores via `router.replace()`. Verified both directions live via Playwright. Meeting-transcript base-file update flow: `analyzeTranscriptAgainstFile`/`updateClientFileContent` (lib/actions/client-files.ts), new `TranscriptUpdateSection`, transcript never persisted. **Found and fixed a real bug during verification:** `client_files` never had an UPDATE policy/GRANT (migration 0011 only shipped SELECT/INSERT/DELETE) — `.update()` silently succeeded with zero rows changed. Migration 0020 adds `client_files_update_scoped` + GRANT, pushed live and verified end-to-end.
 - **2026-08-05: First production deploy, on Vercel.** User's explicit access decision: the app already gates everything behind login (Auth + RLS since Phase 1), so a public URL exposes no data by itself — only accounts can get in — and noindex (260805-hbs) is sufficient protection for a still-under-construction app; no extra password layer added. Vercel project `backstageed-os` (team `lucaspaivaanaia-gmailcoms-projects`) linked and connected to the GitHub repo (`lucaspaivaanaia-lab/backstageed.os`) for continuous deployment — first-ever push of 191 local-only commits to `origin/main` was required before connecting. Production env vars set to the hosted Supabase project (`ancfwsgyzoostoidqzqj`, not local): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `ANTHROPIC_API_KEY` (the only 4 vars actually referenced via `process.env` anywhere in the codebase, confirmed by grep — `TROPICALIA_API_KEY`/`SUPABASE_ACCESS_TOKEN` in `.env.local` are unused at runtime and were not set in Vercel). **Production URL: https://backstageed-os.vercel.app**. Live-verified end-to-end on production: login, noindex meta tag present, client selection, board/checklist rendering, real Chat AI response, "Enviar pro Kanban". Test data cleaned up after (including 2 unrelated leftover test clients spotted from an earlier session's testing).
+- **2026-08-05: Phase 2 (Client-Isolated AI Chat) closed.** User confirmed the chat feature works and asked for the formal checkpoint (02-06) to be run — it had been stuck as "BLOCKED" since 2026-07-21 (missing API key at the time), long after `ANTHROPIC_API_KEY` became available and the Tropicalia→`client_files` RAG migration (260722-hnm) shipped, simply because nobody re-ran it. Re-executed Task 1 (preflight, green) + Tasks 2/3 (live human-verify) directly against **production** (not local `npm run dev`) after discovering a real, non-blocking, local-Turbopack-only intermittent chat-stream crash (see Blockers/Concerns) — production has proven reliable across many live tests this session. Verified live: cross-client isolation (both directions), streaming, stale-response guard (abort-on-switch), degraded-mode badge, file-upload-to-chat immediate reflection (no async wait, matching the no-embeddings architecture), and the curation round-trip (confirmed via direct DB query that a new `client_files` markdown row was actually created, not just a UI toast). CTX-01 through CTX-05 all confirmed. ROADMAP.md and this file updated to mark Phase 2 complete. Immediately followed by resuming Phase 3 waves 8-9 (paused since 2026-08-04's P0 pivot) via `/gsd-execute-phase`.
 
 ### Pending Todos
 
-- Run `/gsd:discuss-phase` for the new Phase 1 (Client Records & Isolated RAG Setup) — including resolving the login/auth dependency gap noted above.
-- Resume Phase 3 waves 8-9 (03-05, 03-06) after the 2026-08-05 Netuxa test.
-- P1 items (briefing-save button text, client-list back arrow, Admin-only client deletion) — same batch as P0 if time allows, otherwise immediately after.
+- Phase 3 wave 8 (03-05, admin audit trail + force-advance override): code complete (Tasks 1-3), human-verify checkpoint (Task 4) pending — needs a live walkthrough per `03-05-PLAN.md`'s 12-step roteiro, plus pushing migration `0022_card_checklist_overrides.sql` to the hosted project (executor's worktree lacked `.env.local`/hosted credentials).
+- Phase 3 wave 9 (03-06, content packages) not yet started — blocked on wave 8's checkpoint per the roadmap's dependency ordering.
+- (Historical items about Phase 1 discuss-phase and P1 batch items are resolved/superseded — removed from this list 2026-08-05.)
 
 ### Quick Tasks Completed
 
@@ -118,6 +119,7 @@ Recent decisions affecting current work:
 
 - **No auth path into the app for a live user.** Phase 5's login (05-02) and admin-approval queue (05-02) are paused; only signup → `/pending` exists. Phase 1 (Client Records) needs someone authenticated as PM/Admin to exercise its UI. Needs resolution during Phase 1 discuss/plan — flagged above and in ROADMAP.md.
 - Historical: Phase 5 (formerly Phase 1) decision-coverage gate (`check.decision-coverage-plan`) flagged 9/10 CONTEXT.md decisions (D-01 through D-09) as lacking a literal "D-NN" citation string in the plan text. User chose to proceed anyway: the plan-checker's semantic review (3 rounds) already confirmed all 10 decisions are substantively implemented. Flagging for `/gsd:verify-work` to re-surface and double-check when Phase 5 resumes.
+- **Non-blocking: local `npm run dev` (Turbopack) intermittently crashes the chat stream.** Found 2026-08-05 while running Phase 2's 02-06 checkpoint locally: `app/api/chat/route.ts`'s `ReadableStream` occasionally throws `TypeError: Invalid state: Controller is already closed` (roughly 3 of 4 attempts), even on a brand-new client with no history and a freshly cleared `.next` cache. Root-caused via elimination: a direct Anthropic SDK call (bypassing Next.js) never fails, and production (`https://backstageed-os.vercel.app`, a pre-compiled build, not Turbopack dev-mode) has never shown this error across many live tests this session. Points at a timing-sensitive interaction between the Anthropic streaming SDK's async iteration and Next.js 16 Turbopack's dev-mode response-streaming path (this project's `middleware.ts` "proxy" deprecation warning suggests that plumbing is genuinely new). Does not affect real users. Worth a future look (e.g. `next dev --webpack` to confirm Turbopack-specific) but is not a phase gap — 02-06's actual live verification ran against production instead and passed cleanly.
 
 ## Deferred Items
 
