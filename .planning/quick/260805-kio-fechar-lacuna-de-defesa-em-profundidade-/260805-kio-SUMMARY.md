@@ -96,20 +96,24 @@ None. The local Supabase Docker stack (`supabase_db_backstageed-os`) was already
 
 None - no external service configuration required by Tasks 1-2. Task 3 (below) requires the ORCHESTRATOR to run `npx supabase db push` against the hosted project with existing credentials/MCP access; no new setup, just an existing workflow the isolated executor worktree cannot reach.
 
+## Task 3: Applied to Hosted — APROVADO
+
+Executado pela sessão orquestradora após o merge do worktree:
+
+1. Confirmado `supabase/migrations/0021_pm_assigned_clients_status_check.sql` presente em `main`.
+2. `npx supabase migration list` (pré-push): 0021 aparecia em `local` com `remote` vazio — todas as anteriores (0001-0020) já em sincronia.
+3. `npx supabase db push`: aplicou exatamente 1 migração (`0021_pm_assigned_clients_status_check.sql`). Um warning não-fatal de cache do CLI (`failed to cache migrations catalog`, certificado ausente) apareceu mas não impediu a aplicação — confirmado pelo "Finished supabase db push." e pela checagem seguinte.
+4. `npx supabase migration list` (pós-push): todas as linhas, incluindo 0021, agora com `local`/`remote` idênticos.
+5. `npx supabase db dump --linked --schema public` confirmou o corpo da função hospedada contém exatamente `join public.profiles`, `p.role = 'pm'`, `p.status = 'approved'` — a mudança está de fato em produção, não só no CLI local.
+6. Sanity-check em produção via Playwright com credenciais reais: login funcionando, PM aprovado ainda vê os 13 clientes atribuídos em `/pm/clients` — zero regressão no caminho legítimo.
+
+**Resume-signal: "approved".** Migração 0021 confirmada em produção, comportamento de PM aprovado inalterado.
+
 ## Next Phase Readiness
 
-**Task 3 is PENDING — orchestrator action required, not run by this executor:**
+Todas as 3 tasks completas. Lacuna de defesa-em-profundidade fechada em produção: `pm_assigned_clients()` agora reverifica `role='pm' and status='approved'` a cada chamada, igual a `is_admin()`/`is_pm()`. Nenhum trabalho adicional necessário — quick task fechado.
 
-Per the plan, Task 3 (`checkpoint:human-verify`, `gate="blocking"`) applies migration `0021_pm_assigned_clients_status_check.sql` to the HOSTED Supabase project `ancfwsgyzoostoidqzqj`. This isolated executor worktree lacks the network/credential access to push there (documented precedent: quick task 260722-hnm, "Both new migrations applied to hosted Supabase by the orchestrator — executor's worktree lacked MCP access"). The migration and its proof are complete and green locally; the orchestrator must, after merging this worktree:
-
-1. Confirm `supabase/migrations/0021_pm_assigned_clients_status_check.sql` exists on the merged branch.
-2. Run `npx supabase migration list` and confirm 0021 shows in `Local` with an empty `Remote` (pre-push state).
-3. Run `npx supabase db push`, confirming it applies exactly one migration (0021). If it proposes more, STOP — history has drifted.
-4. Re-run `npx supabase migration list` and confirm every row through 0021 now matches `Local`/`Remote`.
-5. Confirm the hosted function body via SQL editor/MCP: `select pg_get_functiondef('public.pm_assigned_clients()'::regprocedure);` must contain `join public.profiles`, `p.role = 'pm'`, `p.status = 'approved'`.
-6. Sanity-check production: log in as an approved PM at https://backstageed-os.vercel.app and confirm their client list still renders (the one behavior that must NOT change). Clean up test data afterward.
-
-No other blockers or concerns. `is_admin()`, `is_pm()`, `middleware.ts`, `listPmRoster()`, `clients_select_scoped`, `clients_update_scoped`, and the `pending`/`rejected`/`deactivated` workflow are all confirmed untouched.
+`is_admin()`, `is_pm()`, `middleware.ts`, `listPmRoster()`, `clients_select_scoped`, `clients_update_scoped`, e o fluxo `pending`/`rejected`/`deactivated` permanecem confirmadamente intocados.
 
 ## Self-Check: PASSED
 
