@@ -48,6 +48,17 @@ export function ClientFilesSection({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isDeletePending, startDeleteTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Bare native <input type="file"> rendering/click behavior is
+  // inconsistent enough across browsers/OSes to cause reports like "the
+  // button does nothing" (2026-08-04). Driving it via a hidden input +
+  // fileInputRef.current.click() from a real shadcn Button is the
+  // standard robust pattern — the button's own click handling is what
+  // fires, never the browser's own (possibly finicky) rendering of the
+  // native control. `selectedFileName` replaces the native "No file
+  // chosen" label this hides.
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(
+    null
+  );
 
   function handleUpload(formData: FormData) {
     setUploadError(null);
@@ -58,6 +69,7 @@ export function ClientFilesSection({
         return;
       }
       if (fileInputRef.current) fileInputRef.current.value = "";
+      setSelectedFileName(null);
       const updated = await listClientFiles(clientId);
       setFiles(updated);
 
@@ -146,12 +158,25 @@ export function ClientFilesSection({
                 name="file"
                 accept=".pdf,.txt,.md,.docx"
                 disabled={isUploadPending}
-                className="text-sm"
+                className="hidden"
+                onChange={(event) =>
+                  setSelectedFileName(event.target.files?.[0]?.name ?? null)
+                }
               />
               <Button
-                type="submit"
+                type="button"
                 variant="outline"
                 disabled={isUploadPending}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                Escolher arquivo
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                {selectedFileName ?? "Nenhum arquivo selecionado"}
+              </span>
+              <Button
+                type="submit"
+                disabled={isUploadPending || !selectedFileName}
               >
                 {isUploadPending ? "Enviando..." : "Enviar arquivo"}
               </Button>
