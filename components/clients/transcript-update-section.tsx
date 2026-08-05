@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   analyzeTranscriptAgainstFile,
+  analyzeTranscriptFileAgainstFile,
   updateClientFileContent,
   type ClientFileRow,
 } from "@/lib/actions/client-files";
@@ -44,6 +45,12 @@ type TranscriptUpdateSectionProps = {
  * doc comment states the same guarantee server-side: no table ever stores
  * it). Hidden entirely when there are no files yet — there is nothing to
  * update.
+ *
+ * A second, visually secondary entry path (quick task 260805-iea) lets the
+ * PM/Admin upload a transcript file (PDF/TXT/MD/DOCX) instead of pasting
+ * text — the analysis fires on selection, no second click. Same guarantee
+ * applies: the uploaded file is never persisted anywhere, only its
+ * extracted text travels to the AI, and only until confirm/discard.
  */
 export function TranscriptUpdateSection({
   files,
@@ -58,6 +65,10 @@ export function TranscriptUpdateSection({
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
   const [isApplying, startApplyTransition] = useTransition();
   const [applyError, setApplyError] = useState<string | null>(null);
+  const transcriptFileInputRef = useRef<HTMLInputElement>(null);
+  const [analyzingSource, setAnalyzingSource] = useState<
+    "text" | "file" | null
+  >(null);
 
   if (files.length === 0) return null;
 
@@ -66,6 +77,7 @@ export function TranscriptUpdateSection({
     const trimmedTranscript = transcript.trim();
     if (!selectedFileId || trimmedTranscript.length === 0) return;
 
+    setAnalyzingSource("text");
     startAnalyzeTransition(async () => {
       const result = await analyzeTranscriptAgainstFile(
         selectedFileId,
@@ -73,6 +85,7 @@ export function TranscriptUpdateSection({
       );
       if ("error" in result) {
         setAnalyzeError(result.error);
+        setAnalyzingSource(null);
         return;
       }
       setAnalysis({
@@ -81,6 +94,38 @@ export function TranscriptUpdateSection({
         updatedContent: result.updatedContent,
       });
       setDraftContent(result.updatedContent);
+      setAnalyzingSource(null);
+    });
+  }
+
+  function handleTranscriptFileSelected(
+    event: React.ChangeEvent<HTMLInputElement>
+  ) {
+    const picked = event.target.files?.[0] ?? null;
+    event.target.value = "";
+    setAnalyzeError(null);
+    if (!picked || !selectedFileId) return;
+
+    setAnalyzingSource("file");
+    startAnalyzeTransition(async () => {
+      const fd = new FormData();
+      fd.append("file", picked);
+      const result = await analyzeTranscriptFileAgainstFile(
+        selectedFileId,
+        fd
+      );
+      if ("error" in result) {
+        setAnalyzeError(result.error);
+        setAnalyzingSource(null);
+        return;
+      }
+      setAnalysis({
+        summary: result.summary,
+        changes: result.changes,
+        updatedContent: result.updatedContent,
+      });
+      setDraftContent(result.updatedContent);
+      setAnalyzingSource(null);
     });
   }
 
@@ -108,12 +153,14 @@ export function TranscriptUpdateSection({
     setDraftContent("");
     setAnalyzeError(null);
     setApplyError(null);
+    setAnalyzingSource(null);
+    if (transcriptFileInputRef.current) transcriptFileInputRef.current.value = "";
   }
 
   return (
     <DataCard
       title="Atualizar arquivo via transcrição de reunião"
-      description="Cole a transcrição de uma reunião — a IA resume o que foi discutido, compara com o arquivo base e propõe uma versão atualizada. A transcrição em si nunca é salva."
+      description="Cole a transcrição de uma reunião — a IA resume o que foi discutido, compara com o arquivo base e propõe uma versão atualizada. A transcrição em si nunca é salva. Também é possível enviar um arquivo com a transcrição (PDF/TXT/MD/DOCX)."
     >
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
@@ -155,8 +202,35 @@ export function TranscriptUpdateSection({
               disabled={isAnalyzing || transcript.trim().length === 0}
               className="w-fit"
             >
-              {isAnalyzing ? "Analisando..." : "Analisar transcrição"}
+              {isAnalyzing && analyzingSource === "text"
+                ? "Analisando..."
+                : "Analisar transcrição"}
             </Button>
+            <span className="text-xs text-muted-foreground">ou</span>
+            <input
+              ref={transcriptFileInputRef}
+              type="file"
+              accept=".pdf,.txt,.md,.docx"
+              className="hidden"
+              disabled={isAnalyzing}
+              onChange={handleTranscriptFileSelected}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-fit"
+              disabled={isAnalyzing}
+              onClick={() => transcriptFileInputRef.current?.click()}
+            >
+              {isAnalyzing && analyzingSource === "file"
+                ? "Analisando arquivo..."
+                : "Enviar arquivo de transcrição"}
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              PDF, TXT, MD ou DOCX, até 5MB. O arquivo não é salvo — só o
+              texto extraído dele é usado na análise.
+            </span>
           </div>
         ) : (
           <div className="flex flex-col gap-4">
