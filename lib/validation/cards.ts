@@ -105,3 +105,17 @@ export const removeAttachmentSchema = z.object({
   attachmentId: z.string().uuid(),
 });
 export type RemoveAttachmentInput = z.infer<typeof removeAttachmentSchema>;
+
+/**
+ * forceAdvanceOverride's input (CHK-04, D-11, plan 03-05). The target stage
+ * is NEVER a parameter -- it is always derived server-side from
+ * `nextStage(card.stage)`, exactly like `advanceStageSchema`. This schema
+ * is intentionally identical in shape to `advanceStageSchema` but kept as
+ * its own export -- the two actions are authorized completely differently
+ * (Admin-only vs. any assigned PM) and must never be confused for the same
+ * code path.
+ */
+export const forceAdvanceSchema = z.object({
+  cardId: z.string().uuid(),
+});
+export type ForceAdvanceInput = z.infer<typeof forceAdvanceSchema>;

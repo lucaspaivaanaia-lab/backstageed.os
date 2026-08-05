@@ -23,6 +23,21 @@ export type BoardAttachment = {
   created_at: string;
 };
 
+/**
+ * A D-11 force-advance audit row (CHK-04, plan 03-05). `unchecked_item_labels`
+ * is a frozen snapshot taken at override time — never re-derived from the
+ * card's CURRENT checklist state, which may have since changed.
+ */
+export type BoardOverride = {
+  id: string;
+  card_id: string;
+  overridden_by: string;
+  occurred_at: string;
+  unchecked_item_labels: string[];
+  from_stage: CardStage;
+  to_stage: CardStage;
+};
+
 export type BoardCard = {
   id: string;
   title: string;
@@ -34,6 +49,7 @@ export type BoardCard = {
   created_at: string;
   checklistItems: BoardChecklistItem[];
   attachments: BoardAttachment[];
+  overrides: BoardOverride[];
 };
 
 export type BoardColumn = {
@@ -130,13 +146,30 @@ export default async function PmBoardPage({
           .order("created_at", { ascending: true })
       : { data: [] as BoardAttachment[] };
 
+  // D-11 override audit rows (CHK-04) — the PM-facing half of the "never
+  // silent" guarantee. Same batched-read/cardIds.length guard shape as the
+  // checklist/attachment reads above.
+  const { data: overrides } =
+    cardIds.length > 0
+      ? await supabase
+          .from("card_checklist_overrides")
+          .select(
+            "id, card_id, overridden_by, occurred_at, unchecked_item_labels, from_stage, to_stage"
+          )
+          .in("card_id", cardIds)
+          .order("occurred_at", { ascending: true })
+      : { data: [] as BoardOverride[] };
+
   const completedByIds = (checklistItems ?? [])
     .map((item) => item.completed_by)
     .filter((id): id is string => Boolean(id));
   const assigneeIds = (cards ?? [])
     .map((card) => card.assignee_id)
     .filter((id): id is string => Boolean(id));
-  const idsToResolve = Array.from(new Set([...completedByIds, ...assigneeIds]));
+  const overriddenByIds = (overrides ?? []).map((o) => o.overridden_by);
+  const idsToResolve = Array.from(
+    new Set([...completedByIds, ...assigneeIds, ...overriddenByIds])
+  );
   const pmNames = await resolvePmNames(idsToResolve);
 
   const itemsByCardId = new Map<string, BoardChecklistItem[]>();
@@ -153,10 +186,18 @@ export default async function PmBoardPage({
     attachmentsByCardId.set(attachment.card_id, existing);
   }
 
+  const overridesByCardId = new Map<string, BoardOverride[]>();
+  for (const override of overrides ?? []) {
+    const existing = overridesByCardId.get(override.card_id) ?? [];
+    existing.push(override);
+    overridesByCardId.set(override.card_id, existing);
+  }
+
   const allCards: BoardCard[] = (cards ?? []).map((card) => ({
     ...card,
     checklistItems: itemsByCardId.get(card.id) ?? [],
     attachments: attachmentsByCardId.get(card.id) ?? [],
+    overrides: overridesByCardId.get(card.id) ?? [],
   }));
   const packages = allCards.filter((c) => c.stage === null);
 
