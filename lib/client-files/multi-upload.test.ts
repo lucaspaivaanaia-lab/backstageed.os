@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { FILE_LIMIT } from "./limit.ts";
 import {
   remainingSlots,
   splitBySlots,
@@ -7,19 +8,19 @@ import {
 } from "./multi-upload.ts";
 
 test("remainingSlots: POSITIVE - counts down from FILE_LIMIT and never goes negative", () => {
-  assert.equal(remainingSlots(0), 3);
-  assert.equal(remainingSlots(2), 1);
-  assert.equal(remainingSlots(3), 0);
-  assert.equal(remainingSlots(5), 0);
+  assert.equal(remainingSlots(0), FILE_LIMIT);
+  assert.equal(remainingSlots(FILE_LIMIT - 2), 2);
+  assert.equal(remainingSlots(FILE_LIMIT), 0);
+  assert.equal(remainingSlots(FILE_LIMIT + 2), 0);
 });
 
 test("splitBySlots: POSITIVE - cuts items at the remaining slots, preserving selection order", () => {
-  const result = splitBySlots(["a", "b", "c", "d"], 1);
+  const result = splitBySlots(["a", "b", "c", "d"], FILE_LIMIT - 2);
   assert.deepEqual(result, { accepted: ["a", "b"], skipped: ["c", "d"] });
 });
 
 test("splitBySlots: NEGATIVE - client already at the ceiling accepts nothing", () => {
-  const result = splitBySlots(["a"], 3);
+  const result = splitBySlots(["a"], FILE_LIMIT);
   assert.deepEqual(result, { accepted: [], skipped: ["a"] });
 });
 
@@ -69,5 +70,5 @@ test("summarizeUploadOutcomes: EDGE - skipped files (over the slot limit) are na
   assert.ok(result.message);
   assert.match(result.message, /c\.pdf/);
   assert.match(result.message, /d\.pdf/);
-  assert.match(result.message, /3/);
+  assert.match(result.message, new RegExp(String(FILE_LIMIT)));
 });
