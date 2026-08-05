@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { useEffect, useOptimistic, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -14,6 +15,8 @@ import {
   FileTextIcon,
   LinkIcon,
   ClipboardPasteIcon,
+  MessageSquareIcon,
+  FileEditIcon,
 } from "lucide-react";
 import {
   DndContext,
@@ -1156,7 +1159,7 @@ export function BoardPanel({
         Produção
       </PageTitle>
 
-      <div className="mb-8">
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <Select
           value={activeClientId ?? undefined}
           onValueChange={handleSwitchClient}
@@ -1172,6 +1175,23 @@ export function BoardPanel({
             ))}
           </SelectContent>
         </Select>
+
+        {activeClient ? (
+          <div className="flex items-center gap-2">
+            <Button variant="outline" asChild>
+              <Link href="/pm/chat">
+                <MessageSquareIcon className="size-4" />
+                Chat
+              </Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href={`/pm/clients/${activeClient.id}`}>
+                <FileEditIcon className="size-4" />
+                Editar briefing
+              </Link>
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       {!activeClient ? (
