@@ -113,6 +113,12 @@ export default function LoginPage() {
             >
               Esqueceu sua senha?
             </Link>
+            <Link
+              href="/signup"
+              className="mt-2 block text-center text-sm text-muted-foreground hover:underline"
+            >
+              Criar conta
+            </Link>
           </CardContent>
         </Card>
       </div>
