@@ -13,6 +13,7 @@ import {
   getLastSelectedClientId,
   subscribeLastSelectedClientId,
   getLastSelectedClientIdServerSnapshot,
+  clearLastSelectedClientId,
 } from "@/lib/client-selection";
 
 export type SidebarNavItem = {
@@ -81,7 +82,7 @@ export function AppSidebar({ items }: AppSidebarProps) {
             pathname === href || pathname.startsWith(`${href}/`);
           return (
             <Link
-              key={item.href}
+              key={item.label}
               href={href}
               className={cn(
                 "flex items-center gap-2 rounded-md px-3 py-2 text-body transition-colors",
@@ -97,7 +98,10 @@ export function AppSidebar({ items }: AppSidebarProps) {
         })}
       </nav>
       <div className="border-t border-sidebar-border p-3">
-        <form action={signOut}>
+        <form
+          action={signOut}
+          onSubmit={() => clearLastSelectedClientId()}
+        >
           <Button
             variant="ghost"
             type="submit"

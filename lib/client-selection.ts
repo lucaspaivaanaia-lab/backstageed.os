@@ -34,6 +34,24 @@ export function setLastSelectedClientId(clientId: string): void {
 }
 
 /**
+ * Navigation-flow correction 2026-08-05: called on logout (AppSidebar's
+ * "Sair" form) so every fresh login starts at "only Clientes visible" —
+ * without this, a PM who had a client active before signing out would see
+ * Chat/Produção immediately on their next login, before picking anything.
+ * Also avoids leaking one PM's last-viewed client into a different PM's
+ * session on a shared machine (UX hygiene, not a security boundary — RLS
+ * is what actually scopes data access).
+ */
+export function clearLastSelectedClientId(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Same rationale as setLastSelectedClientId above.
+  }
+}
+
+/**
  * useSyncExternalStore trio for reading the last-selected client without a
  * setState-in-effect (this project's `react-hooks/set-state-in-effect`
  * lint rule blocks that pattern outright). `getServerSnapshot` returns
