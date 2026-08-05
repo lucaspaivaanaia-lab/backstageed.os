@@ -157,6 +157,8 @@ Motivo documentado no próprio arquivo (L57-65): input file nativo visível tem 
 Componentes UI disponíveis: `Button`, `Textarea`, `ErrorBox`, `DataCard`, `Select*`, `SectionTitle` (todos já importados no arquivo). `lucide-react` disponível se um ícone for desejado (opcional).
 
 Verificação: não há `npm run typecheck` — usar `npx tsc --noEmit`. `npm test` = `node --test` só sobre módulos puros (`lib/**/*.test.ts`); **não existe harness de teste para Server Actions** neste projeto (elas exigem sessão Supabase real + `ANTHROPIC_API_KEY`), por isso a prova de runtime está no checkpoint humano da Task 3.
+
+**Contagem de writes no arquivo hoje (baseline verificado, 2026-08-05)** — `lib/actions/client-files.ts` tem **exatamente** 1 `.insert(` (L116, dentro de `uploadClientFile`), **exatamente** 1 `.update(` (L307, dentro de `updateClientFileContent`) e **zero** `.upsert(`. Este plano **não adiciona nenhum write** — o caminho novo é somente-leitura + IA. A Task 1 congela essa contagem num gate automatizado.
 </interfaces>
 </context>
 
@@ -203,6 +205,8 @@ Ordem de operações (obrigatória, nesta sequência):
 
 **Por que o passo 4 (autorização) vem ANTES do passo 5 (extração), e não depois:** parsear um PDF/DOCX de até 5MB é a operação mais cara desta action. Fazê-la antes de saber se o chamador sequer alcança aquele `fileId` via RLS permite queimar CPU do servidor com um `fileId` inválido/alheio. Autorizar primeiro é estritamente melhor e não altera nenhum resultado do caminho feliz — só a precedência entre dois erros que nunca coexistem na prática (a UI sempre manda um `fileId` vindo do `<Select>`). Ver T-iea-02.
 
+**Esta action é somente-leitura + IA: ela NÃO pode conter nenhuma escrita.** Nenhum `.insert(`, `.update(`, `.upsert(`, nenhuma chamada a Storage, nenhuma chamada a `updateClientFileContent`. O buffer e o texto extraído existem só durante a requisição. O gate automatizado abaixo congela a contagem de writes do arquivo inteiro em **1 `.insert(` / 1 `.update(` / 0 `.upsert(`** — exatamente o baseline de hoje (o insert de `uploadClientFile` e o update de `updateClientFileContent`). Se o executor acidentalmente ligar o caminho novo a uma escrita, o gate quebra aqui, na Task 1, em vez de só no checkpoint ao vivo da Task 3. Ver T-iea-03.
+
 Escrever um doc comment na nova action deixando explícito: (a) é o mesmo fluxo de `analyzeTranscriptAgainstFile`, só com a transcrição vindo de um arquivo em vez de texto colado; (b) o arquivo enviado **NUNCA** é persistido — não há `insert`/`upsert`/`update` nem escrita em Storage neste caminho, o buffer e o texto extraído existem só durante a requisição; (c) por não ser armazenado, ele não consome vaga de `FILE_LIMIT` e nenhuma checagem de teto se aplica.
 
 **Não** alterar: `updateClientFileContent` (nenhuma linha), `listClientFiles`, `deleteClientFile`, o gate de `atFileLimit`, os tipos exportados existentes, ou qualquer arquivo fora de `lib/actions/client-files.ts`.
@@ -223,6 +227,9 @@ CODE=$(grep -v -E '^[[:space:]]*(//|\*|/\*)' lib/actions/client-files.ts) &&
 [ "$(printf '%s\n' "$CODE" | grep -c 'const ALLOWED_EXTENSIONS')" -eq 1 ] &&
 [ "$(printf '%s\n' "$CODE" | grep -c 'Formato não suportado. Envie um arquivo PDF, TXT, MD ou DOCX.')" -eq 1 ] &&
 [ "$(printf '%s\n' "$CODE" | grep -c 'Não foi possível ler o conteúdo deste arquivo.')" -eq 1 ] &&
+[ "$(printf '%s\n' "$CODE" | grep -c '\.insert(')" -eq 1 ] &&
+[ "$(printf '%s\n' "$CODE" | grep -c '\.update(')" -eq 1 ] &&
+[ "$(printf '%s\n' "$CODE" | grep -c '\.upsert(')" -eq 0 ] &&
 [ "$(git diff -U0 lib/actions/client-files.ts | grep -E '^[+-]' | grep -v -E '^(\+\+\+|---)' | grep -c 'updateClientFileContent')" -eq 0 ] &&
 [ "$(git diff -U0 lib/actions/client-files.ts | grep -E '^[+-]' | grep -v -E '^(\+\+\+|---)' | grep -c 'export async function analyzeTranscriptAgainstFile')" -eq 0 ] &&
 [ "$(git diff -U0 lib/actions/client-files.ts | grep -E '^[+-]' | grep -v -E '^(\+\+\+|---)' | grep -c 'atFileLimit')" -eq 0 ] &&
@@ -235,7 +242,7 @@ npm test &&
 Ler o diff de `lib/actions/client-files.ts` e confirmar, linha a linha, que o bloco movido para `runTranscriptAnalysis` é o MESMO texto de antes: o `instruction` (as 3 partes numeradas do prompt), `toolName: "report_transcript_update"`, `toolDescription` e o `inputSchema` (summary/changes/updatedContent + required) devem aparecer no diff apenas como linhas movidas/reindentadas, nunca reescritas. Qualquer alteração de palavra no prompt é regressão de comportamento da IA e deve ser revertida.
     </manual>
   </verify>
-  <done>`analyzeTranscriptFileAgainstFile` existe e é exportada; `analyzeTranscriptAgainstFile` mantém assinatura e comportamento; `runTranscriptAnalysis`/`resolveTranscriptTarget` são privados e têm exatamente 2 chamadores cada; `runStructuredExtraction` é chamado uma única vez no arquivo; `MAX_FILE_BYTES`/`ALLOWED_EXTENSIONS` não foram redeclarados; `updateClientFileContent` e o gate de `atFileLimit` não aparecem no diff; `tsc`/`lint`/`npm test` verdes; nenhum arquivo fora de `lib/actions/client-files.ts` foi tocado.</done>
+  <done>`analyzeTranscriptFileAgainstFile` existe e é exportada; `analyzeTranscriptAgainstFile` mantém assinatura e comportamento; `runTranscriptAnalysis`/`resolveTranscriptTarget` são privados e têm exatamente 2 chamadores cada; `runStructuredExtraction` é chamado uma única vez no arquivo; `MAX_FILE_BYTES`/`ALLOWED_EXTENSIONS` não foram redeclarados; a contagem de writes do arquivo segue congelada em 1 `.insert(` / 1 `.update(` / 0 `.upsert(` (o caminho novo não escreve nada); `updateClientFileContent` e o gate de `atFileLimit` não aparecem no diff; `tsc`/`lint`/`npm test` verdes; nenhum arquivo fora de `lib/actions/client-files.ts` foi tocado.</done>
 </task>
 
 <task type="auto">
@@ -321,9 +328,9 @@ Ler o diff de `transcript-update-section.tsx` e confirmar que o ramo de revisão
   <what-built>
 Os dois caminhos de entrada da seção "Atualizar arquivo via transcrição de reunião": o de texto colado (inalterado) e o novo de upload de arquivo, ambos desembocando no mesmo fluxo de revisão/confirmação. Servidor: `analyzeTranscriptFileAgainstFile` (nova) + `analyzeTranscriptAgainstFile` (refatorada, comportamento idêntico), compartilhando o mesmo helper de análise.
 
-Gates automáticos já verdes: `npx tsc --noEmit`, `npm run lint`, `npm run build`, `npm test`, e os gates de escopo (diff toca exatamente 2 arquivos; `updateClientFileContent`, RLS, migrations, `client-files-section.tsx` e o motor de IA intocados).
+Gates automáticos já verdes: `npx tsc --noEmit`, `npm run lint`, `npm run build`, `npm test`, os gates de escopo (diff toca exatamente 2 arquivos; `updateClientFileContent`, RLS, migrations, `client-files-section.tsx` e o motor de IA intocados) e o gate de writes (contagem congelada em 1 `.insert(` / 1 `.update(` / 0 `.upsert(` — o caminho novo não escreve nada).
 
-**Por que este checkpoint é obrigatório e bloqueante:** não existe harness de teste automatizado para Server Actions neste projeto — a nova action só é exercitada de verdade com sessão Supabase real (RLS), arquivo real e chamada real à Claude API. A garantia central deste plano ("o arquivo enviado nunca é persistido") também só é comprovável observando o banco/UI depois de um envio real.
+**Por que este checkpoint é obrigatório e bloqueante:** não existe harness de teste automatizado para Server Actions neste projeto — a nova action só é exercitada de verdade com sessão Supabase real (RLS), arquivo real e chamada real à Claude API. A garantia central deste plano ("o arquivo enviado nunca é persistido") tem o gate estático da Task 1 provando que nenhuma escrita nova foi introduzida, mas a confirmação de runtime só vem observando o banco/UI depois de um envio real.
   </what-built>
   <how-to-verify>
 Rodar `npm run dev` e logar com credenciais reais (PM ou Admin). Usar um **cliente de teste** (criar um, ou reutilizar um cliente de teste já existente) com pelo menos **um arquivo base real** em "Arquivos do cliente" — nunca um cliente de produção, porque o fluxo sobrescreve o conteúdo do arquivo base.
@@ -363,7 +370,7 @@ Anotar antes de começar: quantos arquivos aparecem na lista "Arquivos do client
   </how-to-verify>
   <resume-signal>Responda "aprovado" se A, B, C, D e E passaram (com atenção especial ao item 14/15 — nenhum arquivo de transcrição persistido) ou descreva o que falhou, citando o número do passo.</resume-signal>
   <verify>
-    <automated>echo "Checkpoint humano — sem gate automatizado. Os gates de tsc/lint/build/test e de escopo já rodaram nas Tasks 1 e 2; a prova de runtime desta task é a aprovação explícita do desenvolvedor registrada no SUMMARY."</automated>
+    <automated>echo "Checkpoint humano — sem gate automatizado. Os gates de tsc/lint/build/test, de escopo e de contagem de writes já rodaram nas Tasks 1 e 2; a prova de runtime desta task é a aprovação explícita do desenvolvedor registrada no SUMMARY."</automated>
     <human-check>Roteiro completo em &lt;how-to-verify&gt; acima: seções A (texto colado inalterado), B (arquivo ponta a ponta), C (nada persistido em client_files), D (erros num único ErrorBox), E (limpeza).</human-check>
   </verify>
   <done>Desenvolvedor confirmou ao vivo: (A) caminho de texto colado inalterado, (B) caminho de arquivo funcionando ponta a ponta com rótulo "Analisando arquivo..." e o arquivo base realmente atualizado, (C) nenhuma linha nova em client_files e a lista "Arquivos do cliente" com a mesma contagem de antes, (D) os erros aparecendo no mesmo ErrorBox e o reenvio do mesmo arquivo voltando a disparar, (E) dados de teste limpos.</done>
@@ -387,7 +394,7 @@ Anotar antes de começar: quantos arquivos aparecem na lista "Arquivos do client
 |-----------|----------|-----------|-------------|-----------------|
 | T-iea-01 | Elevation of Privilege | `analyzeTranscriptFileAgainstFile` — `fileId` vindo do cliente | mitigate | Reutiliza `resolveTranscriptTarget`, o MESMO resolve RLS de `analyzeTranscriptAgainstFile`: `client_files.select(...).eq("id", fileId).single()` pelo client Supabase com sessão do usuário. Um `fileId` de outro cliente volta vazio → `TRANSCRIPT_FILE_NOT_FOUND_ERROR`. Nenhum client de service-role é usado, nenhuma checagem nova de autorização é inventada |
 | T-iea-02 | Denial of Service | parsing de PDF/DOCX de até 5MB por chamador não autorizado | mitigate | A autorização (passo 4) roda **antes** da extração (passo 5): um `fileId` inalcançável é rejeitado sem que um único byte seja parseado. Além disso a rota inteira já está atrás do auth gate do `middleware.ts`, e `MAX_FILE_BYTES` (5MB) + `bodySizeLimit: "6mb"` limitam o tamanho aceito |
-| T-iea-03 | Tampering | arquivo de transcrição enviado poderia acabar persistido | mitigate | O caminho novo não executa nenhum `insert`/`upsert`/`update` nem escrita em Storage — o buffer e o texto extraído só existem no escopo da requisição. Gate estrutural: `updateClientFileContent` não aparece no diff da Task 1, `runTranscriptAnalysis` (o único destino do texto extraído) só chama a IA. Prova de runtime: Task 3 itens 14-15 (contagem de `client_files` inalterada, nenhuma linha com o filename da transcrição) |
+| T-iea-03 | Tampering | arquivo de transcrição enviado poderia acabar persistido | mitigate | O caminho novo não executa nenhum `insert`/`upsert`/`update` nem escrita em Storage — o buffer e o texto extraído só existem no escopo da requisição. Gates estruturais na Task 1: (a) a contagem de writes do arquivo inteiro fica congelada em **1 `.insert(` / 1 `.update(` / 0 `.upsert(`**, exatamente o baseline de hoje (`uploadClientFile` + `updateClientFileContent`), então qualquer escrita nova quebra o gate; (b) `updateClientFileContent` não aparece no diff; (c) `runTranscriptAnalysis`, único destino do texto extraído, só chama a IA. Prova de runtime: Task 3 itens 14-15 (contagem de `client_files` inalterada, nenhuma linha com o filename da transcrição) |
 | T-iea-04 | Information Disclosure | texto extraído da transcrição enviado à Claude API | accept | Mesma exposição que o caminho de texto colado já tinha desde 2026-08-04 (e que todo o RAG deste app já tem): o `runStructuredExtraction` compartilhado é o único canal, inalterado. Nenhuma superfície nova de terceiros é criada |
 | T-iea-05 | Tampering | arquivo malicioso explorando unpdf/mammoth | accept | Mesmo parser, mesma versão e mesma superfície já expostos por `uploadClientFile` desde 260722-hnm — este plano não amplia o conjunto de tipos aceitos (mesmo `ALLOWED_EXTENSIONS`) nem o tamanho (mesmo `MAX_FILE_BYTES`); só adiciona um segundo chamador autenticado do mesmo caminho |
 | T-iea-06 | Denial of Service | transcrição gigante (5MB de .txt) inflando o prompt da IA | accept | `MAX_FILE_BYTES` já limita a 5MB, o mesmo teto que um arquivo de `client_files` (que é injetado inteiro no system prompt do chat a cada turno). Exposição não é maior que a já aceita; uma falha aqui é um erro de uma requisição, não persistente |
@@ -404,6 +411,7 @@ Gates automáticos (raiz do repo):
 - `git diff --name-only` ao fim do plano lista **exatamente** 2 arquivos: `lib/actions/client-files.ts` e `components/clients/transcript-update-section.tsx`. Qualquer arquivo a mais é scope creep e deve ser revertido antes do commit.
 - Scope gate: `git diff -- supabase/ middleware.ts next.config.ts package.json lib/ai/ lib/extract/ lib/client-files/ components/clients/client-files-section.tsx` deve sair **vazio** (nenhuma migration/RLS, nenhum middleware, nenhuma dependência nova, nenhuma mudança no motor de IA, no extrator, no teto de arquivos ou na seção "Arquivos do cliente").
 - Gate de não-regressão: `git diff -U0 lib/actions/client-files.ts | grep -E '^[+-]' | grep -v -E '^(\+\+\+|---)' | grep -cE 'updateClientFileContent|atFileLimit'` deve ser `0` (o passo de persistência e o gate de teto não são tocados).
+- Gate de escrita zero (T-iea-03): em `lib/actions/client-files.ts`, a contagem de `\.insert(` deve continuar `1`, a de `\.update(` deve continuar `1` e a de `\.upsert(` deve continuar `0` — o baseline de hoje (`uploadClientFile` + `updateClientFileContent`). O caminho novo é somente-leitura + IA; qualquer escrita adicionada quebra este gate na Task 1, antes do checkpoint ao vivo.
 - Gate de superfície única de erro: `grep -c '<ErrorBox>' components/clients/transcript-update-section.tsx` deve continuar `2`.
 
 <human-check>
@@ -417,7 +425,7 @@ A verificação humana ao vivo é a Task 3 (checkpoint bloqueante) — cobre os 
 - Os dois caminhos convergem para o mesmo estado `analysis`/`draftContent` e para o mesmo "Confirmar atualização"/"Descartar" — `updateClientFileContent` não muda uma linha.
 - `runStructuredExtraction` é chamado em **um único** lugar do arquivo (helper compartilhado), provando que a lógica de análise não foi duplicada; `MAX_FILE_BYTES` e `ALLOWED_EXTENSIONS` não foram redeclarados.
 - Rótulos de pending distintos por caminho ("Analisando..." vs "Analisando arquivo..."), e uma **única** superfície de erro (`analyzeError` → `<ErrorBox>`) para ambos.
-- O arquivo de transcrição enviado não é persistido em lugar nenhum — comprovado estruturalmente (nenhum write no caminho novo) e ao vivo (contagem de `client_files` inalterada após um envio real).
+- O arquivo de transcrição enviado não é persistido em lugar nenhum — comprovado estruturalmente (contagem de writes do arquivo congelada em 1 insert / 1 update / 0 upsert, nenhuma escrita no caminho novo) e ao vivo (contagem de `client_files` inalterada após um envio real).
 - `tsc`/`lint`/`build`/`test` verdes; diff toca exatamente 2 arquivos; RLS, migrations, middleware, dependências, motor de IA, extrator e a seção "Arquivos do cliente" permanecem intocados.
 - Checkpoint humano da Task 3 aprovado e dados de teste limpos.
 </success_criteria>
