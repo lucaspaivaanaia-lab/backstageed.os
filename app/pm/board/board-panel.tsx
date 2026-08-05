@@ -75,6 +75,7 @@ import type {
   BoardChecklistItem,
   BoardClient,
   BoardColumn,
+  BoardOverride,
   BoardPmRosterEntry,
 } from "./page";
 import { Button } from "@/components/ui/button";
@@ -463,6 +464,54 @@ function ChecklistItemRow({
           Marcado por {completedByName} em {formatCompletedAt(item.completed_at)}
         </span>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * The D-11 override marker (CHK-04) — rendered inside the checklist section
+ * header exactly as 03-UI-SPEC's override-audit contract requires when a
+ * card has one or more `card_checklist_overrides` rows. Read-only: a plain
+ * `<details>`/`<summary>` toggle, not a new component, listing every
+ * override's who/when/forced-transition/frozen-unchecked-labels line so a
+ * bypass is never silent on the PM's own board.
+ */
+function OverrideHistory({
+  overrides,
+  pmNames,
+}: {
+  overrides: BoardOverride[];
+  pmNames: Record<string, string>;
+}) {
+  if (overrides.length === 0) return null;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <StatusBadge tone="danger">Avanço forçado</StatusBadge>
+      <details className="text-meta text-muted-foreground">
+        <summary className="cursor-pointer">
+          Ver histórico de avanços forçados
+        </summary>
+        <div className="mt-2 flex flex-col gap-3">
+          {overrides.map((override) => {
+            const overriddenByName =
+              pmNames[override.overridden_by] ?? override.overridden_by;
+            return (
+              <div key={override.id} className="flex flex-col gap-0.5">
+                <span>
+                  Marcado por {overriddenByName} em{" "}
+                  {formatCompletedAt(override.occurred_at)} —{" "}
+                  {STAGE_LABELS[override.from_stage]} para{" "}
+                  {STAGE_LABELS[override.to_stage]}
+                </span>
+                <span>
+                  Itens pendentes no momento: {override.unchecked_item_labels.join(", ")}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </details>
     </div>
   );
 }
@@ -886,6 +935,7 @@ function BoardCardItem({
                   </Button>
                 ) : null}
               </div>
+              <OverrideHistory overrides={card.overrides} pmNames={pmNames} />
               {card.checklistItems.length === 0 && !hasChecklistTemplate ? (
                 <EmptyState
                   title="Nenhum checklist configurado"
