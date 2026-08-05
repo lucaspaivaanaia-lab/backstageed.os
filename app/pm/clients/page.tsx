@@ -109,12 +109,26 @@ export default async function PmClientsPage() {
                 .filter(Boolean)
                 .join(", ");
 
+              // Navigation-flow correction 2026-08-05: a client whose
+              // briefing is already filled goes straight to Produção — the
+              // briefing form is no longer the default landing screen for
+              // an established client. A client with an EMPTY briefing
+              // still lands on the briefing form first (same as a freshly
+              // created client naturally does, via ClientCreateForm's own
+              // redirect to /pm/clients/[id]) — it needs one filled in
+              // before Produção is useful. "Editar briefing" (sidebar,
+              // visible whenever a client is active) is how a PM reaches
+              // the briefing form for an already-filled client afterwards.
+              const clientHref = briefingEmpty
+                ? `/pm/clients/${client.id}`
+                : `/pm/board?client=${client.id}`;
+
               return (
                 <TableRow key={client.id}>
                   <TableCell>
                     <ClientListLink
                       clientId={client.id}
-                      href={`/pm/clients/${client.id}`}
+                      href={clientHref}
                       className="flex items-center gap-2 font-medium hover:text-primary"
                     >
                       {client.name}
@@ -129,10 +143,7 @@ export default async function PmClientsPage() {
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    <ClientListLink
-                      clientId={client.id}
-                      href={`/pm/clients/${client.id}`}
-                    >
+                    <ClientListLink clientId={client.id} href={clientHref}>
                       <ChevronRightIcon className="size-4 text-muted-foreground" />
                     </ClientListLink>
                   </TableCell>

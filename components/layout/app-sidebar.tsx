@@ -24,6 +24,13 @@ export type SidebarNavItem = {
   // once (lib/client-selection.ts). Only /pm/chat and /pm/board set this —
   // Admin's nav items never do, since Admin has no client-scoped screens.
   requiresActiveClient?: boolean;
+  // Navigation-flow correction 2026-08-05: when true, this item's `href`
+  // is ignored and rebuilt as `/pm/clients/${activeClientId}` at render
+  // time — used by the one "Editar briefing" item, whose target depends
+  // on WHICH client is active, not a fixed route. Implies
+  // requiresActiveClient (no point rendering it with no client to point
+  // at) — set both on the item.
+  linksToActiveClientDetail?: boolean;
 };
 
 type AppSidebarProps = {
@@ -66,12 +73,16 @@ export function AppSidebar({ items }: AppSidebarProps) {
       </div>
       <nav className="flex flex-1 flex-col gap-1 px-3">
         {visibleItems.map((item) => {
+          const href =
+            item.linksToActiveClientDetail && activeClientId
+              ? `/pm/clients/${activeClientId}`
+              : item.href;
           const isActive =
-            pathname === item.href || pathname.startsWith(`${item.href}/`);
+            pathname === href || pathname.startsWith(`${href}/`);
           return (
             <Link
               key={item.href}
-              href={item.href}
+              href={href}
               className={cn(
                 "flex items-center gap-2 rounded-md px-3 py-2 text-body transition-colors",
                 isActive

@@ -1,4 +1,9 @@
-import { UsersIcon, MessageSquareIcon, LayoutDashboardIcon } from "lucide-react";
+import {
+  UsersIcon,
+  MessageSquareIcon,
+  LayoutDashboardIcon,
+  FileEditIcon,
+} from "lucide-react";
 
 import { AppSidebar } from "@/components/layout/app-sidebar";
 
@@ -27,6 +32,17 @@ export default function PmLayout({
             label: "Produção",
             icon: <LayoutDashboardIcon />,
             requiresActiveClient: true,
+          },
+          {
+            // Navigation-flow correction 2026-08-05: href is a placeholder
+            // — AppSidebar rebuilds it as /pm/clients/${activeClientId} at
+            // render time (linksToActiveClientDetail). Briefing editing is
+            // reached from here now, not as the default landing screen.
+            href: "/pm/clients",
+            label: "Editar briefing",
+            icon: <FileEditIcon />,
+            requiresActiveClient: true,
+            linksToActiveClientDetail: true,
           },
         ]}
       />

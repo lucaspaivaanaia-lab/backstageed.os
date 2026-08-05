@@ -189,6 +189,15 @@ export function ClientDetailForm({
       // again, no extra event wiring needed.
       form.reset(values);
       setJustSavedBriefing(true);
+      // Navigation-flow correction 2026-08-05: the briefing form is a
+      // detour from Produção now (reached via the "Editar briefing"
+      // sidebar item), not the default landing screen — saving always
+      // returns to Produção for THIS client, whether it's the very first
+      // save on a freshly created client or a later edit. router.push()
+      // here (not replace) so the briefing edit stays in browser history —
+      // pressing back from Produção returns to the form with the just-
+      // saved values still shown, rather than skipping it entirely.
+      router.push(`/pm/board?client=${client.id}`);
     });
   }
 
