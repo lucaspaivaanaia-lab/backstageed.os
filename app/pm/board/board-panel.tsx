@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useOptimistic, useState, useTransition } from "react";
+import { useEffect, useOptimistic, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -56,6 +56,10 @@ import {
   INVALID_DRIVE_LINK_MESSAGE,
   type DriveLinkType,
 } from "@/lib/attachments/drive-url";
+import {
+  getLastSelectedClientId,
+  setLastSelectedClientId,
+} from "@/lib/client-selection";
 import {
   DraggableCard,
   cardIdFromDraggableId,
@@ -1100,7 +1104,26 @@ export function BoardPanel({
 
   function handleSwitchClient(clientId: string) {
     router.push(`/pm/board?client=${clientId}`);
+    // P2 pivot 2026-08-04: remember this choice so /pm/chat (and a future
+    // board visit with no ?client= in the URL) can default back to it —
+    // see lib/client-selection.ts.
+    setLastSelectedClientId(clientId);
   }
+
+  // P2 pivot 2026-08-04: if the URL has no ?client= (activeClientId prop is
+  // null), fall back to whatever was last selected here or in chat — but
+  // only if that id is still in THIS caller's own roster (`clients` is
+  // already RLS-scoped server-side; a foreign/stale id is silently
+  // ignored). A router.replace() is a navigation call, not a React
+  // setState, so this effect doesn't trip react-hooks/set-state-in-effect
+  // the way calling a state setter directly here would.
+  useEffect(() => {
+    if (activeClientId) return;
+    const lastId = getLastSelectedClientId();
+    if (lastId && clients.some((c) => c.id === lastId)) {
+      router.replace(`/pm/board?client=${lastId}`);
+    }
+  }, [activeClientId, clients, router]);
 
   return (
     <PageShell width="wide">

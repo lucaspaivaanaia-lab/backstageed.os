@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  useTransition,
+  type KeyboardEvent,
+} from "react";
 import {
   SendHorizontal,
   TriangleAlertIcon,
@@ -9,6 +16,12 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { shouldAppendChunk } from "@/lib/chat/stale-response-guard";
+import {
+  getLastSelectedClientId,
+  setLastSelectedClientId,
+  subscribeLastSelectedClientId,
+  getLastSelectedClientIdServerSnapshot,
+} from "@/lib/client-selection";
 import { saveKnowledge, listMessagesForClient } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -65,7 +78,26 @@ const CHECKBOX_LABEL = "Incluir esta mensagem no conhecimento salvo";
  * thread.
  */
 export function ChatPanel({ clients }: ChatPanelProps) {
-  const [activeClientId, setActiveClientId] = useState<string | null>(null);
+  // P2 pivot 2026-08-04: `manualClientId` is only set when the PM
+  // explicitly picks a client THIS session (handleSwitchClient). Until
+  // then, `activeClientId` below falls back to whatever was last selected
+  // (here or on /pm/board) via `useSyncExternalStore` — a derived value
+  // computed during render, never a setState-in-effect on mount (this
+  // project's react-hooks/set-state-in-effect rule blocks that pattern;
+  // useSyncExternalStore is also the hydration-safe way to read
+  // localStorage, since its getServerSnapshot matches what SSR renders).
+  const [manualClientId, setManualClientId] = useState<string | null>(null);
+  const lastSelectedClientId = useSyncExternalStore(
+    subscribeLastSelectedClientId,
+    getLastSelectedClientId,
+    getLastSelectedClientIdServerSnapshot
+  );
+  const activeClientId =
+    manualClientId ??
+    (lastSelectedClientId && clients.some((c) => c.id === lastSelectedClientId)
+      ? lastSelectedClientId
+      : null);
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
@@ -110,14 +142,32 @@ export function ChatPanel({ clients }: ChatPanelProps) {
     setInterrupted(false);
     setInput("");
     activeClientIdRef.current = clientId;
-    setActiveClientId(clientId);
-    // Never carry in-memory state across clients — clear immediately, then
-    // refetch this client's persisted history. Curation selection is
-    // ephemeral and never carries across clients either.
+    setManualClientId(clientId);
+    // Never carry in-memory state across clients — clear immediately.
+    // History load is handled uniformly by the activeClientId-watching
+    // effect below (covers this manual-switch path AND the P2 auto-restore
+    // derived value the same way, one place decides "when to load history").
+    // Curation selection is ephemeral and never carries across clients.
     setMessages([]);
     setCheckedMessageIds(new Set());
-    void loadHistory(clientId);
+    // P2 pivot 2026-08-04: remember this choice so /pm/board (and a future
+    // chat visit) can default back to it — see lib/client-selection.ts.
+    setLastSelectedClientId(clientId);
   }
+
+  // Loads history for whichever client is active — covers BOTH the P2
+  // auto-restore derived value above and a manual handleSwitchClient call.
+  // handleSwitchClient clears messages/checked-ids itself first, so a
+  // manual switch never shows a flash of the previous client's messages.
+  // The `void loadHistory(...)` call below runs async — its own setState
+  // happens after the `await`, not synchronously in this effect body, so
+  // it doesn't trip react-hooks/set-state-in-effect the way a bare
+  // `setState()` call directly in the effect would.
+  useEffect(() => {
+    if (activeClientId) {
+      void loadHistory(activeClientId);
+    }
+  }, [activeClientId]);
 
   function toggleMessageChecked(messageId: string) {
     setCheckedMessageIds((prev) => {
