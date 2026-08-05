@@ -17,6 +17,16 @@ import { runStructuredExtraction } from "@/lib/ai/structured-extraction";
 const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5MB
 const ALLOWED_EXTENSIONS = new Set(["pdf", "txt", "md", "docx"]);
 
+// Mensagens de erro de validação/extração de arquivo — compartilhadas entre
+// uploadClientFile e analyzeTranscriptFileAgainstFile (dois consumidores do
+// mesmo conjunto de mensagens voltadas ao usuário; duplicar string aqui
+// garantiria divergência futura).
+const FILE_SELECT_ERROR = "Selecione um arquivo para enviar.";
+const FILE_FORMAT_ERROR =
+  "Formato não suportado. Envie um arquivo PDF, TXT, MD ou DOCX.";
+const FILE_TOO_LARGE_ERROR = "Arquivo muito grande. O limite é 5MB.";
+const FILE_UNREADABLE_ERROR = "Não foi possível ler o conteúdo deste arquivo.";
+
 export type ClientFileRow = {
   id: string;
   filename: string;
@@ -72,18 +82,16 @@ export async function uploadClientFile(
 ): Promise<UploadClientFileResult> {
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
-    return { error: "Selecione um arquivo para enviar." };
+    return { error: FILE_SELECT_ERROR };
   }
 
   const extension = extensionOf(file.name);
   if (!ALLOWED_EXTENSIONS.has(extension)) {
-    return {
-      error: "Formato não suportado. Envie um arquivo PDF, TXT, MD ou DOCX.",
-    };
+    return { error: FILE_FORMAT_ERROR };
   }
 
   if (file.size > MAX_FILE_BYTES) {
-    return { error: "Arquivo muito grande. O limite é 5MB." };
+    return { error: FILE_TOO_LARGE_ERROR };
   }
 
   const supabase = await createClient();
@@ -105,12 +113,12 @@ export async function uploadClientFile(
     content = await extractDocumentText(buffer, fileType);
   } catch (err) {
     if (err instanceof UnreadableFileError) {
-      return { error: "Não foi possível ler o conteúdo deste arquivo." };
+      return { error: FILE_UNREADABLE_ERROR };
     }
     // Qualquer outro erro de parsing (PDF corrompido, DOCX invalido, etc.)
     // tambem bloqueia o insert com a mesma mensagem amigavel — nunca
     // persiste um client_files com content vazio/lixo (T-hnm-03).
-    return { error: "Não foi possível ler o conteúdo deste arquivo." };
+    return { error: FILE_UNREADABLE_ERROR };
   }
 
   const { error: insertError } = await supabase.from("client_files").insert({
@@ -188,6 +196,25 @@ export async function analyzeTranscriptAgainstFile(
   fileId: string,
   transcript: string
 ): Promise<AnalyzeTranscriptResult> {
+  const target = await resolveTranscriptTarget(fileId);
+  if (!target) return { error: TRANSCRIPT_FILE_NOT_FOUND_ERROR };
+
+  return runTranscriptAnalysis(target.file, target.client, transcript);
+}
+
+/**
+ * Resolve, via RLS, o arquivo base + o client dono dele a partir de um
+ * fileId não-confiado. `client_files_select_scoped` é a fronteira real de
+ * autorização — fileId nunca é confiado além disso. Retorna null quando o
+ * arquivo ou o cliente não são encontrados (fileId inválido ou fora do
+ * alcance do chamador); cada chamador mapeia null para
+ * TRANSCRIPT_FILE_NOT_FOUND_ERROR. Compartilhado pelos dois caminhos de
+ * entrada da análise de transcrição (texto colado e arquivo enviado).
+ */
+async function resolveTranscriptTarget(fileId: string): Promise<{
+  file: { id: string; filename: string; content: string; client_id: string };
+  client: { id: string; name: string };
+} | null> {
   const supabase = await createClient();
 
   // Re-read the file through RLS — never trust that fileId belongs to a
@@ -198,15 +225,30 @@ export async function analyzeTranscriptAgainstFile(
     .select("id, filename, content, client_id")
     .eq("id", fileId)
     .single();
-  if (!file) return { error: TRANSCRIPT_FILE_NOT_FOUND_ERROR };
+  if (!file) return null;
 
   const { data: client } = await supabase
     .from("clients")
     .select("id, name")
     .eq("id", file.client_id)
     .single();
-  if (!client) return { error: TRANSCRIPT_FILE_NOT_FOUND_ERROR };
+  if (!client) return null;
 
+  return { file, client };
+}
+
+/**
+ * Chama a IA (runStructuredExtraction) para produzir o resumo, as
+ * novidades/contradições e o texto completo atualizado do arquivo base, e
+ * valida o formato da resposta antes de devolver ao chamador. Compartilhado
+ * pelos dois caminhos de entrada — a transcrição em si, seja ela colada ou
+ * extraída de um arquivo enviado, é o único parâmetro que varia.
+ */
+async function runTranscriptAnalysis(
+  file: { filename: string; content: string },
+  client: { name: string },
+  transcript: string
+): Promise<AnalyzeTranscriptResult> {
   const result = await runStructuredExtraction({
     clientName: client.name,
     files: [
@@ -269,7 +311,7 @@ export async function analyzeTranscriptAgainstFile(
     raw.updatedContent.trim().length === 0
   ) {
     console.error(
-      "[analyzeTranscriptAgainstFile] AI returned an unexpected shape",
+      "[runTranscriptAnalysis] AI returned an unexpected shape",
       raw
     );
     return { error: TRANSCRIPT_ANALYZE_ERROR };
@@ -281,6 +323,60 @@ export async function analyzeTranscriptAgainstFile(
     changes: raw.changes.filter((c): c is string => typeof c === "string"),
     updatedContent: raw.updatedContent,
   };
+}
+
+/**
+ * Segundo caminho de entrada da mesma análise: a transcrição vem de um
+ * arquivo enviado (PDF/TXT/MD/DOCX) em vez de texto colado. Mesmo fluxo de
+ * `analyzeTranscriptAgainstFile`, mesmo helper compartilhado
+ * (`runTranscriptAnalysis`) — só a origem do texto muda.
+ *
+ * O arquivo enviado NUNCA é persistido: não há insert/upsert/update nem
+ * escrita em Storage neste caminho — o buffer e o texto extraído existem
+ * só durante a requisição. Por não ser armazenado, ele também não consome
+ * vaga de FILE_LIMIT — nenhuma checagem de teto se aplica a ele.
+ *
+ * Autorização (`resolveTranscriptTarget`) roda ANTES da extração de texto:
+ * parsear um PDF/DOCX de até 5MB é a operação mais cara desta action, e
+ * fazê-la antes de saber se o chamador sequer alcança aquele fileId via
+ * RLS permitiria queimar CPU do servidor com um fileId inválido/alheio.
+ */
+export async function analyzeTranscriptFileAgainstFile(
+  fileId: string,
+  formData: FormData
+): Promise<AnalyzeTranscriptResult> {
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: FILE_SELECT_ERROR };
+  }
+
+  const extension = extensionOf(file.name);
+  if (!ALLOWED_EXTENSIONS.has(extension)) {
+    return { error: FILE_FORMAT_ERROR };
+  }
+
+  if (file.size > MAX_FILE_BYTES) {
+    return { error: FILE_TOO_LARGE_ERROR };
+  }
+
+  const target = await resolveTranscriptTarget(fileId);
+  if (!target) return { error: TRANSCRIPT_FILE_NOT_FOUND_ERROR };
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  let extractedText: string;
+  try {
+    extractedText = await extractDocumentText(
+      buffer,
+      extension as ClientFileType
+    );
+  } catch (err) {
+    if (err instanceof UnreadableFileError) {
+      return { error: FILE_UNREADABLE_ERROR };
+    }
+    return { error: FILE_UNREADABLE_ERROR };
+  }
+
+  return runTranscriptAnalysis(target.file, target.client, extractedText);
 }
 
 export type UpdateClientFileContentResult = { success: true } | { error: string };
