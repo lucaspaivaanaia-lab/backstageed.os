@@ -1,4 +1,4 @@
-import { UsersIcon, FileEditIcon } from "lucide-react";
+import { UsersIcon } from "lucide-react";
 
 import { AppSidebar } from "@/components/layout/app-sidebar";
 
@@ -15,23 +15,13 @@ export default function PmLayout({
     <div className="flex h-screen">
       <AppSidebar
         items={[
+          // Navigation-flow correction 2026-08-05: "Clientes" is the only
+          // sidebar item now. "Chat" and "Produção" are reachable via each
+          // page's own explicit button (board-panel.tsx's "Chat" button,
+          // chat-panel.tsx's "Produção" button); "Editar briefing" is
+          // reachable via the button on the Produção page. The sidebar no
+          // longer duplicates any of that navigation.
           { href: "/pm/clients", label: "Clientes", icon: <UsersIcon /> },
-          // Navigation-flow correction 2026-08-05: "Chat" and "Produção"
-          // removed from the sidebar — each page now carries an explicit
-          // button to the other (board-panel.tsx's "Chat" button,
-          // chat-panel.tsx's "Produção" button), so the sidebar no longer
-          // needs to duplicate that navigation. "Clientes" and "Editar
-          // briefing" remain the only sidebar-level entry points.
-          {
-            // href is a placeholder — AppSidebar rebuilds it as
-            // /pm/clients/${activeClientId} at render time
-            // (linksToActiveClientDetail).
-            href: "/pm/clients",
-            label: "Editar briefing",
-            icon: <FileEditIcon />,
-            requiresActiveClient: true,
-            linksToActiveClientDetail: true,
-          },
         ]}
       />
       <main className="flex min-w-0 flex-1 flex-col overflow-y-auto">
