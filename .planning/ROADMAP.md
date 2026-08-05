@@ -156,7 +156,7 @@ Plans:
 
 **Wave 8** *(blocked on Wave 7)*
 
-- [ ] 03-05-PLAN.md — /admin/cards audit trail + Admin-only force-advance override with append-only audit row (CHK-04)
+- [x] 03-05-PLAN.md — /admin/cards audit trail + Admin-only force-advance override with append-only audit row (CHK-04)
 
 **Wave 9** *(blocked on Wave 8)*
 
@@ -234,7 +234,7 @@ Plans:
 |-------|----------|----------------|--------|-----------|
 | 1. Client Records & Isolated RAG Setup | 2026-07-11 | 4/4 | Complete   | 2026-07-13 |
 | 2. Client-Isolated AI Chat | 2026-07-18 | 6/6 | Complete   | 2026-08-05 |
-| 3. Content Production Kanban | 2026-08-05 | 7/9 | In Progress|  |
+| 3. Content Production Kanban | 2026-08-05 | 8/9 | In Progress|  |
 | 4. Client Approval & Scheduling | 2026-08-07 | 0/? | Not started | - |
 | 5. Access & Roles | 2026-08-12 | 6/6 | Complete   | 2026-07-16 |
 | 6. Admin Oversight Dashboard | 2026-08-15 | 0/? | Not started | - |

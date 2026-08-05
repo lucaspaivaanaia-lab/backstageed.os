@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Phase 2 closed (02-06 live-verified); Phase 3 waves 8-9 resumed — wave 8 (03-05) code complete, human-verify checkpoint pending"
-last_updated: "2026-08-05T19:00:00.000Z"
-last_activity: 2026-08-05 -- Phase 2 (Client-Isolated AI Chat) closed via live production verification; Phase 3 wave 8 (03-05 admin audit + override) code complete, awaiting human-verify checkpoint
+stopped_at: "Phase 2 closed; Phase 3 wave 8 (03-05) fully closed and live-verified; wave 9 (03-06, content packages) next"
+last_updated: "2026-08-05T20:00:00.000Z"
+last_activity: 2026-08-05 -- Phase 2 closed via live production verification; Phase 3 wave 8 (03-05 admin audit + force-advance override) fully closed, hosted migration applied, 12-step checkpoint approved
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 26
-  completed_plans: 19
-  percent: 50
+  total_plans: 27
+  completed_plans: 20
+  percent: 52
 ---
 
 # Project State
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-07-08)
 Phase: 03 (content-production-kanban) — EXECUTING
 Plan: 1 of 9
 Status: Executing Phase 03
-Last activity: 2026-08-05 - Phase 2 closed (02-06 live-verified against production); Phase 3 wave 8 (03-05) code complete, human-verify checkpoint pending
+Last activity: 2026-08-05 - Phase 3 wave 8 (03-05, admin audit + force-advance override) fully closed — hosted migration applied, 12-step live checkpoint approved. Wave 9 (03-06, content packages) unblocked, ready to start.
 
 Progress: [██████████] 100% (plans this phase) — 10/10 plans complete, Phase 5 fully closed
 
@@ -85,12 +85,12 @@ Recent decisions affecting current work:
 - **P2 — both items shipped 2026-08-04, ahead of the original "after 2026-08-05" plan (user explicitly asked to proceed early).** Chat/Produção last-selected-client persistence: `lib/client-selection.ts` (localStorage handoff, no route restructuring); chat-panel.tsx's `activeClientId` restructured to a derived value (`useSyncExternalStore`, not a setState-in-effect — this project's `react-hooks/set-state-in-effect` lint rule blocks that pattern outright); board-panel.tsx restores via `router.replace()`. Verified both directions live via Playwright. Meeting-transcript base-file update flow: `analyzeTranscriptAgainstFile`/`updateClientFileContent` (lib/actions/client-files.ts), new `TranscriptUpdateSection`, transcript never persisted. **Found and fixed a real bug during verification:** `client_files` never had an UPDATE policy/GRANT (migration 0011 only shipped SELECT/INSERT/DELETE) — `.update()` silently succeeded with zero rows changed. Migration 0020 adds `client_files_update_scoped` + GRANT, pushed live and verified end-to-end.
 - **2026-08-05: First production deploy, on Vercel.** User's explicit access decision: the app already gates everything behind login (Auth + RLS since Phase 1), so a public URL exposes no data by itself — only accounts can get in — and noindex (260805-hbs) is sufficient protection for a still-under-construction app; no extra password layer added. Vercel project `backstageed-os` (team `lucaspaivaanaia-gmailcoms-projects`) linked and connected to the GitHub repo (`lucaspaivaanaia-lab/backstageed.os`) for continuous deployment — first-ever push of 191 local-only commits to `origin/main` was required before connecting. Production env vars set to the hosted Supabase project (`ancfwsgyzoostoidqzqj`, not local): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `ANTHROPIC_API_KEY` (the only 4 vars actually referenced via `process.env` anywhere in the codebase, confirmed by grep — `TROPICALIA_API_KEY`/`SUPABASE_ACCESS_TOKEN` in `.env.local` are unused at runtime and were not set in Vercel). **Production URL: https://backstageed-os.vercel.app**. Live-verified end-to-end on production: login, noindex meta tag present, client selection, board/checklist rendering, real Chat AI response, "Enviar pro Kanban". Test data cleaned up after (including 2 unrelated leftover test clients spotted from an earlier session's testing).
 - **2026-08-05: Phase 2 (Client-Isolated AI Chat) closed.** User confirmed the chat feature works and asked for the formal checkpoint (02-06) to be run — it had been stuck as "BLOCKED" since 2026-07-21 (missing API key at the time), long after `ANTHROPIC_API_KEY` became available and the Tropicalia→`client_files` RAG migration (260722-hnm) shipped, simply because nobody re-ran it. Re-executed Task 1 (preflight, green) + Tasks 2/3 (live human-verify) directly against **production** (not local `npm run dev`) after discovering a real, non-blocking, local-Turbopack-only intermittent chat-stream crash (see Blockers/Concerns) — production has proven reliable across many live tests this session. Verified live: cross-client isolation (both directions), streaming, stale-response guard (abort-on-switch), degraded-mode badge, file-upload-to-chat immediate reflection (no async wait, matching the no-embeddings architecture), and the curation round-trip (confirmed via direct DB query that a new `client_files` markdown row was actually created, not just a UI toast). CTX-01 through CTX-05 all confirmed. ROADMAP.md and this file updated to mark Phase 2 complete. Immediately followed by resuming Phase 3 waves 8-9 (paused since 2026-08-04's P0 pivot) via `/gsd-execute-phase`.
+- **2026-08-05: Phase 3 wave 8 (03-05, CHK-04/D-11) fully closed.** Admin-only cross-client `/admin/cards` audit screen + append-only `card_checklist_overrides` table + `forceAdvanceOverride` Server Action (writes the audit row before mutating the card's stage, so a mid-request failure leaves a record of an attempted override rather than a silent advance) + a danger-tone "Avanço forçado" marker surfaced back on the PM's own board. Executor renumbered the plan's originally-reserved migration/test slots (0019/0011 → 0022/0012) since those numbers were consumed by the 2026-08-04/05 P0 pivot after the plan was authored. Migration `0022` applied to the hosted project by the orchestrator (executor's worktree lacked `.env.local`/hosted credentials, the same recurring limitation as 260722-hnm/260805-kio). Live-verified all 12 steps of the plan's checkpoint: table lists cards across every client, checklist progress column, read-only checklist in the Admin dialog, the exact UI-SPEC confirmation copy, the audit history naming who/when/transition/pending-items, the marker surfacing correctly on the PM board, a fully-checked card correctly NOT offering the override, and — critically — a real drag-and-drop attempt to move a blocked card out of Revisão interna still snaps back (the override did not open a second, drag-side bypass). Testing this required an Admin login; no admin password was available, so — **with the user's explicit authorization** — an existing admin account's (`juliano@backstageed.com`) password was temporarily reset for this one verification, then its `must_change_password` flag was restored to its original value afterward. Wave 9 (03-06, content packages) is now unblocked.
 
 ### Pending Todos
 
-- Phase 3 wave 8 (03-05, admin audit trail + force-advance override): code complete (Tasks 1-3), human-verify checkpoint (Task 4) pending — needs a live walkthrough per `03-05-PLAN.md`'s 12-step roteiro, plus pushing migration `0022_card_checklist_overrides.sql` to the hosted project (executor's worktree lacked `.env.local`/hosted credentials).
-- Phase 3 wave 9 (03-06, content packages) not yet started — blocked on wave 8's checkpoint per the roadmap's dependency ordering.
-- (Historical items about Phase 1 discuss-phase and P1 batch items are resolved/superseded — removed from this list 2026-08-05.)
+- Phase 3 wave 9 (03-06, content packages: parent card + independently-advancing peças) — next up, unblocked now that wave 8 (03-05) is fully closed.
+- Phase 6 (Admin Oversight Dashboard) has zero plans yet — the last phase in the roadmap without any planning started.
 
 ### Quick Tasks Completed
 

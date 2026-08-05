@@ -124,27 +124,36 @@ Task 4 (checkpoint:human-verify, `gate="blocking"`) has **not** been executed �
 
 None beyond the two deviations documented above.
 
-## User Setup Required
+## Task 4: Live Verification — APROVADO
 
-**Hosted Supabase push is still pending.** The orchestrator (or whoever has hosted credentials) must run, from a checkout/worktree with `.env.local`'s `SUPABASE_ACCESS_TOKEN` set:
+Migration `0022` pushed to the hosted project (`ancfwsgyzoostoidqzqj`) by the orchestrator via `npx supabase db push` (applied exactly one migration; `npx supabase migration list` confirmed local/remote in sync through 0022). Full 12-step walkthrough then run live against `npm run dev` with real PM credentials and a temporary Admin test login (an existing admin account's password was reset with the user's explicit authorization for this one verification, then its `must_change_password` flag was restored to its prior value afterward).
 
-```bash
-npx supabase db push
-```
+Fixture setup: created a test card on client "juju" (the one client already carrying a 3-item checklist template), advanced it to Revisão interna, filled description + assignee, checked 1 of 3 items.
 
-This applies `supabase/migrations/0022_card_checklist_overrides.sql` to the linked hosted project (`ancfwsgyzoostoidqzqj`, per STATE.md). Until this runs, `card_checklist_overrides` does not exist on the hosted database, and the Task 4 human-verify checkpoint (which requires a live `npm run dev` session against real data) cannot be walked through end-to-end against production — it can still be exercised against a local dev server pointed at the local Supabase stack, since the schema is live there.
+1. ✅ Fixture card set up as above (Descrição, Responsável, 1/3 checklist).
+2. ✅ "Cards" appears in the Admin sidebar, opens `/admin/cards`.
+3. ✅ Table lists cards across ALL clients (juju, Juliano, juliano marchesine, Lucas Paiva, ...); "Responsável" column shows the assigned PM's email.
+4. ✅ The fixture card's Checklist column reads "1/3".
+5. ✅ Opened the card — Descrição text present, "Marcado por {PM} em {date}" on the checked item, the two unchecked items visible, all three checkboxes confirmed read-only (`disabled`).
+6. ✅ "Forçar avanço" clicked — AlertDialog title/body matched the UI-SPEC copy byte-for-byte.
+7. ✅ Confirmed — card moved to "Aprovação do cliente", "Avanço forçado" danger badge appeared on its row, and "Histórico de avanços forçados" inside the dialog named the admin (`juliano@backstageed.com`), the timestamp, the forced transition ("Revisão interna para Aprovação do cliente"), and BOTH still-unchecked item labels ("cta presente", "ortografia revisada").
+8. ✅ Reopened the same card — "Forçar avanço" no longer offered (card no longer in `revisao_interna`).
+9. ✅ Logged back as the PM, opened the same card on `/pm/board` — the "Avanço forçado" badge and its expandable note (same who/when/transition/pending-items) are visible there too.
+10. ✅ A second, purpose-built fixture card ("QA 03-05 Fully Checked") advanced to Revisão interna with ALL 3 items checked — the Admin dialog correctly does NOT offer "Forçar avanço" for it (gate genuinely not blocked).
+11. ✅ A third fixture card ("QA 03-05 Drag Regression", 1/3 checked) — attempted a real pointer-based drag out of Revisão interna into Aprovação do cliente on `/pm/board`. The card snapped back and remained in Revisão interna — the override did not open a drag-side bypass; `moveCard`/`evaluateMove`'s existing gate still holds.
+12. ✅ Confirmed `/admin/cards` has no "Criar card" button and (per the plan's own automated grep gate, `grep -c '@dnd-kit' app/admin/cards/card-audit-panel.tsx` = 0) no drag-and-drop surface.
+
+All 3 fixture cards and their checklist/override rows were deleted after verification; the temporarily-reset admin account's `must_change_password` flag was restored to its original value.
+
+**Resume-signal: "approved".** All 12 steps passed without any gap or regression.
 
 ## Next Phase Readiness
 
-- **Tasks 1–3 are complete, committed, and locally verified** (`tsc --noEmit`, `npm run lint`, `npm run build`, `npm test`, `npx supabase test db` all green; `app/pm/board/actions.ts` confirmed byte-unchanged).
-- **Task 4 (`checkpoint:human-verify`, `gate="blocking"`) has NOT been executed.** Per this run's constraints, execution stopped at this gate rather than attempting browser verification. The 12-step walkthrough in `03-05-PLAN.md` (lines 308–320) is ready to run as soon as:
-  1. The hosted push above completes (or the developer verifies against a local dev server backed by the local Supabase stack, where the schema is already live), and
-  2. A fresh agent/session picks up the plan at Task 4 with the developer present to respond to the resume-signal ("approved" or a description of what went wrong).
-- No plan-metadata commit (SUMMARY + STATE + ROADMAP) has been made — per this run's instructions, only this SUMMARY.md is committed by the executor; STATE.md/ROADMAP.md updates are the orchestrator's responsibility after Task 4 is signed off.
+Phase 3 wave 8 (CHK-04, D-11) is fully complete: all 4 tasks done, hosted migration applied and confirmed, live walkthrough approved. ROADMAP.md and STATE.md updated. Wave 9 (03-06, content packages) unblocked and ready to start.
 
 ---
 *Phase: 03-content-production-kanban*
-*Completed: 2026-08-05 (Tasks 1-3 only; Task 4 pending)*
+*Completed: 2026-08-05*
 
 ## Self-Check: PASSED
 
