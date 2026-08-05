@@ -86,8 +86,12 @@ export const config = {
     /*
      * Match all request paths except:
      * - _next/static, _next/image (static assets)
-     * - favicon.ico, and common static file extensions
+     * - favicon.ico, robots.txt (Next.js Metadata Route — must stay
+     *   reachable by anonymous crawlers, or an auth redirect makes Google
+     *   treat it as "no robots.txt found" and default to full crawl
+     *   permission, inverting the intended block-all behavior)
+     * - common static file extensions
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
