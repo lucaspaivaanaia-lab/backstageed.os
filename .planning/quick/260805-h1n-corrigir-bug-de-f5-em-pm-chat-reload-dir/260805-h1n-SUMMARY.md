@@ -43,13 +43,14 @@ No other part of the component was touched: `activeClientId`'s render-time deriv
 - `getLastSelectedClientId()` appears exactly once outside comments in the file
 - `git diff --stat` against the pre-dispatch commit (`3d2aab0`) shows exactly 1 production file changed: `app/pm/chat/chat-panel.tsx`
 
-**Verification (human-check, PENDING):** The plan's `<human-check>` requires live Playwright verification with real credentials, logged in as a PM, covering 4 scenarios:
-1. F5 (`page.reload()`, not `page.goto()`) on `/pm/chat` with an active client — expected to stay on `/pm/chat` with the same client still selected.
-2. Normal in-app navigation via the sidebar "Chat" link — expected unchanged behavior.
-3. Cleared `localStorage` visiting `/pm/chat` — expected redirect to `/pm/clients`.
-4. Stale/out-of-roster id in `localStorage` — expected redirect to `/pm/clients`.
+**Verification (human-check) — APROVADO.** Rodado pela sessão orquestradora via Playwright com credenciais reais de PM, contra o dev server local reiniciado após o merge:
 
-This human-check was **not performed** by this execution run per explicit instruction — browser verification is deferred to a follow-up step. The code change is complete and committed; only the live-verification checkpoint remains open.
+1. F5 real (`page.reload()`) em `/pm/chat` com cliente ativo — permaneceu em `/pm/chat` com o mesmo cliente selecionado (composer do chat presente, sem redirect). **Bug corrigido.**
+2. Navegação in-app via link "Chat" — comportamento inalterado, chegou em `/pm/chat` normalmente.
+3. `localStorage` limpo (`localStorage.removeItem(...)`) + reload em `/pm/chat` — redirecionou corretamente para `/pm/clients` (o redirect legítimo continua funcionando).
+4. Id obsoleto/fora do roster do PM salvo em `localStorage` + navegação para `/pm/chat` — redirecionou corretamente para `/pm/clients` (o fix não quebrou o caso legítimo).
+
+Todos os 4 cenários passaram. `tsc --noEmit`, `lint` e `build` (`next build` local, sanity pré-deploy) também confirmados verdes no `main` já mergeado.
 
 ## Deviations from Plan
 
@@ -65,9 +66,7 @@ None — the change reuses the existing `clients.some(...)` roster-membership ch
 
 ## Outstanding
 
-- **Checkpoint pending:** Task 1's `<human-check>` (4 live Playwright scenarios) has not been run. The plan's `<done>` criteria are only partially met: `tsc`/`lint`/scope-gate pass, but live confirmation is required before this quick task can be considered fully closed.
-- `.planning/STATE.md` Blockers/Concerns entry ("Minor, pre-existing: a hard page reload...") should be removed once the human-check confirms the fix — not done in this run per the constraint to leave `STATE.md` untouched, and because the checkpoint is still open.
-- A new row for this quick task in `.planning/STATE.md`'s "Quick Tasks Completed" table should be added once fully verified.
+None. Checkpoint approved, all 4 scenarios verified live. `.planning/STATE.md`'s Blockers/Concerns entry for this bug removed and a new "Quick Tasks Completed" row added in the same commit as this SUMMARY update.
 
 ## Self-Check
 
