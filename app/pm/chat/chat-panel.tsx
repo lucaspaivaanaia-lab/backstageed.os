@@ -13,8 +13,10 @@ import {
   TriangleAlertIcon,
   MessageSquareIcon,
   InboxIcon,
+  LayoutDashboardIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { toast } from "sonner";
 import { shouldAppendChunk } from "@/lib/chat/stale-response-guard";
 import {
@@ -342,7 +344,7 @@ export function ChatPanel({ clients }: ChatPanelProps) {
 
   return (
     <div className="mx-auto flex h-full min-h-0 max-w-3xl flex-col">
-      <header className="sticky top-0 z-10 border-b bg-background px-6 py-4">
+      <header className="sticky top-0 z-10 flex items-center gap-2 border-b bg-background px-6 py-4">
         <Select
           value={activeClientId ?? undefined}
           onValueChange={handleSwitchClient}
@@ -358,6 +360,14 @@ export function ChatPanel({ clients }: ChatPanelProps) {
             ))}
           </SelectContent>
         </Select>
+        {activeClientId ? (
+          <Button variant="outline" className="shrink-0" asChild>
+            <Link href={`/pm/board?client=${activeClientId}`}>
+              <LayoutDashboardIcon className="size-4" />
+              Produção
+            </Link>
+          </Button>
+        ) : null}
       </header>
 
       <div className="flex-1 overflow-y-auto px-6 py-4">

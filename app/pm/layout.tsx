@@ -1,9 +1,4 @@
-import {
-  UsersIcon,
-  MessageSquareIcon,
-  LayoutDashboardIcon,
-  FileEditIcon,
-} from "lucide-react";
+import { UsersIcon, FileEditIcon } from "lucide-react";
 
 import { AppSidebar } from "@/components/layout/app-sidebar";
 
@@ -21,23 +16,16 @@ export default function PmLayout({
       <AppSidebar
         items={[
           { href: "/pm/clients", label: "Clientes", icon: <UsersIcon /> },
+          // Navigation-flow correction 2026-08-05: "Chat" and "Produção"
+          // removed from the sidebar — each page now carries an explicit
+          // button to the other (board-panel.tsx's "Chat" button,
+          // chat-panel.tsx's "Produção" button), so the sidebar no longer
+          // needs to duplicate that navigation. "Clientes" and "Editar
+          // briefing" remain the only sidebar-level entry points.
           {
-            href: "/pm/chat",
-            label: "Chat",
-            icon: <MessageSquareIcon />,
-            requiresActiveClient: true,
-          },
-          {
-            href: "/pm/board",
-            label: "Produção",
-            icon: <LayoutDashboardIcon />,
-            requiresActiveClient: true,
-          },
-          {
-            // Navigation-flow correction 2026-08-05: href is a placeholder
-            // — AppSidebar rebuilds it as /pm/clients/${activeClientId} at
-            // render time (linksToActiveClientDetail). Briefing editing is
-            // reached from here now, not as the default landing screen.
+            // href is a placeholder — AppSidebar rebuilds it as
+            // /pm/clients/${activeClientId} at render time
+            // (linksToActiveClientDetail).
             href: "/pm/clients",
             label: "Editar briefing",
             icon: <FileEditIcon />,
