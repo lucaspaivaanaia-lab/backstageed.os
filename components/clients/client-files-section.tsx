@@ -17,6 +17,7 @@ import { XIcon, FileTextIcon } from "lucide-react";
 import { ErrorBox } from "@/components/ui/error-box";
 import { DataCard } from "@/components/ui/data-card";
 import { EmptyState } from "@/components/layout/page-shell";
+import { TranscriptUpdateSection } from "@/components/clients/transcript-update-section";
 
 const BRIEFING_AUTOFILLED_TOAST =
   "Briefing preenchido pela IA a partir do arquivo. Revise e clique em \"Salvar briefing\".";
@@ -101,91 +102,94 @@ export function ClientFilesSection({
   }
 
   return (
-    <DataCard
-      title="Arquivos do cliente"
-      description={`Até ${FILE_LIMIT} arquivos (PDF/TXT/MD/DOCX) usados como contexto da IA deste cliente.`}
-    >
-      <div className="flex flex-col gap-4">
-        {files.length > 0 ? (
-          <ul className="flex flex-col gap-2">
-            {files.map((file) => (
-              <li
-                key={file.id}
-                className="flex items-center justify-between gap-3 rounded-md border p-3 text-sm"
-              >
-                <div className="flex items-center gap-2">
-                  <FileTextIcon className="size-4 text-muted-foreground" />
-                  <div className="flex flex-col gap-0.5">
-                    <span className="font-medium">{file.filename}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {file.file_type.toUpperCase()} ·{" "}
-                      {new Date(file.created_at).toLocaleDateString("pt-BR")}
-                    </span>
+    <>
+      <DataCard
+        title="Arquivos do cliente"
+        description={`Até ${FILE_LIMIT} arquivos (PDF/TXT/MD/DOCX) usados como contexto da IA deste cliente.`}
+      >
+        <div className="flex flex-col gap-4">
+          {files.length > 0 ? (
+            <ul className="flex flex-col gap-2">
+              {files.map((file) => (
+                <li
+                  key={file.id}
+                  className="flex items-center justify-between gap-3 rounded-md border p-3 text-sm"
+                >
+                  <div className="flex items-center gap-2">
+                    <FileTextIcon className="size-4 text-muted-foreground" />
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-medium">{file.filename}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {file.file_type.toUpperCase()} ·{" "}
+                        {new Date(file.created_at).toLocaleDateString("pt-BR")}
+                      </span>
+                    </div>
                   </div>
-                </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Remover ${file.filename}`}
+                    disabled={isDeletePending && deletingId === file.id}
+                    onClick={() => handleDelete(file.id)}
+                  >
+                    <XIcon className="size-4" />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyState
+              icon={<FileTextIcon className="size-5" />}
+              title="Nenhum arquivo enviado ainda"
+              description={`Envie até ${FILE_LIMIT} arquivos para alimentar o contexto da IA deste cliente.`}
+            />
+          )}
+
+          {atFileLimit(files.length) ? (
+            <Badge variant="outline" className="w-fit">
+              Limite de {FILE_LIMIT} arquivos atingido — remova um arquivo
+              para enviar outro
+            </Badge>
+          ) : (
+            <form action={handleUpload} className="flex flex-col gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  name="file"
+                  accept=".pdf,.txt,.md,.docx"
+                  disabled={isUploadPending}
+                  className="hidden"
+                  onChange={(event) =>
+                    setSelectedFileName(event.target.files?.[0]?.name ?? null)
+                  }
+                />
                 <Button
                   type="button"
-                  variant="ghost"
-                  size="icon"
-                  aria-label={`Remover ${file.filename}`}
-                  disabled={isDeletePending && deletingId === file.id}
-                  onClick={() => handleDelete(file.id)}
+                  variant="outline"
+                  disabled={isUploadPending}
+                  onClick={() => fileInputRef.current?.click()}
                 >
-                  <XIcon className="size-4" />
+                  Escolher arquivo
                 </Button>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <EmptyState
-            icon={<FileTextIcon className="size-5" />}
-            title="Nenhum arquivo enviado ainda"
-            description={`Envie até ${FILE_LIMIT} arquivos para alimentar o contexto da IA deste cliente.`}
-          />
-        )}
+                <span className="text-sm text-muted-foreground">
+                  {selectedFileName ?? "Nenhum arquivo selecionado"}
+                </span>
+                <Button
+                  type="submit"
+                  disabled={isUploadPending || !selectedFileName}
+                >
+                  {isUploadPending ? "Enviando..." : "Enviar arquivo"}
+                </Button>
+              </div>
+            </form>
+          )}
 
-        {atFileLimit(files.length) ? (
-          <Badge variant="outline" className="w-fit">
-            Limite de {FILE_LIMIT} arquivos atingido — remova um arquivo para
-            enviar outro
-          </Badge>
-        ) : (
-          <form action={handleUpload} className="flex flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <input
-                ref={fileInputRef}
-                type="file"
-                name="file"
-                accept=".pdf,.txt,.md,.docx"
-                disabled={isUploadPending}
-                className="hidden"
-                onChange={(event) =>
-                  setSelectedFileName(event.target.files?.[0]?.name ?? null)
-                }
-              />
-              <Button
-                type="button"
-                variant="outline"
-                disabled={isUploadPending}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                Escolher arquivo
-              </Button>
-              <span className="text-sm text-muted-foreground">
-                {selectedFileName ?? "Nenhum arquivo selecionado"}
-              </span>
-              <Button
-                type="submit"
-                disabled={isUploadPending || !selectedFileName}
-              >
-                {isUploadPending ? "Enviando..." : "Enviar arquivo"}
-              </Button>
-            </div>
-          </form>
-        )}
-
-        {uploadError ? <ErrorBox>{uploadError}</ErrorBox> : null}
-      </div>
-    </DataCard>
+          {uploadError ? <ErrorBox>{uploadError}</ErrorBox> : null}
+        </div>
+      </DataCard>
+      <TranscriptUpdateSection files={files} />
+    </>
   );
 }
