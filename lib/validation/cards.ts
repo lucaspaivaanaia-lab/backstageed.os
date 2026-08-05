@@ -119,3 +119,23 @@ export const forceAdvanceSchema = z.object({
   cardId: z.string().uuid(),
 });
 export type ForceAdvanceInput = z.infer<typeof forceAdvanceSchema>;
+
+/**
+ * createPiece's input (KAN-01 package half, D-01/D-02, plan 03-06,
+ * T-03-31). Deliberately has NO `clientId` field -- a piece's client is
+ * always copied server-side from its re-read parent package row inside
+ * `createPiece`, never taken from the browser (03-RESEARCH.md Security
+ * Domain, the Information Disclosure row). A piece is created title-only;
+ * its description and assignee are set afterwards through the piece's own
+ * card detail Dialog via `updateCardDetails`, so no duplicate creation
+ * surface is introduced.
+ */
+export const createPieceSchema = z.object({
+  parentCardId: z.string().uuid(),
+  title: z
+    .string()
+    .trim()
+    .min(1, { message: "Título obrigatório." })
+    .max(200),
+});
+export type CreatePieceInput = z.infer<typeof createPieceSchema>;

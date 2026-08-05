@@ -37,6 +37,7 @@ import {
   updateCardDetails,
   addAttachment,
   removeAttachment,
+  createPiece,
   validateCardAgainstChecklist,
   type ChecklistValidationItemResult,
 } from "./actions";
@@ -47,6 +48,7 @@ import {
   type AttachDriveLinkInput,
 } from "@/lib/validation/cards";
 import { STAGE_LABELS, STAGE_ORDER, type CardStage } from "@/lib/cards/stages";
+import { packageRollupLabel } from "@/lib/cards/package-rollup";
 import { cardFieldsFromChatText } from "@/lib/cards/chat-import";
 import {
   checklistProgress,
@@ -134,11 +136,17 @@ type BoardPanelProps = {
   clients: BoardClient[];
   activeClientId: string | null;
   columns: BoardColumn[];
-  // Package parents (stage === null) are excluded from every column and
-  // deliberately not rendered yet — plan 03-06's slice (03-RESEARCH.md
-  // Pitfall 4). Accepted here only so page.tsx's shape stays stable across
-  // plans; this panel does not read it.
+  // Package parents (stage === null, per cards_package_has_no_stage) are
+  // excluded from every column and rendered as their own "Pacotes" region
+  // above the board instead (03-RESEARCH.md Pitfall 4, plan 03-06).
   packages: BoardCard[];
+  // Per-package id, the ordered list of its pieces' CURRENT stages — feeds
+  // packageRollupLabel, computed at render time here, never stored (D-02,
+  // 03-RESEARCH.md Anti-Patterns).
+  piecesByPackageId: Record<string, CardStage[]>;
+  // A piece names its package on the board (Task 2, action E) without a
+  // client-side lookup.
+  parentTitleById: Record<string, string>;
   // completed_by id / assignee_id -> display email, resolved server-side
   // (page.tsx) via the privileged resolvePmNames helper — this panel never
   // resolves names itself.
@@ -190,17 +198,21 @@ function formatCompletedAt(iso: string): string {
 }
 
 /**
- * "Criar card" Dialog (KAN-01, single-post path this plan — the package
- * option is added to this same selector by plan 03-06, so cardType is fixed
- * to "single" here rather than exposed as a field). Generalized from a
- * PageTitle-only button (03-02/03-03) into a reusable Dialog three call
- * sites share via an injected `trigger` element (D-14): the top-level
- * PageTitle action and the "no cards yet" EmptyState action (both omit
- * `stage`, so they keep creating in Briefing, unchanged), and a new
- * per-column "+" trigger with `stage` set to that column's own stage. The
- * assignee is deliberately NOT a react-hook-form field — it lives in local
- * state (see `NONE_VALUE` above) and is mapped to `undefined` only at
- * submit time, matching plan 03-01's nullable-FK Select pattern.
+ * "Criar card" Dialog (KAN-01, single AND package paths, plan 03-06).
+ * Generalized from a PageTitle-only button (03-02/03-03) into a reusable
+ * Dialog three call sites share via an injected `trigger` element (D-14):
+ * the top-level PageTitle action and the "no cards yet" EmptyState action
+ * (both omit `stage`, so they keep creating in Briefing by default, and are
+ * the ONLY two call sites that render the "Tipo" (Post único/Pacote)
+ * selector — see `showCardTypeSelector`), and a per-column "+" trigger with
+ * `stage` set to that column's own stage (which always creates a "single"
+ * card, since a package has no stage of its own). When "Pacote" is
+ * selected, the Descrição/Responsável fields are hidden and sent as
+ * `undefined` at submit time, mirroring the package Dialog's own omission
+ * of those sections (D-02). The assignee is deliberately NOT a
+ * react-hook-form field — it lives in local state (see `NONE_VALUE` above)
+ * and is mapped to `undefined` only at submit time, matching plan 03-01's
+ * nullable-FK Select pattern.
  *
  * Quick task 260805-fuu unified the former standalone "Importar do chat"
  * Dialog into a second tab here ("Colar do chat", D-B/D-C/D-D) — a single,
@@ -228,6 +240,13 @@ function CreateCardDialog({
   const [pastedText, setPastedText] = useState("");
 
   const targetStage = stage ?? "briefing";
+  // Task 2, action D (rescope_notice point 1): the card-type selector
+  // belongs ONLY to call sites with no `stage` prop -- the top-level "Criar
+  // card" button and the "no cards yet" EmptyState. The five per-column "+"
+  // triggers always pass a `stage` and therefore always create a "single"
+  // card in that column: a package has no stage of its own, so offering
+  // "Pacote" from a column trigger would be self-contradictory.
+  const showCardTypeSelector = stage === undefined;
 
   const defaultValues: CreateCardInput = {
     clientId: clientId ?? "",
@@ -241,6 +260,9 @@ function CreateCardDialog({
     resolver: zodResolver(createCardSchema),
     defaultValues,
   });
+
+  const cardTypeValue = form.watch("cardType");
+  const isPackageType = showCardTypeSelector && cardTypeValue === "package";
 
   function handleOpenChange(next: boolean) {
     setOpen(next);
@@ -260,11 +282,20 @@ function CreateCardDialog({
 
   function onSubmit(values: CreateCardInput) {
     setServerError(null);
-    const assigneeId = assigneeValue === NONE_VALUE ? undefined : assigneeValue;
+    // A package has no Descrição/Responsável of its own (D-02, mirroring the
+    // package Dialog's own omission of those sections) -- send both as
+    // undefined rather than whatever stale value the now-hidden fields hold.
+    const assigneeId = isPackageType
+      ? undefined
+      : assigneeValue === NONE_VALUE
+        ? undefined
+        : assigneeValue;
+    const description = isPackageType ? undefined : values.description;
     startTransition(async () => {
       const result = await createCard({
         ...values,
         stage: targetStage,
+        description,
         assigneeId,
       });
       if ("error" in result) {
@@ -327,6 +358,33 @@ function CreateCardDialog({
                 onSubmit={form.handleSubmit(onSubmit)}
                 className="flex flex-col gap-4"
               >
+                {showCardTypeSelector ? (
+                  <FormField
+                    control={form.control}
+                    name="cardType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tipo</FormLabel>
+                        <FormControl>
+                          <Select
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            disabled={isPending}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="single">Post único</SelectItem>
+                              <SelectItem value="package">Pacote</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ) : null}
                 <FormField
                   control={form.control}
                   name="title"
@@ -340,49 +398,53 @@ function CreateCardDialog({
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Conteúdo do post</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          {...field}
-                          rows={4}
-                          placeholder="O texto do post que será revisado e publicado."
-                          disabled={isPending}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="flex flex-col gap-1">
-                  <Label>Responsável</Label>
-                  <Select
-                    value={assigneeValue}
-                    onValueChange={setAssigneeValue}
-                    disabled={isPending}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Sem responsável" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={NONE_VALUE}>Sem responsável</SelectItem>
-                      {pmRoster.map((pm) => (
-                        <SelectItem key={pm.id} value={pm.id}>
-                          {pm.email}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {pmRoster.length === 0 ? (
-                    <span className="text-meta text-muted-foreground">
-                      Nenhum PM atribuído a este cliente.
-                    </span>
-                  ) : null}
-                </div>
+                {!isPackageType ? (
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Conteúdo do post</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            {...field}
+                            rows={4}
+                            placeholder="O texto do post que será revisado e publicado."
+                            disabled={isPending}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ) : null}
+                {!isPackageType ? (
+                  <div className="flex flex-col gap-1">
+                    <Label>Responsável</Label>
+                    <Select
+                      value={assigneeValue}
+                      onValueChange={setAssigneeValue}
+                      disabled={isPending}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Sem responsável" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={NONE_VALUE}>Sem responsável</SelectItem>
+                        {pmRoster.map((pm) => (
+                          <SelectItem key={pm.id} value={pm.id}>
+                            {pm.email}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {pmRoster.length === 0 ? (
+                      <span className="text-meta text-muted-foreground">
+                        Nenhum PM atribuído a este cliente.
+                      </span>
+                    ) : null}
+                  </div>
+                ) : null}
                 {serverError ? <ErrorBox>{serverError}</ErrorBox> : null}
                 <Button type="submit" disabled={isPending} className="w-fit">
                   {isPending ? "Criando..." : "Criar card"}
@@ -684,16 +746,20 @@ function AttachDriveLinkForm({ cardId }: { cardId: string }) {
 }
 
 /**
- * A single Kanban card + its detail Dialog (KAN-02, D-05, CHK-03). "Avançar"
- * is a plain Server Action call inside useTransition — no client-side
- * stage computation, `nextStage` runs only on the server
- * (app/pm/board/actions.ts). Server errors render verbatim inside
- * ErrorBox, never paraphrased. The checklist section and the "Avançar"
- * disabled attribute derive entirely from the server-supplied
- * `card.checklistItems` via the shared `checklistProgress`/`isGateBlocked`
- * predicates — never recomputed from local-only state.
+ * The card detail Dialog's CONTENT (KAN-02, D-05, CHK-03) — extracted from
+ * the trigger-carrying card so it can be reused by two different Dialog
+ * shells (plan 03-06, Task 2 action C): `BoardCardItem`'s own uncontrolled
+ * Dialog for a card sitting in a stage column, and `PieceDetailDialog`'s
+ * externally-controlled Dialog opened from a piece row inside the package
+ * Dialog. "Avançar" is a plain Server Action call inside useTransition — no
+ * client-side stage computation, `nextStage` runs only on the server
+ * (app/pm/board/actions.ts). Server errors render verbatim inside ErrorBox,
+ * never paraphrased. The checklist section and the "Avançar" disabled
+ * attribute derive entirely from the server-supplied `card.checklistItems`
+ * via the shared `checklistProgress`/`isGateBlocked` predicates — never
+ * recomputed from local-only state.
  */
-function BoardCardItem({
+function CardDetailDialogBody({
   card,
   pmNames,
   pmRoster,
@@ -708,7 +774,6 @@ function BoardCardItem({
   const [error, setError] = useState<string | null>(null);
   const isLastStage = card.stage === "agendamento";
 
-  const progress = checklistProgress(card.checklistItems);
   const gateBlocked = card.stage === "revisao_interna" && isGateBlocked(card.checklistItems);
   const showChecklistSection =
     card.stage !== null &&
@@ -792,6 +857,180 @@ function BoardCardItem({
     });
   }
 
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle>{card.title}</DialogTitle>
+      </DialogHeader>
+      <div className="flex flex-col gap-4">
+        <StatusBadge tone="neutral">
+          {card.stage ? STAGE_LABELS[card.stage] : "—"}
+        </StatusBadge>
+
+        {aiValidation ? (
+          <div className="flex flex-col gap-2 rounded-md border p-3">
+            <span className="text-body font-medium">
+              Validação da IA: {aiValidation.filter((r) => r.passed).length}/
+              {aiValidation.length} itens aprovados
+            </span>
+            {aiValidation
+              .filter((r) => !r.passed)
+              .map((r) => (
+                <div key={r.itemId} className="flex flex-col gap-0.5">
+                  <span className="text-body">Não passou: {r.label}</span>
+                  <span className="text-meta text-muted-foreground">
+                    {r.justification}
+                  </span>
+                </div>
+              ))}
+          </div>
+        ) : null}
+
+        <div className="flex flex-col gap-2">
+          <SectionTitle>Descrição</SectionTitle>
+          <Textarea
+            value={draftDescription}
+            onChange={(event) => setDraftDescription(event.target.value)}
+            rows={5}
+            placeholder="Sem descrição."
+            disabled={isSavingDetails}
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <SectionTitle>Responsável</SectionTitle>
+          <Select
+            value={draftAssignee}
+            onValueChange={setDraftAssignee}
+            disabled={isSavingDetails}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Sem responsável" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NONE_VALUE}>Sem responsável</SelectItem>
+              {assigneeOptions.map((pm) => (
+                <SelectItem key={pm.id} value={pm.id}>
+                  {pm.email}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {pmRoster.length === 0 ? (
+            <span className="text-meta text-muted-foreground">
+              Nenhum PM atribuído a este cliente.
+            </span>
+          ) : null}
+          <Button
+            type="button"
+            onClick={handleSaveDetails}
+            disabled={isSavingDetails || !hasDetailChanges}
+            className="w-fit"
+          >
+            {isSavingDetails ? "Salvando..." : "Salvar alterações"}
+          </Button>
+          {detailsError ? <ErrorBox>{detailsError}</ErrorBox> : null}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <SectionTitle>Anexos</SectionTitle>
+          {card.attachments.length === 0 ? (
+            <EmptyState
+              title="Nenhum anexo"
+              description="Cole um link do Google Drive abaixo para anexar imagem, vídeo ou PDF a este card."
+            />
+          ) : (
+            <div className="flex flex-col gap-2">
+              {card.attachments.map((attachment) => (
+                <AttachmentRow key={attachment.id} attachment={attachment} />
+              ))}
+            </div>
+          )}
+          <AttachDriveLinkForm cardId={card.id} />
+        </div>
+
+        {showChecklistSection ? (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-2">
+              <SectionTitle>Checklist de revisão</SectionTitle>
+              {card.checklistItems.length > 0 ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRevalidate}
+                  disabled={isValidating}
+                >
+                  {isValidating ? "Revalidando..." : "Revalidar com IA"}
+                </Button>
+              ) : null}
+            </div>
+            <OverrideHistory overrides={card.overrides} pmNames={pmNames} />
+            {card.checklistItems.length === 0 && !hasChecklistTemplate ? (
+              <EmptyState
+                title="Nenhum checklist configurado"
+                description="Este cliente ainda não tem um checklist de revisão atribuído. Peça a um Admin para configurar um em Checklists."
+              />
+            ) : (
+              <div className="flex flex-col gap-2">
+                {card.checklistItems.map((item) => (
+                  <ChecklistItemRow
+                    key={item.id}
+                    item={item}
+                    pmNames={pmNames}
+                    interactive={isInRevisaoInterna}
+                  />
+                ))}
+              </div>
+            )}
+            {validateError ? <ErrorBox>{validateError}</ErrorBox> : null}
+          </div>
+        ) : null}
+      </div>
+
+      {gateBlocked ? (
+        <span className="text-meta text-muted-foreground">
+          {GATE_BLOCKED_MESSAGE}
+        </span>
+      ) : null}
+      {error ? <ErrorBox>{error}</ErrorBox> : null}
+      <DialogFooter>
+        <Button
+          type="button"
+          disabled={isLastStage || isPending || gateBlocked}
+          onClick={handleAdvance}
+        >
+          {isPending ? "Avançando..." : "Avançar"}
+        </Button>
+      </DialogFooter>
+    </>
+  );
+}
+
+/**
+ * A single Kanban card (KAN-02, D-05, CHK-03) — the `DataCard` trigger plus
+ * its own uncontrolled Dialog wrapping `CardDetailDialogBody`. Pieces append
+ * one more `meta` segment naming their parent package (plan 03-06, Task 2
+ * action E) — pushed onto the existing segments array rather than
+ * rewriting the composition, so a piece's meta can read e.g. "Criado em
+ * 31/07/2026 · Responsável: pm@x.com · 2 anexos · Pacote: Campanha de
+ * lançamento".
+ */
+function BoardCardItem({
+  card,
+  pmNames,
+  pmRoster,
+  hasChecklistTemplate,
+  parentTitleById,
+}: {
+  card: BoardCard;
+  pmNames: Record<string, string>;
+  pmRoster: BoardPmRosterEntry[];
+  hasChecklistTemplate: boolean;
+  parentTitleById: Record<string, string>;
+}) {
+  const progress = checklistProgress(card.checklistItems);
+
   const metaSegments = [`Criado em ${formatCreatedAt(card.created_at)}`];
   if (card.assignee_id) {
     metaSegments.push(
@@ -802,6 +1041,12 @@ function BoardCardItem({
     metaSegments.push("1 anexo");
   } else if (card.attachments.length > 1) {
     metaSegments.push(`${card.attachments.length} anexos`);
+  }
+  if (card.card_type === "piece" && card.parent_card_id) {
+    const parentTitle = parentTitleById[card.parent_card_id];
+    if (parentTitle) {
+      metaSegments.push(`Pacote: ${parentTitle}`);
+    }
   }
   const cardMeta = metaSegments.join(" · ");
 
@@ -829,152 +1074,160 @@ function BoardCardItem({
         </div>
       </DialogTrigger>
       <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{card.title}</DialogTitle>
-        </DialogHeader>
-        <div className="flex flex-col gap-4">
-          <StatusBadge tone="neutral">
-            {card.stage ? STAGE_LABELS[card.stage] : "—"}
-          </StatusBadge>
-
-          {aiValidation ? (
-            <div className="flex flex-col gap-2 rounded-md border p-3">
-              <span className="text-body font-medium">
-                Validação da IA: {aiValidation.filter((r) => r.passed).length}/
-                {aiValidation.length} itens aprovados
-              </span>
-              {aiValidation
-                .filter((r) => !r.passed)
-                .map((r) => (
-                  <div key={r.itemId} className="flex flex-col gap-0.5">
-                    <span className="text-body">Não passou: {r.label}</span>
-                    <span className="text-meta text-muted-foreground">
-                      {r.justification}
-                    </span>
-                  </div>
-                ))}
-            </div>
-          ) : null}
-
-          <div className="flex flex-col gap-2">
-            <SectionTitle>Descrição</SectionTitle>
-            <Textarea
-              value={draftDescription}
-              onChange={(event) => setDraftDescription(event.target.value)}
-              rows={5}
-              placeholder="Sem descrição."
-              disabled={isSavingDetails}
-            />
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <SectionTitle>Responsável</SectionTitle>
-            <Select
-              value={draftAssignee}
-              onValueChange={setDraftAssignee}
-              disabled={isSavingDetails}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Sem responsável" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NONE_VALUE}>Sem responsável</SelectItem>
-                {assigneeOptions.map((pm) => (
-                  <SelectItem key={pm.id} value={pm.id}>
-                    {pm.email}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {pmRoster.length === 0 ? (
-              <span className="text-meta text-muted-foreground">
-                Nenhum PM atribuído a este cliente.
-              </span>
-            ) : null}
-            <Button
-              type="button"
-              onClick={handleSaveDetails}
-              disabled={isSavingDetails || !hasDetailChanges}
-              className="w-fit"
-            >
-              {isSavingDetails ? "Salvando..." : "Salvar alterações"}
-            </Button>
-            {detailsError ? <ErrorBox>{detailsError}</ErrorBox> : null}
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <SectionTitle>Anexos</SectionTitle>
-            {card.attachments.length === 0 ? (
-              <EmptyState
-                title="Nenhum anexo"
-                description="Cole um link do Google Drive abaixo para anexar imagem, vídeo ou PDF a este card."
-              />
-            ) : (
-              <div className="flex flex-col gap-2">
-                {card.attachments.map((attachment) => (
-                  <AttachmentRow key={attachment.id} attachment={attachment} />
-                ))}
-              </div>
-            )}
-            <AttachDriveLinkForm cardId={card.id} />
-          </div>
-
-          {showChecklistSection ? (
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between gap-2">
-                <SectionTitle>Checklist de revisão</SectionTitle>
-                {card.checklistItems.length > 0 ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleRevalidate}
-                    disabled={isValidating}
-                  >
-                    {isValidating ? "Revalidando..." : "Revalidar com IA"}
-                  </Button>
-                ) : null}
-              </div>
-              <OverrideHistory overrides={card.overrides} pmNames={pmNames} />
-              {card.checklistItems.length === 0 && !hasChecklistTemplate ? (
-                <EmptyState
-                  title="Nenhum checklist configurado"
-                  description="Este cliente ainda não tem um checklist de revisão atribuído. Peça a um Admin para configurar um em Checklists."
-                />
-              ) : (
-                <div className="flex flex-col gap-2">
-                  {card.checklistItems.map((item) => (
-                    <ChecklistItemRow
-                      key={item.id}
-                      item={item}
-                      pmNames={pmNames}
-                      interactive={isInRevisaoInterna}
-                    />
-                  ))}
-                </div>
-              )}
-              {validateError ? <ErrorBox>{validateError}</ErrorBox> : null}
-            </div>
-          ) : null}
-        </div>
-
-        {gateBlocked ? (
-          <span className="text-meta text-muted-foreground">
-            {GATE_BLOCKED_MESSAGE}
-          </span>
-        ) : null}
-        {error ? <ErrorBox>{error}</ErrorBox> : null}
-        <DialogFooter>
-          <Button
-            type="button"
-            disabled={isLastStage || isPending || gateBlocked}
-            onClick={handleAdvance}
-          >
-            {isPending ? "Avançando..." : "Avançar"}
-          </Button>
-        </DialogFooter>
+        <CardDetailDialogBody
+          card={card}
+          pmNames={pmNames}
+          pmRoster={pmRoster}
+          hasChecklistTemplate={hasChecklistTemplate}
+        />
       </DialogContent>
     </Dialog>
+  );
+}
+
+/**
+ * The piece detail Dialog opened from a piece row inside the package Dialog
+ * (plan 03-06, Task 2 action C) — an EXTERNALLY-controlled Dialog (`card`
+ * null closes it) wrapping the exact same `CardDetailDialogBody` a
+ * standalone card's own Dialog uses, so Descrição/Responsável/Anexos/
+ * Checklist and the "Avançar" gate all behave identically for a piece
+ * opened this way as for a piece opened directly from its stage column.
+ */
+function PieceDetailDialog({
+  card,
+  onOpenChange,
+  pmNames,
+  pmRoster,
+  hasChecklistTemplate,
+}: {
+  card: BoardCard | null;
+  onOpenChange: (open: boolean) => void;
+  pmNames: Record<string, string>;
+  pmRoster: BoardPmRosterEntry[];
+  hasChecklistTemplate: boolean;
+}) {
+  return (
+    <Dialog open={card !== null} onOpenChange={onOpenChange}>
+      <DialogContent>
+        {card ? (
+          <CardDetailDialogBody
+            card={card}
+            pmNames={pmNames}
+            pmRoster={pmRoster}
+            hasChecklistTemplate={hasChecklistTemplate}
+          />
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/**
+ * The "Pacotes" region's per-package row (plan 03-06, Task 2 actions B/C,
+ * D-01/D-02, T-03-33b). Rendered OUTSIDE the drag-and-drop context and
+ * wraps neither of the column board's own draggable/droppable wrappers — a
+ * package has `stage = null` (cards_package_has_no_stage), so it has no
+ * legal drop target and `moveCard` would reject it; making it draggable
+ * would only produce dead gestures. The rollup badge is computed at render
+ * time by the pure `packageRollupLabel` over `pieceStages`, never stored
+ * (D-02, 03-RESEARCH.md Anti-Patterns). The package Dialog itself renders
+ * none of the four sections a full card detail Dialog has (D-02/A3) — a
+ * package is an organisational container whose per-piece children carry the
+ * real content and ownership; clicking a piece row closes this Dialog and hands
+ * off to `onOpenPieceDetail`, which opens that piece's own full card detail
+ * Dialog (the same one standalone cards use).
+ */
+function PackageRow({
+  pkg,
+  pieceStages,
+  pieces,
+  onOpenPieceDetail,
+}: {
+  pkg: BoardCard;
+  pieceStages: CardStage[];
+  pieces: BoardCard[];
+  onOpenPieceDetail: (pieceId: string) => void;
+}) {
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function handleAddPiece() {
+    setServerError(null);
+    startTransition(async () => {
+      const result = await createPiece({ parentCardId: pkg.id, title });
+      if ("error" in result) {
+        setServerError(result.error);
+        return;
+      }
+      setTitle("");
+    });
+  }
+
+  function handlePieceClick(pieceId: string) {
+    setDialogOpen(false);
+    onOpenPieceDetail(pieceId);
+  }
+
+  return (
+    <div className="flex items-center justify-between gap-4 rounded-md border p-4">
+      <div className="flex flex-col gap-1">
+        <span className="text-body font-medium">{pkg.title}</span>
+        <StatusBadge tone="info">{packageRollupLabel(pieceStages)}</StatusBadge>
+      </div>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogTrigger asChild>
+          <Button type="button" variant="outline">
+            Ver peças
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{pkg.title}</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-2">
+            {pieces.length === 0 ? (
+              <EmptyState
+                title="Nenhuma peça"
+                description="Adicione a primeira peça deste pacote abaixo."
+              />
+            ) : (
+              pieces.map((piece) => (
+                <button
+                  key={piece.id}
+                  type="button"
+                  onClick={() => handlePieceClick(piece.id)}
+                  className="flex items-center justify-between gap-2 rounded-md border p-2 text-left"
+                >
+                  <span className="text-body">{piece.title}</span>
+                  <StatusBadge tone="neutral">
+                    {piece.stage ? STAGE_LABELS[piece.stage] : "—"}
+                  </StatusBadge>
+                </button>
+              ))
+            )}
+          </div>
+          <DialogFooter className="flex-col items-stretch gap-2 sm:flex-col">
+            <Input
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              placeholder="Título da peça"
+              disabled={isPending}
+            />
+            {serverError ? <ErrorBox>{serverError}</ErrorBox> : null}
+            <Button
+              type="button"
+              onClick={handleAddPiece}
+              disabled={isPending || title.trim().length === 0}
+              className="w-fit"
+            >
+              {isPending ? "Adicionando..." : "Adicionar peça"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
 
@@ -1013,6 +1266,9 @@ export function BoardPanel({
   clients,
   activeClientId,
   columns,
+  packages,
+  piecesByPackageId,
+  parentTitleById,
   pmNames,
   pmRoster,
   hasChecklistTemplate,
@@ -1021,6 +1277,12 @@ export function BoardPanel({
 
   const activeClient = clients.find((c) => c.id === activeClientId) ?? null;
   const hasCards = columns.some((column) => column.cards.length > 0);
+
+  // Plan 03-06 (KAN-01 package half): which piece's detail Dialog is
+  // currently open because it was opened from a package's "Ver peças"
+  // dialog (Task 2, action C) rather than from its own stage-column card.
+  // `null` means none — `PieceDetailDialog` treats a null card as closed.
+  const [openPieceId, setOpenPieceId] = useState<string | null>(null);
 
   // Optimistic layer only — removes the round-trip flicker while `moveCard`
   // is in flight. `moveCard`'s own `revalidatePath("/pm/board")` is the
@@ -1048,6 +1310,11 @@ export function BoardPanel({
       });
     }
   );
+
+  // A piece opened from a package dialog is found the same way a dragged
+  // card is — across every column's `cards` array, since a piece lives in
+  // its own stage column exactly like a standalone card.
+  const openPieceCard = openPieceId ? findCard(optimisticColumns, openPieceId) : null;
 
   const sensors = useSensors(
     // 8px activation distance lets a plain click on the card body still
@@ -1226,6 +1493,33 @@ export function BoardPanel({
         ) : null}
       </div>
 
+      {activeClient && packages.length > 0 ? (
+        <div className="mb-8 flex flex-col gap-4">
+          <SectionTitle>Pacotes</SectionTitle>
+          {packages.map((pkg) => (
+            <PackageRow
+              key={pkg.id}
+              pkg={pkg}
+              pieceStages={piecesByPackageId[pkg.id] ?? []}
+              pieces={optimisticColumns
+                .flatMap((column) => column.cards)
+                .filter((card) => card.parent_card_id === pkg.id)}
+              onOpenPieceDetail={setOpenPieceId}
+            />
+          ))}
+        </div>
+      ) : null}
+
+      <PieceDetailDialog
+        card={openPieceCard}
+        onOpenChange={(next) => {
+          if (!next) setOpenPieceId(null);
+        }}
+        pmNames={pmNames}
+        pmRoster={pmRoster}
+        hasChecklistTemplate={hasChecklistTemplate}
+      />
+
       {!activeClient ? (
         <EmptyState
           title="Nenhum cliente selecionado"
@@ -1302,6 +1596,7 @@ export function BoardPanel({
                         pmNames={pmNames}
                         pmRoster={pmRoster}
                         hasChecklistTemplate={hasChecklistTemplate}
+                        parentTitleById={parentTitleById}
                       />
                     </DraggableCard>
                   ))}

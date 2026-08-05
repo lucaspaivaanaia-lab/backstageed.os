@@ -199,12 +199,42 @@ export default async function PmBoardPage({
     attachments: attachmentsByCardId.get(card.id) ?? [],
     overrides: overridesByCardId.get(card.id) ?? [],
   }));
-  const packages = allCards.filter((c) => c.stage === null);
+
+  // Plan 03-06 (KAN-01 package half, D-01/D-02): split into three groups by
+  // `card_type` server-side. `packages` (stage === null per
+  // cards_package_has_no_stage) never populate a stage column — a package
+  // row has no stage of its own and would either crash the stage filter or
+  // silently vanish (03-RESEARCH.md Pitfall 4). `pieces` and `standalone`
+  // ("single") cards both populate the five stage columns exactly like
+  // before this plan, since only a null stage is excluded below.
+  const packages = allCards.filter(
+    (c) => c.card_type === "package" && c.stage === null
+  );
+  const pieces = allCards.filter((c) => c.card_type === "piece");
 
   const columns: BoardColumn[] = STAGE_ORDER.map((stage) => ({
     stage,
     cards: allCards.filter((c) => c.stage === stage),
   }));
+
+  // Per-package, the ordered list of its pieces' CURRENT stages — feeds
+  // `packageRollupLabel`, computed at render time in the panel, never
+  // stored (D-02, 03-RESEARCH.md Anti-Patterns).
+  const piecesByPackageId: Record<string, CardStage[]> = {};
+  for (const piece of pieces) {
+    if (!piece.parent_card_id || !piece.stage) continue;
+    piecesByPackageId[piece.parent_card_id] = [
+      ...(piecesByPackageId[piece.parent_card_id] ?? []),
+      piece.stage,
+    ];
+  }
+
+  // A piece names its package on the board (Task 2, action E) without a
+  // client-side lookup.
+  const parentTitleById: Record<string, string> = {};
+  for (const pkg of packages) {
+    parentTitleById[pkg.id] = pkg.title;
+  }
 
   return (
     <BoardPanel
@@ -212,6 +242,8 @@ export default async function PmBoardPage({
       activeClientId={clientId ?? null}
       columns={columns}
       packages={packages}
+      piecesByPackageId={piecesByPackageId}
+      parentTitleById={parentTitleById}
       pmNames={pmNames}
       pmRoster={pmRoster}
       hasChecklistTemplate={Boolean(activeClient?.checklist_template_id)}
