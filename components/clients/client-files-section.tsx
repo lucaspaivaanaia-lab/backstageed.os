@@ -11,6 +11,11 @@ import {
 import { autofillBriefingFromFiles } from "@/lib/actions/clients";
 import type { BriefingInput } from "@/lib/validation/clients";
 import { FILE_LIMIT, atFileLimit } from "@/lib/client-files/limit";
+import {
+  splitBySlots,
+  summarizeUploadOutcomes,
+  type UploadOutcome,
+} from "@/lib/client-files/multi-upload";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { XIcon, FileTextIcon } from "lucide-react";
@@ -55,34 +60,79 @@ export function ClientFilesSection({
   // fileInputRef.current.click() from a real shadcn Button is the
   // standard robust pattern — the button's own click handling is what
   // fires, never the browser's own (possibly finicky) rendering of the
-  // native control. `selectedFileName` replaces the native "No file
-  // chosen" label this hides.
-  const [selectedFileName, setSelectedFileName] = useState<string | null>(
-    null
-  );
+  // native control. `selectedNames` replaces the native "No file chosen"
+  // label this hides, and (260805-dkr) now holds every name from a
+  // `multiple`-file selection, not just one.
+  const [selectedNames, setSelectedNames] = useState<string[]>([]);
+  // Batch-upload progress (260805-dkr): non-null only while more than one
+  // file is being sent, so the submit button can show "Enviando N de M...".
+  const [progress, setProgress] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
 
   function handleUpload(formData: FormData) {
     setUploadError(null);
     startUploadTransition(async () => {
-      const result = await uploadClientFile(clientId, formData);
-      if ("error" in result) {
-        setUploadError(result.error);
+      const picked = formData
+        .getAll("file")
+        .filter((value): value is File => value instanceof File && value.size > 0);
+
+      if (picked.length === 0) {
+        setUploadError("Selecione ao menos um arquivo para enviar.");
         return;
       }
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      setSelectedFileName(null);
-      const updated = await listClientFiles(clientId);
-      setFiles(updated);
 
-      // P0 pivot 2026-08-04, item 5: auto-fill the briefing right after a
-      // successful upload. A failure here is silent (no ErrorBox) — the
-      // upload itself already succeeded, and auto-fill is a convenience,
-      // not a required step; the PM can still fill the briefing by hand.
-      const autofill = await autofillBriefingFromFiles(clientId);
-      if ("success" in autofill) {
-        onBriefingAutofilled?.(autofill.briefing);
-        toast.success(BRIEFING_AUTOFILLED_TOAST);
+      const { accepted, skipped } = splitBySlots(picked, files.length);
+
+      // Loop sequencial obrigatório — NUNCA disparar os uploads em
+      // paralelo (nada de aguardar todas as promises de uma vez):
+      // uploadClientFile faz read-then-insert do contador de arquivos para
+      // checar atFileLimit no banco, então chamadas concorrentes poderiam
+      // todas ler o mesmo count pré-insert e ultrapassar o teto de
+      // FILE_LIMIT (T-dkr-02).
+      const outcomes: UploadOutcome[] = [];
+      for (let i = 0; i < accepted.length; i++) {
+        const file = accepted[i];
+        setProgress({ done: i, total: accepted.length });
+        const fd = new FormData();
+        fd.append("file", file);
+        const result = await uploadClientFile(clientId, fd);
+        outcomes.push(
+          "error" in result
+            ? { filename: file.name, error: result.error }
+            : { filename: file.name }
+        );
+        setProgress({ done: i + 1, total: accepted.length });
       }
+
+      const { successCount, message } = summarizeUploadOutcomes(
+        outcomes,
+        skipped.map((file) => file.name)
+      );
+      setUploadError(message);
+
+      if (successCount > 0) {
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        setSelectedNames([]);
+        setFiles(await listClientFiles(clientId));
+
+        // P0 pivot 2026-08-04, item 5: auto-fill the briefing once per
+        // batch (never once per file — 260805-dkr), right after at least
+        // one file in the batch succeeds. A failure here is silent (no
+        // ErrorBox) — the upload itself already succeeded, and auto-fill
+        // is a convenience, not a required step; the PM can still fill
+        // the briefing by hand.
+        const autofill = await autofillBriefingFromFiles(clientId);
+        if ("success" in autofill) {
+          onBriefingAutofilled?.(autofill.briefing);
+          toast.success(BRIEFING_AUTOFILLED_TOAST);
+        }
+      }
+      // successCount === 0: keep the current selection so the user can
+      // retry without re-picking every file.
+
+      setProgress(null);
     });
   }
 
@@ -159,10 +209,13 @@ export function ClientFilesSection({
                   type="file"
                   name="file"
                   accept=".pdf,.txt,.md,.docx"
+                  multiple
                   disabled={isUploadPending}
                   className="hidden"
                   onChange={(event) =>
-                    setSelectedFileName(event.target.files?.[0]?.name ?? null)
+                    setSelectedNames(
+                      Array.from(event.target.files ?? []).map((f) => f.name)
+                    )
                   }
                 />
                 <Button
@@ -171,16 +224,24 @@ export function ClientFilesSection({
                   disabled={isUploadPending}
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  Escolher arquivo
+                  Escolher arquivo(s)
                 </Button>
                 <span className="text-sm text-muted-foreground">
-                  {selectedFileName ?? "Nenhum arquivo selecionado"}
+                  {selectedNames.length === 0
+                    ? "Nenhum arquivo selecionado"
+                    : selectedNames.length === 1
+                      ? selectedNames[0]
+                      : `${selectedNames.length} arquivos selecionados`}
                 </span>
                 <Button
                   type="submit"
-                  disabled={isUploadPending || !selectedFileName}
+                  disabled={isUploadPending || selectedNames.length === 0}
                 >
-                  {isUploadPending ? "Enviando..." : "Enviar arquivo"}
+                  {isUploadPending
+                    ? progress && progress.total > 1
+                      ? `Enviando ${progress.done + 1} de ${progress.total}...`
+                      : "Enviando..."
+                    : "Enviar arquivo(s)"}
                 </Button>
               </div>
             </form>
