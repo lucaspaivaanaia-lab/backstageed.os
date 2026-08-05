@@ -16,8 +16,18 @@ export default function PmLayout({
       <AppSidebar
         items={[
           { href: "/pm/clients", label: "Clientes", icon: <UsersIcon /> },
-          { href: "/pm/chat", label: "Chat", icon: <MessageSquareIcon /> },
-          { href: "/pm/board", label: "Produção", icon: <LayoutDashboardIcon /> },
+          {
+            href: "/pm/chat",
+            label: "Chat",
+            icon: <MessageSquareIcon />,
+            requiresActiveClient: true,
+          },
+          {
+            href: "/pm/board",
+            label: "Produção",
+            icon: <LayoutDashboardIcon />,
+            requiresActiveClient: true,
+          },
         ]}
       />
       <main className="flex min-w-0 flex-1 flex-col overflow-y-auto">

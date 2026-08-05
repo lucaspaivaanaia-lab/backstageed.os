@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PlusIcon, UsersIcon, ChevronRightIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { resolvePmNames } from "@/lib/actions/clients";
+import { ClientListLink } from "@/components/clients/client-list-link";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
@@ -111,12 +112,13 @@ export default async function PmClientsPage() {
               return (
                 <TableRow key={client.id}>
                   <TableCell>
-                    <Link
+                    <ClientListLink
+                      clientId={client.id}
                       href={`/pm/clients/${client.id}`}
                       className="flex items-center gap-2 font-medium hover:text-primary"
                     >
                       {client.name}
-                    </Link>
+                    </ClientListLink>
                   </TableCell>
                   <TableCell>{assignedPmEmails || "—"}</TableCell>
                   <TableCell>
@@ -127,9 +129,12 @@ export default async function PmClientsPage() {
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Link href={`/pm/clients/${client.id}`}>
+                    <ClientListLink
+                      clientId={client.id}
+                      href={`/pm/clients/${client.id}`}
+                    >
                       <ChevronRightIcon className="size-4 text-muted-foreground" />
-                    </Link>
+                    </ClientListLink>
                   </TableCell>
                 </TableRow>
               );

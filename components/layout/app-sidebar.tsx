@@ -3,16 +3,27 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSyncExternalStore } from "react";
 import { LogOutIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/lib/actions/auth";
+import {
+  getLastSelectedClientId,
+  subscribeLastSelectedClientId,
+  getLastSelectedClientIdServerSnapshot,
+} from "@/lib/client-selection";
 
 export type SidebarNavItem = {
   href: string;
   label: string;
   icon: ReactNode;
+  // P2 pivot 2026-08-04 (client-scoped navigation): when true, this item
+  // is hidden from the sidebar until a client has been selected at least
+  // once (lib/client-selection.ts). Only /pm/chat and /pm/board set this —
+  // Admin's nav items never do, since Admin has no client-scoped screens.
+  requiresActiveClient?: boolean;
 };
 
 type AppSidebarProps = {
@@ -25,9 +36,26 @@ type AppSidebarProps = {
  * — no expand/shrink interaction, no saved-preference persistence, no
  * hamburger). Highlights the active route and exposes the logout Server
  * Action at the footer — same mechanics as before, just repositioned.
+ *
+ * `useSyncExternalStore` (not a setState-in-effect — this project's
+ * react-hooks/set-state-in-effect lint rule blocks that pattern, and this
+ * hook is also the hydration-safe way to read localStorage) drives which
+ * items with `requiresActiveClient` actually render. A PM with no active
+ * client yet sees only the items without that flag (e.g. "Clientes");
+ * once a client is selected — from the client list (ClientListLink) or
+ * from Chat/Produção's own switcher — those items appear too, on every
+ * /pm/* page, without a reload.
  */
 export function AppSidebar({ items }: AppSidebarProps) {
   const pathname = usePathname();
+  const activeClientId = useSyncExternalStore(
+    subscribeLastSelectedClientId,
+    getLastSelectedClientId,
+    getLastSelectedClientIdServerSnapshot
+  );
+  const visibleItems = items.filter(
+    (item) => !item.requiresActiveClient || Boolean(activeClientId)
+  );
 
   return (
     <aside className="flex h-screen w-sidebar shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
@@ -37,7 +65,7 @@ export function AppSidebar({ items }: AppSidebarProps) {
         </span>
       </div>
       <nav className="flex flex-1 flex-col gap-1 px-3">
-        {items.map((item) => {
+        {visibleItems.map((item) => {
           const isActive =
             pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (

@@ -1117,12 +1117,21 @@ export function BoardPanel({
   // ignored). A router.replace() is a navigation call, not a React
   // setState, so this effect doesn't trip react-hooks/set-state-in-effect
   // the way calling a state setter directly here would.
+  //
+  // Client-scoped navigation (same pivot): if there's STILL no usable
+  // client after that fallback — first-ever visit, cleared localStorage,
+  // or a stale id that no longer matches this PM's roster — redirect to
+  // the client list instead of rendering an empty board. Produção should
+  // never be reachable with no client context, matching the sidebar only
+  // exposing this link once a client has been selected at least once.
   useEffect(() => {
     if (activeClientId) return;
     const lastId = getLastSelectedClientId();
     if (lastId && clients.some((c) => c.id === lastId)) {
       router.replace(`/pm/board?client=${lastId}`);
+      return;
     }
+    router.replace("/pm/clients");
   }, [activeClientId, clients, router]);
 
   return (

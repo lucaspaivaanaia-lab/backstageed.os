@@ -14,6 +14,7 @@ import {
   MessageSquareIcon,
   InboxIcon,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { shouldAppendChunk } from "@/lib/chat/stale-response-guard";
 import {
@@ -78,6 +79,8 @@ const CHECKBOX_LABEL = "Incluir esta mensagem no conhecimento salvo";
  * thread.
  */
 export function ChatPanel({ clients }: ChatPanelProps) {
+  const router = useRouter();
+
   // P2 pivot 2026-08-04: `manualClientId` is only set when the PM
   // explicitly picks a client THIS session (handleSwitchClient). Until
   // then, `activeClientId` below falls back to whatever was last selected
@@ -118,6 +121,22 @@ export function ChatPanel({ clients }: ChatPanelProps) {
   useEffect(() => {
     activeClientIdRef.current = activeClientId;
   }, [activeClientId]);
+
+  // Client-scoped navigation (P2 pivot 2026-08-04): Chat should never be
+  // reachable with no client context — matching the sidebar only exposing
+  // this link once a client has been selected at least once (either here
+  // or on the board). `activeClientId` already accounts for both the
+  // manual pick and the localStorage-restored value (see its derivation
+  // above); if it's still null once this effect runs, there's genuinely no
+  // usable client — first-ever visit, cleared storage, or a stale id no
+  // longer in this PM's roster — so send them to the client list instead
+  // of rendering an empty chat. router.push() is a navigation call, not a
+  // React setState, so this doesn't trip react-hooks/set-state-in-effect.
+  useEffect(() => {
+    if (!activeClientId) {
+      router.push("/pm/clients");
+    }
+  }, [activeClientId, router]);
 
   const activeClient = clients.find((c) => c.id === activeClientId) ?? null;
 
