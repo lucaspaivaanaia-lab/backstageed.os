@@ -290,12 +290,12 @@ function CreateCardDialog({
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Descrição</FormLabel>
+                  <FormLabel>Conteúdo do post</FormLabel>
                   <FormControl>
                     <Textarea
                       {...field}
                       rows={4}
-                      placeholder="Opcional — contexto, briefing rápido, referências."
+                      placeholder="O texto do post que será revisado e publicado."
                       disabled={isPending}
                     />
                   </FormControl>
@@ -399,7 +399,12 @@ function ImportFromChatDialog({ clientId }: { clientId: string | null }) {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button type="button" variant="outline" disabled={!clientId}>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={!clientId}
+          title="Cole aqui o texto gerado no Chat para criar o card automaticamente."
+        >
           <ClipboardPasteIcon className="size-4" />
           Importar do chat
         </Button>
