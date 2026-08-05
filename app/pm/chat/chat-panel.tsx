@@ -145,11 +145,23 @@ export function ChatPanel({ clients }: ChatPanelProps) {
   // longer in this PM's roster — so send them to the client list instead
   // of rendering an empty chat. router.push() is a navigation call, not a
   // React setState, so this doesn't trip react-hooks/set-state-in-effect.
+  // Fix (quick task 260805-h1n): on a hard reload, `activeClientId` still
+  // carries the `null` from `getLastSelectedClientIdServerSnapshot` on the
+  // very first post-hydration render (it must match SSR to avoid a
+  // hydration mismatch), even though the real id is already sitting in
+  // `localStorage`. Trusting `activeClientId` alone here would redirect a
+  // PM who genuinely has an active client — so before navigating away we
+  // reread the client-only source of truth directly and only redirect if
+  // that fresh read also comes up empty or out of this PM's roster.
   useEffect(() => {
-    if (!activeClientId) {
+    if (activeClientId) return;
+    const freshId = getLastSelectedClientId();
+    const freshIdInRoster =
+      freshId && clients.some((c) => c.id === freshId) ? freshId : null;
+    if (!freshIdInRoster) {
       router.push("/pm/clients");
     }
-  }, [activeClientId, router]);
+  }, [activeClientId, clients, router]);
 
   const activeClient = clients.find((c) => c.id === activeClientId) ?? null;
 
