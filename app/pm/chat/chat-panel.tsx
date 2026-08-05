@@ -25,6 +25,9 @@ import {
   subscribeLastSelectedClientId,
   getLastSelectedClientIdServerSnapshot,
 } from "@/lib/client-selection";
+import { cardFieldsFromChatText } from "@/lib/cards/chat-import";
+import { STAGE_ORDER } from "@/lib/cards/stages";
+import { createCard } from "@/app/pm/board/actions";
 import { saveKnowledge, listMessagesForClient } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -67,6 +70,10 @@ const SAVE_SUCCESS =
   "Conhecimento salvo. As mensagens selecionadas foram enviadas para a base de conhecimento do cliente.";
 const SAVE_ERROR = "Não foi possível salvar o conhecimento. Tente novamente.";
 const CHECKBOX_LABEL = "Incluir esta mensagem no conhecimento salvo";
+// Quick task 260805-fuu, Part 2: one-click Chat -> Kanban shortcut.
+const SEND_TO_KANBAN_SUCCESS = "Card criado na Produção.";
+const SEND_TO_KANBAN_ERROR =
+  "Não foi possível criar o card. Tente novamente.";
 
 /**
  * Client switcher + message list + composer (CTX-01, CTX-02). This is the
@@ -115,6 +122,10 @@ export function ChatPanel({ clients }: ChatPanelProps) {
     new Set()
   );
   const [isSavingKnowledge, startSaveTransition] = useTransition();
+
+  // Quick task 260805-fuu, Part 2: separate transition from the curation
+  // save above — this one owns "Enviar pro Kanban" only.
+  const [isSendingToKanban, startSendToKanbanTransition] = useTransition();
 
   const activeClientIdRef = useRef<string | null>(activeClientId);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -214,6 +225,40 @@ export function ChatPanel({ clients }: ChatPanelProps) {
       }
       toast.success(SAVE_SUCCESS);
       setCheckedMessageIds(new Set());
+    });
+  }
+
+  // Quick task 260805-fuu, Part 2: reuses the same title/description rule
+  // as the board's "Colar do chat" tab (lib/cards/chat-import.ts) — the
+  // only difference is the source text (the AI's own last reply, not a
+  // manual paste) and the target stage (always STAGE_ORDER[0], D-E).
+  function handleSendToKanban(message: ChatMessage) {
+    const clientId = activeClientId;
+    if (!clientId) return;
+    const { title, description } = cardFieldsFromChatText(message.content);
+
+    startSendToKanbanTransition(async () => {
+      try {
+        const result = await createCard({
+          clientId,
+          title,
+          cardType: "single",
+          stage: STAGE_ORDER[0],
+          description,
+        });
+        if ("error" in result) {
+          toast.error(result.error);
+          return;
+        }
+        toast.success(SEND_TO_KANBAN_SUCCESS, {
+          action: {
+            label: "Ver na Produção",
+            onClick: () => router.push(`/pm/board?client=${clientId}`),
+          },
+        });
+      } catch {
+        toast.error(SEND_TO_KANBAN_ERROR);
+      }
     });
   }
 
@@ -342,6 +387,15 @@ export function ChatPanel({ clients }: ChatPanelProps) {
     }
   }
 
+  // "Enviar pro Kanban" only ever renders next to the LAST assistant
+  // message — not `findLastIndex` (unconfirmed support in this build
+  // target), a plain reduce over the whole array is safe and O(n).
+  const lastAssistantIndex = messages.reduce(
+    (lastIndex, message, index) =>
+      message.role === "assistant" ? index : lastIndex,
+    -1
+  );
+
   return (
     <div className="mx-auto flex h-full min-h-0 max-w-3xl flex-col">
       <header className="sticky top-0 z-10 flex items-center gap-2 border-b bg-background px-6 py-4">
@@ -425,6 +479,31 @@ export function ChatPanel({ clients }: ChatPanelProps) {
                   />
                 ) : null;
 
+                // Quick task 260805-fuu, Part 2: only the last, fully
+                // streamed assistant reply — with a client active — ever
+                // shows this button. Every other message (user turns,
+                // earlier AI replies, an in-progress stream) renders
+                // nothing here, not a disabled button.
+                const showSendToKanban =
+                  index === lastAssistantIndex &&
+                  message.role === "assistant" &&
+                  !message.streaming &&
+                  message.content.trim().length > 0 &&
+                  activeClientId !== null;
+                const sendToKanbanButton = showSendToKanban ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    aria-label="Enviar pro Kanban"
+                    disabled={isSendingToKanban}
+                    onClick={() => handleSendToKanban(message)}
+                  >
+                    <LayoutDashboardIcon className="size-4" />
+                    {isSendingToKanban ? "Enviando..." : "Enviar pro Kanban"}
+                  </Button>
+                ) : null;
+
                 return (
                   <div
                     key={message.id ?? index}
@@ -443,6 +522,7 @@ export function ChatPanel({ clients }: ChatPanelProps) {
                       <>
                         {bubble}
                         {checkbox}
+                        {sendToKanbanButton}
                       </>
                     )}
                   </div>

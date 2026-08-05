@@ -47,6 +47,7 @@ import {
   type AttachDriveLinkInput,
 } from "@/lib/validation/cards";
 import { STAGE_LABELS, STAGE_ORDER, type CardStage } from "@/lib/cards/stages";
+import { cardFieldsFromChatText } from "@/lib/cards/chat-import";
 import {
   checklistProgress,
   isGateBlocked,
@@ -112,6 +113,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Form,
   FormField,
@@ -198,6 +200,13 @@ function formatCompletedAt(iso: string): string {
  * assignee is deliberately NOT a react-hook-form field — it lives in local
  * state (see `NONE_VALUE` above) and is mapped to `undefined` only at
  * submit time, matching plan 03-01's nullable-FK Select pattern.
+ *
+ * Quick task 260805-fuu unified the former standalone "Importar do chat"
+ * Dialog into a second tab here ("Colar do chat", D-B/D-C/D-D) — a single,
+ * obvious "Criar card" entry point replaces the two separate buttons that
+ * used to sit side by side in the header. Both tabs share this Dialog's
+ * `stage` prop identically: the paste tab is no longer hardcoded to
+ * Briefing, it now creates in whatever stage the trigger passed (D-B).
  */
 function CreateCardDialog({
   clientId,
@@ -211,15 +220,19 @@ function CreateCardDialog({
   trigger: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"escrever" | "colar">("escrever");
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
   const [assigneeValue, setAssigneeValue] = useState(NONE_VALUE);
+  const [pastedText, setPastedText] = useState("");
+
+  const targetStage = stage ?? "briefing";
 
   const defaultValues: CreateCardInput = {
     clientId: clientId ?? "",
     title: "",
     cardType: "single",
-    stage: stage ?? "briefing",
+    stage: targetStage,
     description: "",
   };
 
@@ -234,7 +247,14 @@ function CreateCardDialog({
       setServerError(null);
       form.reset(defaultValues);
       setAssigneeValue(NONE_VALUE);
+      setActiveTab("escrever");
+      setPastedText("");
     }
+  }
+
+  function handleTabChange(next: string) {
+    setActiveTab(next as "escrever" | "colar");
+    setServerError(null);
   }
 
   function onSubmit(values: CreateCardInput) {
@@ -243,8 +263,30 @@ function CreateCardDialog({
     startTransition(async () => {
       const result = await createCard({
         ...values,
-        stage: stage ?? "briefing",
+        stage: targetStage,
         assigneeId,
+      });
+      if ("error" in result) {
+        setServerError(result.error);
+        return;
+      }
+      toast.success(CARD_CREATED_TOAST);
+      setOpen(false);
+    });
+  }
+
+  function handlePasteImport() {
+    if (!clientId) return;
+    setServerError(null);
+    const { title, description } = cardFieldsFromChatText(pastedText);
+
+    startTransition(async () => {
+      const result = await createCard({
+        clientId,
+        title,
+        cardType: "single",
+        stage: targetStage,
+        description,
       });
       if ("error" in result) {
         setServerError(result.error);
@@ -267,174 +309,110 @@ function CreateCardDialog({
             </DialogDescription>
           ) : null}
         </DialogHeader>
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="flex flex-col gap-4"
-          >
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Título</FormLabel>
-                  <FormControl>
-                    <Input {...field} disabled={isPending} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Conteúdo do post</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      {...field}
-                      rows={4}
-                      placeholder="O texto do post que será revisado e publicado."
-                      disabled={isPending}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="flex flex-col gap-1">
-              <Label>Responsável</Label>
-              <Select
-                value={assigneeValue}
-                onValueChange={setAssigneeValue}
-                disabled={isPending}
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
+          <TabsList>
+            <TabsTrigger value="escrever">Escrever</TabsTrigger>
+            <TabsTrigger
+              value="colar"
+              title="Cole aqui o texto gerado no Chat para criar o card automaticamente."
+            >
+              <ClipboardPasteIcon className="size-4" />
+              Colar do chat
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="escrever">
+            <Form {...form}>
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="flex flex-col gap-4"
               >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Sem responsável" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NONE_VALUE}>Sem responsável</SelectItem>
-                  {pmRoster.map((pm) => (
-                    <SelectItem key={pm.id} value={pm.id}>
-                      {pm.email}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {pmRoster.length === 0 ? (
-                <span className="text-meta text-muted-foreground">
-                  Nenhum PM atribuído a este cliente.
-                </span>
-              ) : null}
-            </div>
+                <FormField
+                  control={form.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Título</FormLabel>
+                      <FormControl>
+                        <Input {...field} disabled={isPending} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Conteúdo do post</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          {...field}
+                          rows={4}
+                          placeholder="O texto do post que será revisado e publicado."
+                          disabled={isPending}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="flex flex-col gap-1">
+                  <Label>Responsável</Label>
+                  <Select
+                    value={assigneeValue}
+                    onValueChange={setAssigneeValue}
+                    disabled={isPending}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Sem responsável" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NONE_VALUE}>Sem responsável</SelectItem>
+                      {pmRoster.map((pm) => (
+                        <SelectItem key={pm.id} value={pm.id}>
+                          {pm.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {pmRoster.length === 0 ? (
+                    <span className="text-meta text-muted-foreground">
+                      Nenhum PM atribuído a este cliente.
+                    </span>
+                  ) : null}
+                </div>
+                {serverError ? <ErrorBox>{serverError}</ErrorBox> : null}
+                <Button type="submit" disabled={isPending} className="w-fit">
+                  {isPending ? "Criando..." : "Criar card"}
+                </Button>
+              </form>
+            </Form>
+          </TabsContent>
+          <TabsContent value="colar">
+            <DialogDescription>
+              Cole abaixo o conteúdo gerado no chat. A primeira linha vira o
+              título. O card será criado na etapa{" "}
+              {STAGE_LABELS[targetStage]}.
+            </DialogDescription>
+            <Textarea
+              value={pastedText}
+              onChange={(event) => setPastedText(event.target.value)}
+              rows={10}
+              placeholder="Cole aqui o conteúdo gerado no chat..."
+              disabled={isPending}
+            />
             {serverError ? <ErrorBox>{serverError}</ErrorBox> : null}
-            <Button type="submit" disabled={isPending} className="w-fit">
-              {isPending ? "Criando..." : "Criar card"}
+            <Button
+              type="button"
+              onClick={handlePasteImport}
+              disabled={isPending || pastedText.trim().length === 0}
+              className="w-fit"
+            >
+              {isPending ? "Importando..." : "Importar e criar card"}
             </Button>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-const IMPORTED_TITLE_FALLBACK = "Conteúdo importado do chat";
-
-/**
- * "Importar do chat" Dialog (P0 pivot 2026-08-04, item 2). A single paste
- * box, not the structured title+description form `CreateCardDialog` above
- * uses — the PM copies a block of AI-generated content straight from
- * `/pm/chat` and drops it here without having to split it into fields
- * themselves. The pasted text's first non-empty line becomes the card
- * title (truncated to createCardSchema's 200-char limit; a blank paste
- * falls back to a fixed label so the required-title validation never
- * blocks the import), and the full text becomes the description. Always
- * creates in Briefing (D-14's default, matching "primeira coluna" — this
- * is the ONE entry point that does NOT accept a `stage` override, unlike
- * the per-column "+" triggers). Reuses `createCard` directly — no new
- * Server Action, since createCardSchema already covers this shape.
- */
-function ImportFromChatDialog({ clientId }: { clientId: string | null }) {
-  const [open, setOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
-  const [serverError, setServerError] = useState<string | null>(null);
-  const [pastedText, setPastedText] = useState("");
-
-  function handleOpenChange(next: boolean) {
-    setOpen(next);
-    if (next) {
-      setServerError(null);
-      setPastedText("");
-    }
-  }
-
-  function handleImport() {
-    if (!clientId) return;
-    setServerError(null);
-    const trimmed = pastedText.trim();
-    const firstLine = trimmed.split("\n")[0]?.trim() ?? "";
-    const title =
-      firstLine.length > 0
-        ? firstLine.slice(0, 200)
-        : IMPORTED_TITLE_FALLBACK;
-
-    startTransition(async () => {
-      const result = await createCard({
-        clientId,
-        title,
-        cardType: "single",
-        stage: "briefing",
-        description: trimmed.slice(0, 5000),
-      });
-      if ("error" in result) {
-        setServerError(result.error);
-        return;
-      }
-      toast.success(CARD_CREATED_TOAST);
-      setOpen(false);
-    });
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={!clientId}
-          title="Cole aqui o texto gerado no Chat para criar o card automaticamente."
-        >
-          <ClipboardPasteIcon className="size-4" />
-          Importar do chat
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Importar conteúdo do chat</DialogTitle>
-          <DialogDescription>
-            Cole abaixo o conteúdo gerado no chat. O card será criado na
-            etapa Briefing — a primeira linha vira o título.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="flex flex-col gap-4">
-          <Textarea
-            value={pastedText}
-            onChange={(event) => setPastedText(event.target.value)}
-            rows={10}
-            placeholder="Cole aqui o conteúdo gerado no chat..."
-            disabled={isPending}
-          />
-          {serverError ? <ErrorBox>{serverError}</ErrorBox> : null}
-          <Button
-            type="button"
-            onClick={handleImport}
-            disabled={isPending || pastedText.trim().length === 0}
-            className="w-fit"
-          >
-            {isPending ? "Importando..." : "Importar e criar card"}
-          </Button>
-        </div>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
@@ -1147,7 +1125,6 @@ export function BoardPanel({
       <PageTitle
         action={
           <div className="flex items-center gap-2">
-            <ImportFromChatDialog clientId={activeClientId} />
             <CreateCardDialog
               clientId={activeClientId}
               pmRoster={pmRoster}
