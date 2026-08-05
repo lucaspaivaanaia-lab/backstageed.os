@@ -16,6 +16,7 @@ import {
   updateCardDetailsSchema,
   attachDriveLinkSchema,
   removeAttachmentSchema,
+  createPieceSchema,
   type CreateCardInput,
   type AdvanceStageInput,
   type ToggleChecklistItemInput,
@@ -23,6 +24,7 @@ import {
   type UpdateCardDetailsInput,
   type AttachDriveLinkInput,
   type RemoveAttachmentInput,
+  type CreatePieceInput,
 } from "@/lib/validation/cards";
 
 const CARD_CREATE_ERROR = "Não foi possível criar o card. Tente novamente.";
@@ -35,6 +37,10 @@ const ASSIGNEE_NOT_ON_CLIENT_ERROR =
 const CARD_ROLLBACK_FAILED_ERROR =
   "O card foi criado mas o checklist falhou e não foi possível desfazer. Avise o administrador antes de usar este card.";
 const CARD_SAVE_ERROR = "Não foi possível salvar o card. Tente novamente.";
+const PACKAGE_NOT_FOUND_ERROR = "Pacote não encontrado.";
+const PIECE_PARENT_MUST_BE_PACKAGE_ERROR =
+  "Só é possível adicionar peças a um pacote.";
+const PIECE_CREATE_ERROR = "Não foi possível criar a peça. Tente novamente.";
 
 /**
  * Maps migration 0017's deliberate `assignee_not_assigned_to_client`
@@ -664,4 +670,80 @@ export async function validateCardAgainstChecklist(
   }));
 
   return { success: true, results };
+}
+
+export type CreatePieceResult =
+  | { success: true; cardId: string }
+  | { error: string };
+
+/**
+ * Create a piece under a package (KAN-01 package half, D-01/D-02, plan
+ * 03-06, threats T-03-31/T-03-32). A piece always belongs to the SAME
+ * client as its parent package: `client_id` is copied from the RE-READ
+ * PARENT ROW below, never from any browser-supplied value -- that is what
+ * keeps the denormalization consistent and the RLS policies flat, since a
+ * piece is scoped by its OWN `client_id`. Letting the browser supply it
+ * would be a cross-client write primitive (03-RESEARCH.md Security Domain,
+ * the Information Disclosure row).
+ */
+export async function createPiece(
+  input: CreatePieceInput
+): Promise<CreatePieceResult> {
+  const parsed = createPieceSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: NOT_AUTHENTICATED_ERROR };
+
+  // Re-read the parent through RLS — never trust that parentCardId belongs
+  // to a client the caller can reach; cards_select_scoped is the real
+  // boundary (T-03-31).
+  const { data: parent } = await supabase
+    .from("cards")
+    .select("id, client_id, card_type")
+    .eq("id", parsed.data.parentCardId)
+    .single();
+  if (!parent) return { error: PACKAGE_NOT_FOUND_ERROR };
+
+  // A piece can only hang off a package, never off a single card or another
+  // piece (T-03-32) — cards_piece_requires_parent enforces the non-null
+  // parent at the database layer, but not which TYPE of parent, so this
+  // app-layer check is the actual boundary for that rule.
+  if (parent.card_type !== "package") {
+    return { error: PIECE_PARENT_MUST_BE_PACKAGE_ERROR };
+  }
+
+  const { data: card, error: insertError } = await supabase
+    .from("cards")
+    .insert({
+      // client_id copied from the RE-READ PARENT ROW, never from any
+      // browser-supplied value (T-03-31).
+      client_id: parent.client_id,
+      parent_card_id: parent.id,
+      card_type: "piece",
+      stage: "briefing",
+      title: parsed.data.title,
+      created_by: user.id,
+      description: null,
+      assignee_id: null,
+    })
+    .select("id")
+    .single();
+
+  if (insertError || !card) {
+    return { error: PIECE_CREATE_ERROR };
+  }
+
+  // A piece always starts at briefing, so no checklist snapshot is needed
+  // here — the D-15 snapshot-on-create logic in createCard only fires for
+  // cards created directly in revisão interna or later. This piece picks up
+  // its own snapshot the normal way, when it first reaches revisão interna
+  // via advanceStage or moveCard, exactly like a standalone card.
+  revalidatePath("/pm/board");
+  return { success: true, cardId: card.id };
 }
