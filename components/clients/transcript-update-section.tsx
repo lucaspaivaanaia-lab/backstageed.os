@@ -55,9 +55,19 @@ type TranscriptUpdateSectionProps = {
 export function TranscriptUpdateSection({
   files,
 }: TranscriptUpdateSectionProps) {
-  const [selectedFileId, setSelectedFileId] = useState<string>(
-    files[0]?.id ?? ""
-  );
+  // `manualFileId` only holds a value once the PM explicitly picks a file
+  // from the dropdown THIS session. Until then, `selectedFileId` below
+  // falls back to `files[0]?.id` — a plain derived value, recomputed every
+  // render, not a useState default. useState's initial argument only runs
+  // on the component's FIRST mount; since this component still executes
+  // its hooks even on a render where `files` is empty (the early return
+  // below happens after them), initializing directly from `files[0]?.id`
+  // would get permanently stuck at "" the first time a client had zero
+  // files, silently no-oping every "Analisar transcrição" click even
+  // after the PM uploads their first file in the same session (real bug,
+  // found live during 260805-iea's verification — same class of stale-
+  // default bug as chat-panel.tsx's activeClientId, fixed the same way).
+  const [manualFileId, setManualFileId] = useState<string | null>(null);
   const [transcript, setTranscript] = useState("");
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [draftContent, setDraftContent] = useState("");
@@ -71,6 +81,11 @@ export function TranscriptUpdateSection({
   >(null);
 
   if (files.length === 0) return null;
+
+  const selectedFileId =
+    manualFileId && files.some((f) => f.id === manualFileId)
+      ? manualFileId
+      : (files[0]?.id ?? "");
 
   function handleAnalyze() {
     setAnalyzeError(null);
@@ -168,7 +183,7 @@ export function TranscriptUpdateSection({
           <Select
             value={selectedFileId}
             onValueChange={(next) => {
-              setSelectedFileId(next);
+              setManualFileId(next);
               handleDiscard();
             }}
             disabled={isAnalyzing || isApplying}
