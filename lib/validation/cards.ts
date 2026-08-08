@@ -139,3 +139,15 @@ export const createPieceSchema = z.object({
     .max(200),
 });
 export type CreatePieceInput = z.infer<typeof createPieceSchema>;
+
+/**
+ * removePiece's input (KAN-01 package half, quick task 260808-c9s). Just the
+ * target card's id -- this schema validates shape only, never the
+ * `card_type='piece'` business rule, which is enforced entirely inside the
+ * `removePiece` Server Action (same division of labor as every other schema
+ * in this file).
+ */
+export const removePieceSchema = z.object({
+  cardId: z.string().uuid(),
+});
+export type RemovePieceInput = z.infer<typeof removePieceSchema>;
