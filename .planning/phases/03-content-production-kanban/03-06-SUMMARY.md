@@ -205,12 +205,37 @@ Task 2's automated verification is fully green:
   span, and zero `Checklist de revisão`/`Anexos`/`Descrição`/`Responsável` occurrences inside
   the package Dialog's own JSX block.
 
-**Task 3 (human-verify checkpoint) is explicitly NOT executed by this agent** — it requires a
-running dev server, real PM credentials, and a live walkthrough of package creation,
-independent per-piece drag advancement, and the per-piece checklist gate (steps 1-12 in the
-plan). This is reserved for the orchestrator session. Once Task 3 is signed off, this plan
-(and Phase 3 wave 9, its last wave) is complete.
+## Task 3: Human Verification — APPROVED
+
+Run 2026-08-08 by the developer directly against `npm run dev` (localhost:3000), walking the
+plan's 12-step script (package creation, "Pacote" option hidden from per-column "+", rollup
+badge transitions, independent per-piece drag, per-piece checklist gate under drag, package
+Dialog omitting Descrição/Responsável/Anexos/Checklist, opening a piece's full detail from
+inside the package Dialog, and full-board regression on a plain single card). Developer
+response: **"confirmo o resto"** (confirms all steps pass) after flagging two follow-up items
+along the way (see below) — neither is a defect in what this plan built; both are new scope,
+deliberately deferred rather than built ad hoc under CLAUDE.md's GSD workflow requirement.
+
+**Follow-ups raised during verification (deferred, not built in this plan):**
+1. **No "excluir peça" (delete piece) action.** Once a piece is created, there is no way to
+   remove it if the title was a mistake. Small, well-scoped gap — candidate for a
+   `/gsd-quick` task (mirrors `createPiece`'s RLS/ownership checks; needs its own soft/hard
+   delete decision).
+2. **Feature idea: AI-driven checklist generation at client creation + AI self-correcting
+   double-check during content validation.** Developer's proposal: when a PM creates a client,
+   the AI should read all of that client's briefings/materials and propose the checklist
+   automatically (rather than requiring the existing manual "Gerar checklist com IA" Admin
+   button, from the 2026-08-04 P0 pivot); when generating/validating content, the AI should
+   also self-correct against any checklist gaps it finds, rather than only reporting them
+   (current "Revalidar com IA" is advisory-only, per D-06 in the P0 pivot). This is
+   substantial new scope touching client creation, the existing `lib/ai/` engine, and the
+   checklist-gate contract (CHK-03's per-piece gate must stay PM-driven, not
+   auto-advanced) — needs its own discussion/planning pass, not an inline change.
+
+Both items are recorded in STATE.md's Pending Todos for follow-up.
+
+Task 3 is now signed off. Phase 3 (Content Production Kanban) is complete — all 9 waves done.
 
 ---
 *Phase: 03-content-production-kanban*
-*Completed: 2026-08-05 (Tasks 1-2; Task 3 pending)*
+*Completed: 2026-08-08 (Tasks 1-3, Task 3 human-verify approved)*
