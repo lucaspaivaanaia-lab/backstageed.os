@@ -17,6 +17,7 @@ import {
   attachDriveLinkSchema,
   removeAttachmentSchema,
   createPieceSchema,
+  removePieceSchema,
   type CreateCardInput,
   type AdvanceStageInput,
   type ToggleChecklistItemInput,
@@ -25,6 +26,7 @@ import {
   type AttachDriveLinkInput,
   type RemoveAttachmentInput,
   type CreatePieceInput,
+  type RemovePieceInput,
 } from "@/lib/validation/cards";
 
 const CARD_CREATE_ERROR = "Não foi possível criar o card. Tente novamente.";
@@ -41,6 +43,9 @@ const PACKAGE_NOT_FOUND_ERROR = "Pacote não encontrado.";
 const PIECE_PARENT_MUST_BE_PACKAGE_ERROR =
   "Só é possível adicionar peças a um pacote.";
 const PIECE_CREATE_ERROR = "Não foi possível criar a peça. Tente novamente.";
+const PIECE_NOT_FOUND_ERROR = "Peça não encontrada.";
+const PIECE_MUST_BE_PIECE_ERROR = "Só é possível excluir peças.";
+const PIECE_DELETE_ERROR = "Não foi possível excluir a peça. Tente novamente.";
 
 /**
  * Maps migration 0017's deliberate `assignee_not_assigned_to_client`
@@ -746,4 +751,52 @@ export async function createPiece(
   // via advanceStage or moveCard, exactly like a standalone card.
   revalidatePath("/pm/board");
   return { success: true, cardId: card.id };
+}
+
+export type RemovePieceResult = { error?: string };
+
+/**
+ * Delete a piece from inside its package's "Ver peças" list (quick task
+ * 260808-c9s, T-03-56). `cards_delete_scoped` (0017) is NOT card_type-scoped
+ * and must never become so, because createCard's D-15 compensating delete
+ * needs it to also cover `single` cards. This function is therefore the
+ * ONLY place `card_type='piece'` is enforced for a piece deletion, and it is
+ * enforced independent of RLS, not as a substitute for it. Note that
+ * `card_checklist_items`, `card_attachments`, and `card_checklist_overrides`
+ * all cascade-delete on `card_id` (0016/0018/0022), so no manual cleanup of
+ * child rows is needed here.
+ */
+export async function removePiece(
+  input: RemovePieceInput
+): Promise<RemovePieceResult> {
+  const parsed = removePieceSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: PIECE_NOT_FOUND_ERROR };
+  }
+
+  const supabase = await createClient();
+
+  // Re-read the target through RLS — never trust a card_type implied by the
+  // caller; cards_delete_scoped is the client-scope boundary, but it is NOT
+  // type-scoped, so the check below is what actually restricts this action
+  // to pieces.
+  const { data: card } = await supabase
+    .from("cards")
+    .select("id, card_type")
+    .eq("id", parsed.data.cardId)
+    .single();
+  if (!card) return { error: PIECE_NOT_FOUND_ERROR };
+
+  if (card.card_type !== "piece") {
+    return { error: PIECE_MUST_BE_PIECE_ERROR };
+  }
+
+  const { error } = await supabase.from("cards").delete().eq("id", card.id);
+
+  if (error) {
+    return { error: PIECE_DELETE_ERROR };
+  }
+
+  revalidatePath("/pm/board");
+  return {};
 }
