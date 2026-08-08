@@ -17,6 +17,7 @@ import {
   ClipboardPasteIcon,
   MessageSquareIcon,
   FileEditIcon,
+  Trash2Icon,
 } from "lucide-react";
 import {
   DndContext,
@@ -38,6 +39,7 @@ import {
   addAttachment,
   removeAttachment,
   createPiece,
+  removePiece,
   validateCardAgainstChecklist,
   type ChecklistValidationItemResult,
 } from "./actions";
@@ -1137,6 +1139,81 @@ function PieceDetailDialog({
  * off to `onOpenPieceDetail`, which opens that piece's own full card detail
  * Dialog (the same one standalone cards use).
  */
+/**
+ * A single piece row inside a package's "Ver peças" dialog (quick task
+ * 260808-c9s). Renders the unchanged click-to-open-detail button plus a new
+ * delete AlertDialog trigger as SIBLINGS inside an outer <div> — a nested
+ * <button> inside a <button> is invalid HTML, so the outer clickable
+ * <button> from before this task is replaced with a plain <div> wrapper.
+ */
+function PieceRow({
+  piece,
+  onOpenDetail,
+}: {
+  piece: BoardCard;
+  onOpenDetail: (pieceId: string) => void;
+}) {
+  const [isPending, startTransition] = useTransition();
+  const [serverError, setServerError] = useState<string | null>(null);
+
+  function handleRemove() {
+    setServerError(null);
+    startTransition(async () => {
+      const result = await removePiece({ cardId: piece.id });
+      if (result.error) {
+        setServerError(result.error);
+      }
+    });
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-2 rounded-md border p-2">
+        <button
+          type="button"
+          onClick={() => onOpenDetail(piece.id)}
+          className="flex min-w-0 flex-1 items-center justify-between gap-2 text-left"
+        >
+          <span className="text-body">{piece.title}</span>
+          <StatusBadge tone="neutral">
+            {piece.stage ? STAGE_LABELS[piece.stage] : "—"}
+          </StatusBadge>
+        </button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-8 shrink-0"
+              aria-label="Excluir peça"
+              disabled={isPending}
+            >
+              <Trash2Icon className="size-4" />
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir peça</AlertDialogTitle>
+              <AlertDialogDescription>
+                Essa peça e todo o seu checklist/anexos serão excluídos
+                permanentemente. Deseja continuar?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction variant="destructive" onClick={handleRemove}>
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+      {serverError ? <ErrorBox>{serverError}</ErrorBox> : null}
+    </div>
+  );
+}
+
 function PackageRow({
   pkg,
   pieceStages,
@@ -1194,17 +1271,11 @@ function PackageRow({
               />
             ) : (
               pieces.map((piece) => (
-                <button
+                <PieceRow
                   key={piece.id}
-                  type="button"
-                  onClick={() => handlePieceClick(piece.id)}
-                  className="flex items-center justify-between gap-2 rounded-md border p-2 text-left"
-                >
-                  <span className="text-body">{piece.title}</span>
-                  <StatusBadge tone="neutral">
-                    {piece.stage ? STAGE_LABELS[piece.stage] : "—"}
-                  </StatusBadge>
-                </button>
+                  piece={piece}
+                  onOpenDetail={handlePieceClick}
+                />
               ))
             )}
           </div>
