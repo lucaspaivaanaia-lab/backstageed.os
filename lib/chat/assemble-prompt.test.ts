@@ -4,6 +4,7 @@ import { assembleSystemPrompt } from "./assemble-prompt.ts";
 
 const CLIENT_A = {
   name: "Cliente A",
+  tag: "CLIENTE-A",
   objective: "Crescer no LinkedIn",
   tone_of_voice: "Formal e direto",
   target_audience: "Gestores de RH",
@@ -12,6 +13,7 @@ const CLIENT_A = {
 
 const CLIENT_B = {
   name: "Cliente B",
+  tag: "CLIENTE-B",
   objective: "Vender produtos de skincare",
   tone_of_voice: "Descontraído",
   target_audience: "Consumidoras 20-35",
@@ -60,6 +62,7 @@ test("assembleSystemPrompt: POSITIVE - null briefing fields are omitted cleanly,
   const prompt = assembleSystemPrompt(
     {
       name: "Cliente C",
+      tag: "CLIENTE-C",
       objective: null,
       tone_of_voice: null,
       target_audience: null,
@@ -69,4 +72,23 @@ test("assembleSystemPrompt: POSITIVE - null briefing fields are omitted cleanly,
   );
   assert.match(prompt, /Cliente C/);
   assert.doesNotMatch(prompt, /null/);
+});
+
+test("assembleSystemPrompt: POSITIVE - tag renders as a labeled reference code, and the anti-confusion instruction is present", () => {
+  const prompt = assembleSystemPrompt(CLIENT_A, []);
+  assert.match(prompt, /código de referência: CLIENTE-A/);
+  assert.match(prompt, /Cliente A/);
+  assert.match(prompt, /NÃO as confunda com o cliente/);
+});
+
+test("assembleSystemPrompt: POSITIVE - tag remains the labeled identifier even when a client's own file mentions another client's name in full", () => {
+  const prompt = assembleSystemPrompt(CLIENT_A, [
+    {
+      filename: "ata-reuniao.md",
+      content:
+        "A reunião também citou o Cliente B e sua estratégia de skincare.",
+    },
+  ]);
+  assert.match(prompt, /código de referência: CLIENTE-A/);
+  assert.match(prompt, /NÃO as confunda com o cliente/);
 });
