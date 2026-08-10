@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
 import { XIcon, PlusIcon, ArrowLeftIcon } from "lucide-react";
 import {
   briefingSchema,
@@ -15,6 +16,7 @@ import {
   assignPms,
   archiveClient,
   updateClientTag,
+  autofillBriefingFromFiles,
 } from "@/lib/actions/clients";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -103,6 +105,9 @@ export function ClientDetailForm({
   backHref,
 }: ClientDetailFormProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const hasTriggeredAutofillRef = useRef(false);
 
   // -- Tag do cliente (updateClientTag), available to both Admin and PM --
   const [tagValue, setTagValue] = useState(client.tag);
@@ -197,6 +202,37 @@ export function ClientDetailForm({
     });
     replace(briefing.contentPillars as never[]);
   }
+
+  // 260810-jl0: consumes the `?autofillBriefing=1` redirect signal appended
+  // by client-create-form.tsx after a successful upload+create — this page
+  // (unlike the creation screen) already has a mounted briefing form, so it
+  // makes the SAME autofillBriefingFromFiles call itself and applies the
+  // result via the existing handleBriefingAutofilled function above (no
+  // duplicated form.setValue/replace logic). Ref-guarded so it fires at
+  // most once per mount even under React Strict Mode's dev double-invoke;
+  // the guard is set synchronously, before any `await`, so a second render
+  // pass cannot re-enter while the first call is still in flight.
+  useEffect(() => {
+    if (
+      hasTriggeredAutofillRef.current ||
+      searchParams.get("autofillBriefing") !== "1"
+    ) {
+      return;
+    }
+    hasTriggeredAutofillRef.current = true;
+
+    (async () => {
+      const result = await autofillBriefingFromFiles(client.id);
+      if ("success" in result) {
+        handleBriefingAutofilled(result.briefing);
+        toast.success(
+          "Briefing preenchido pela IA a partir do arquivo. Revise e clique em \"Salvar briefing\"."
+        );
+      }
+      router.replace(pathname);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 260808-ci5 (found during live verification): ClientFilesSection and
   // ClientChecklistSection are siblings, so the "a draft is being
