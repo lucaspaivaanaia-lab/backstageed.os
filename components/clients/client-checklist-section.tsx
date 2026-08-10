@@ -29,6 +29,13 @@ type ClientChecklistSectionProps = {
   viewerIsAdmin: boolean;
   confirmedTemplate: ClientChecklistSummary | null;
   draftTemplate: ClientChecklistSummary | null;
+  // True for the brief window between an upload triggering
+  // generateChecklistDraftFromFiles and that call settling — bubbled up
+  // from the sibling ClientFilesSection via ClientDetailForm (found
+  // missing during 260808-ci5's own live verification: a PM saw no
+  // feedback that anything was happening after an upload, only a silent
+  // badge appearing later via router.refresh()).
+  generating: boolean;
 };
 
 /**
@@ -68,6 +75,7 @@ export function ClientChecklistSection({
   viewerIsAdmin,
   confirmedTemplate,
   draftTemplate,
+  generating,
 }: ClientChecklistSectionProps) {
   const router = useRouter();
 
@@ -174,6 +182,12 @@ export function ClientChecklistSection({
       description="Regras que um card precisa cumprir antes de avançar de revisão interna — geradas pela IA a partir dos arquivos deste cliente, revisadas antes de confirmar."
     >
       <div className="flex flex-col gap-4">
+        {generating ? (
+          <StatusBadge tone="info" className="w-fit">
+            Checklist sendo gerado pela IA...
+          </StatusBadge>
+        ) : null}
+
         {confirmedTemplate ? (
           <p className="text-body">
             <span className="font-medium">{confirmedTemplate.name}</span> —{" "}

@@ -37,6 +37,15 @@ type ClientFilesSectionProps = {
   // briefing form's state directly (single source of truth stays in
   // ClientDetailForm). Optional so this section stays usable standalone.
   onBriefingAutofilled?: (briefing: BriefingInput) => void;
+  // Bubbles the checklist-draft generation window up to the parent so
+  // ClientChecklistSection (a sibling, not a child, of this component) can
+  // show a visible "Gerando checklist com IA..." indicator instead of
+  // silently updating only after router.refresh() lands (found missing
+  // during 260808-ci5's own live verification — a PM had no feedback that
+  // anything was happening after an upload). Called `true` right before
+  // generateChecklistDraftFromFiles, `false` right after it settles
+  // (success or failure) — optional so this section stays usable standalone.
+  onChecklistGenerating?: (generating: boolean) => void;
 };
 
 /**
@@ -49,6 +58,7 @@ export function ClientFilesSection({
   clientId,
   initialFiles,
   onBriefingAutofilled,
+  onChecklistGenerating,
 }: ClientFilesSectionProps) {
   const router = useRouter();
   const [files, setFiles] = useState<ClientFileRow[]>(initialFiles);
@@ -138,7 +148,9 @@ export function ClientFilesSection({
         // Silent best-effort, same posture as the autofill call: the
         // upload itself already succeeded, and this is a convenience, not
         // a required step — a failure here shows no toast/ErrorBox.
+        onChecklistGenerating?.(true);
         const draftResult = await generateChecklistDraftFromFiles(clientId);
+        onChecklistGenerating?.(false);
         if ("success" in draftResult) {
           router.refresh();
         }

@@ -166,6 +166,13 @@ export function ClientDetailForm({
     replace(briefing.contentPillars as never[]);
   }
 
+  // 260808-ci5 (found during live verification): ClientFilesSection and
+  // ClientChecklistSection are siblings, so the "a draft is being
+  // generated right now" window has to be lifted up here rather than
+  // handled locally in either — same shape as handleBriefingAutofilled
+  // above, just a boolean instead of a payload.
+  const [checklistGenerating, setChecklistGenerating] = useState(false);
+
   function onSubmitBriefing(values: BriefingInput) {
     setBriefingServerError(null);
 
@@ -461,6 +468,7 @@ export function ClientDetailForm({
         clientId={client.id}
         initialFiles={initialFiles}
         onBriefingAutofilled={handleBriefingAutofilled}
+        onChecklistGenerating={setChecklistGenerating}
       />
 
       <ClientChecklistSection
@@ -468,6 +476,7 @@ export function ClientDetailForm({
         viewerIsAdmin={viewerIsAdmin}
         confirmedTemplate={checklistTemplate}
         draftTemplate={checklistDraft}
+        generating={checklistGenerating}
       />
 
       {viewerIsAdmin ? (
