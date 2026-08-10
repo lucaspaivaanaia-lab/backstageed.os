@@ -224,6 +224,7 @@ export type GenerateChecklistResult =
 async function proposeChecklistFromFiles(client: {
   id: string;
   name: string;
+  tag: string;
 }): Promise<GenerateChecklistResult> {
   const supabase = await createClient();
 
@@ -238,6 +239,7 @@ async function proposeChecklistFromFiles(client: {
 
   const result = await runStructuredExtraction({
     clientName: client.name,
+    clientTag: client.tag,
     files,
     instruction:
       "Leia os arquivos de referência acima (manual de marca, briefing, " +
@@ -327,14 +329,18 @@ export async function generateChecklistFromFiles(
   // reach any client, so this also confirms the id genuinely exists).
   const { data: client } = await supabase
     .from("clients")
-    .select("id, name")
+    .select("id, name, tag")
     .eq("id", clientId)
     .single();
   if (!client) {
     return { error: "Cliente não encontrado." };
   }
 
-  return proposeChecklistFromFiles({ id: client.id, name: client.name });
+  return proposeChecklistFromFiles({
+    id: client.id,
+    name: client.name,
+    tag: client.tag,
+  });
 }
 
 /**
@@ -374,7 +380,7 @@ export async function generateChecklistDraftFromFiles(
   // a profiles.role check, since this function must be PM-usable.
   const { data: client } = await supabase
     .from("clients")
-    .select("id, name")
+    .select("id, name, tag")
     .eq("id", clientId)
     .single();
   if (!client) {
@@ -384,6 +390,7 @@ export async function generateChecklistDraftFromFiles(
   const proposalResult = await proposeChecklistFromFiles({
     id: client.id,
     name: client.name,
+    tag: client.tag,
   });
   if ("error" in proposalResult) {
     return { error: proposalResult.error };

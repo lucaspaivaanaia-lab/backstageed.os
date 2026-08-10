@@ -213,7 +213,7 @@ export async function analyzeTranscriptAgainstFile(
  */
 async function resolveTranscriptTarget(fileId: string): Promise<{
   file: { id: string; filename: string; content: string; client_id: string };
-  client: { id: string; name: string };
+  client: { id: string; name: string; tag: string };
 } | null> {
   const supabase = await createClient();
 
@@ -229,7 +229,7 @@ async function resolveTranscriptTarget(fileId: string): Promise<{
 
   const { data: client } = await supabase
     .from("clients")
-    .select("id, name")
+    .select("id, name, tag")
     .eq("id", file.client_id)
     .single();
   if (!client) return null;
@@ -246,11 +246,12 @@ async function resolveTranscriptTarget(fileId: string): Promise<{
  */
 async function runTranscriptAnalysis(
   file: { filename: string; content: string },
-  client: { name: string },
+  client: { name: string; tag: string },
   transcript: string
 ): Promise<AnalyzeTranscriptResult> {
   const result = await runStructuredExtraction({
     clientName: client.name,
+    clientTag: client.tag,
     files: [
       { filename: file.filename, content: file.content },
       {

@@ -290,7 +290,7 @@ export async function autofillBriefingFromFiles(
   // comes from.
   const { data: client } = await supabase
     .from("clients")
-    .select("id, name")
+    .select("id, name, tag")
     .eq("id", clientId)
     .single();
   if (!client) {
@@ -308,6 +308,7 @@ export async function autofillBriefingFromFiles(
 
   const result = await runStructuredExtraction({
     clientName: client.name,
+    clientTag: client.tag,
     files,
     instruction:
       "Leia os arquivos de referência acima e proponha o briefing estratégico " +

@@ -603,7 +603,7 @@ export async function validateCardAgainstChecklist(
 
   const { data: client } = await supabase
     .from("clients")
-    .select("id, name")
+    .select("id, name, tag")
     .eq("id", card.client_id)
     .single();
   if (!client) return { error: CARD_NOT_FOUND_ERROR };
@@ -634,6 +634,7 @@ export async function validateCardAgainstChecklist(
 
   const result = await runStructuredExtraction({
     clientName: client.name,
+    clientTag: client.tag,
     files: [cardContentFile, ...(clientFiles ?? [])],
     instruction:
       "Avalie o conteúdo do card acima (arquivo 'Conteúdo do card') " +
