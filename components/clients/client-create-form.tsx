@@ -1,15 +1,23 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
 import { XIcon, PlusIcon } from "lucide-react";
 import {
   clientCreateSchema,
   type ClientCreateInput,
 } from "@/lib/validation/clients";
 import { createClientRecord } from "@/lib/actions/clients";
+import { uploadClientFile } from "@/lib/actions/client-files";
+import { generateChecklistDraftFromFiles } from "@/lib/actions/checklist-templates";
+import {
+  splitBySlots,
+  summarizeUploadOutcomes,
+  type UploadOutcome,
+} from "@/lib/client-files/multi-upload";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -54,6 +62,12 @@ export function ClientCreateForm({
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadProgress, setUploadProgress] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
 
   const form = useForm<ClientCreateInput>({
     resolver: zodResolver(clientCreateSchema),
@@ -76,7 +90,55 @@ export function ClientCreateForm({
         setServerError(result.error);
         return;
       }
-      router.push(`${basePath}/${result.clientId}`);
+      const clientId = result.clientId;
+
+      let successCount = 0;
+
+      if (selectedFiles.length > 0) {
+        const { accepted, skipped } = splitBySlots(selectedFiles, 0);
+
+        // Loop sequencial obrigatório — NUNCA disparar os uploads em
+        // paralelo: uploadClientFile faz read-then-insert do contador de
+        // arquivos para checar atFileLimit no banco, então chamadas
+        // concorrentes poderiam todas ler o mesmo count pré-insert e
+        // ultrapassar o teto de FILE_LIMIT (T-jl0-03, mesmo raciocínio de
+        // T-dkr-02 em client-files-section.tsx).
+        const outcomes: UploadOutcome[] = [];
+        for (let i = 0; i < accepted.length; i++) {
+          const file = accepted[i];
+          setUploadProgress({ done: i, total: accepted.length });
+          const fd = new FormData();
+          fd.append("file", file);
+          const uploadResult = await uploadClientFile(clientId, fd);
+          outcomes.push(
+            "error" in uploadResult
+              ? { filename: file.name, error: uploadResult.error }
+              : { filename: file.name }
+          );
+          setUploadProgress({ done: i + 1, total: accepted.length });
+        }
+
+        const summary = summarizeUploadOutcomes(
+          outcomes,
+          skipped.map((file) => file.name)
+        );
+        successCount = summary.successCount;
+        if (summary.message) {
+          toast.error(summary.message);
+        }
+
+        if (successCount > 0) {
+          await generateChecklistDraftFromFiles(clientId);
+        }
+
+        setUploadProgress(null);
+      }
+
+      router.push(
+        successCount > 0
+          ? `${basePath}/${clientId}?autofillBriefing=1`
+          : `${basePath}/${clientId}`
+      );
     });
   }
 
@@ -203,10 +265,52 @@ export function ClientCreateForm({
           ) : null}
         </div>
 
+        <div className="flex flex-col gap-3">
+          <FormLabel>Arquivos do cliente (opcional)</FormLabel>
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              name="file"
+              accept=".pdf,.txt,.md,.docx"
+              multiple
+              disabled={isPending}
+              className="hidden"
+              onChange={(event) =>
+                setSelectedFiles(Array.from(event.target.files ?? []))
+              }
+            />
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isPending}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              Escolher arquivo(s)
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              {selectedFiles.length === 0
+                ? "Nenhum arquivo selecionado"
+                : selectedFiles.length === 1
+                  ? selectedFiles[0].name
+                  : `${selectedFiles.length} arquivos selecionados`}
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Arquivos anexados aqui já geram automaticamente um rascunho de
+            checklist e uma proposta de briefing pela IA — nenhum upload
+            manual adicional é necessário.
+          </p>
+        </div>
+
         {serverError ? <ErrorBox>{serverError}</ErrorBox> : null}
 
         <Button type="submit" disabled={isPending} className="w-full">
-          {isPending ? "Criando..." : "Criar cliente"}
+          {isPending
+            ? uploadProgress && uploadProgress.total > 1
+              ? `Enviando ${uploadProgress.done + 1} de ${uploadProgress.total}...`
+              : "Criando..."
+            : "Criar cliente"}
         </Button>
       </form>
     </Form>
