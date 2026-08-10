@@ -57,7 +57,7 @@ export function ClientCreateForm({
 
   const form = useForm<ClientCreateInput>({
     resolver: zodResolver(clientCreateSchema),
-    defaultValues: { name: "", pmIds: [currentUserId] },
+    defaultValues: { name: "", tag: "", pmIds: [currentUserId] },
   });
 
   function onSubmit(values: ClientCreateInput) {
@@ -65,6 +65,7 @@ export function ClientCreateForm({
 
     const formData = new FormData();
     formData.append("name", values.name);
+    formData.append("tag", values.tag);
     for (const id of values.pmIds) {
       formData.append("pmIds", id);
     }
@@ -107,19 +108,38 @@ export function ClientCreateForm({
         onSubmit={form.handleSubmit(onSubmit)}
         className="flex flex-col gap-6"
       >
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Nome</FormLabel>
-              <FormControl>
-                <Input {...field} disabled={isPending} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="flex gap-4">
+          <div className="flex-1">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nome</FormLabel>
+                  <FormControl>
+                    <Input {...field} disabled={isPending} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div className="flex-1">
+            <FormField
+              control={form.control}
+              name="tag"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tag</FormLabel>
+                  <FormControl>
+                    <Input {...field} disabled={isPending} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
 
         <div className="flex flex-col gap-3">
           <FormLabel>PMs atribuídos</FormLabel>

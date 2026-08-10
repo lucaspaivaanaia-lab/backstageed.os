@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   clientCreateSchema,
   briefingSchema,
+  clientTagUpdateSchema,
   type BriefingInput,
 } from "@/lib/validation/clients";
 import { runStructuredExtraction } from "@/lib/ai/structured-extraction";
@@ -46,6 +47,7 @@ export async function createClientRecord(
 
   const parsed = clientCreateSchema.safeParse({
     name: formData.get("name"),
+    tag: formData.get("tag"),
     pmIds: formData.getAll("pmIds"),
   });
   if (!parsed.success) {
@@ -56,10 +58,13 @@ export async function createClientRecord(
 
   const { data: client, error: insertError } = await admin
     .from("clients")
-    .insert({ name: parsed.data.name })
+    .insert({ name: parsed.data.name, tag: parsed.data.tag })
     .select("id, name")
     .single();
   if (insertError || !client) {
+    if (insertError?.code === "23505") {
+      return { error: "Essa tag já está em uso por outro cliente." };
+    }
     return { error: "Não foi possível criar o cliente." };
   }
 
@@ -203,6 +208,43 @@ export async function updateBriefing(
     .eq("id", clientId);
 
   if (error) {
+    return {
+      error:
+        "Não foi possível salvar as alterações. Verifique sua conexão e tente novamente.",
+    };
+  }
+
+  return { success: true };
+}
+
+/**
+ * Update a client's tag (quick task 260810-g3f). Mirrors `updateBriefing`'s
+ * exact pattern — RLS-SCOPED `createClient()` (NOT `createAdminClient()`),
+ * `clients_update_scoped` is the real security boundary, allowing Admin OR
+ * any PM already assigned to this client. A Postgres 23505 error (from the
+ * `clients_tag_key` case-insensitive unique index, migration 0025) is
+ * translated to a friendly duplicate-tag message before falling back to the
+ * existing generic error.
+ */
+export async function updateClientTag(
+  clientId: string,
+  tag: string
+): Promise<ActionResult> {
+  const parsed = clientTagUpdateSchema.safeParse({ tag });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("clients")
+    .update({ tag: parsed.data.tag, updated_at: new Date().toISOString() })
+    .eq("id", clientId);
+
+  if (error) {
+    if (error.code === "23505") {
+      return { error: "Essa tag já está em uso por outro cliente." };
+    }
     return {
       error:
         "Não foi possível salvar as alterações. Verifique sua conexão e tente novamente.",

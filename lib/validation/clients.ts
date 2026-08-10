@@ -6,8 +6,26 @@ import { z } from "zod";
  * Pattern 2 — app-layer authorization + zod validation happen before any
  * privileged write).
  */
+/**
+ * Client tag (nome fantasia/código curto) — distinct from `name` (nome de
+ * exibição). Format enforced here is shape-only (letters/numbers/hyphen, no
+ * spaces); case-insensitive uniqueness across clients is enforced at the
+ * database layer by the `clients_tag_key` functional unique index
+ * (migration 0025_clients_tag.sql) and translated to a friendly message on
+ * a Postgres 23505 error in lib/actions/clients.ts.
+ */
+const tagSchema = z
+  .string()
+  .trim()
+  .min(1, { message: "Tag é obrigatória." })
+  .max(40, { message: "Tag deve ter no máximo 40 caracteres." })
+  .regex(/^[A-Za-z0-9-]+$/, {
+    message: "Tag deve conter apenas letras, números e hífen, sem espaços.",
+  });
+
 export const clientCreateSchema = z.object({
   name: z.string().trim().min(1, { message: "Nome é obrigatório." }),
+  tag: tagSchema,
   // No `.default([])` here: keeping this required (rather than optional-
   // with-default) keeps the zod input/output types identical, which
   // zodResolver + react-hook-form's typed `useForm<ClientCreateInput>()`
@@ -18,6 +36,10 @@ export const clientCreateSchema = z.object({
 });
 
 export type ClientCreateInput = z.infer<typeof clientCreateSchema>;
+
+export const clientTagUpdateSchema = z.object({ tag: tagSchema });
+
+export type ClientTagUpdateInput = z.infer<typeof clientTagUpdateSchema>;
 
 /**
  * Strategic briefing edit form validation (CLI-04). D-05: objective/

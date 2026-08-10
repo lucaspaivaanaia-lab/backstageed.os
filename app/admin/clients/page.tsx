@@ -21,6 +21,7 @@ import {
 type ClientRow = {
   id: string;
   name: string;
+  tag: string;
   objective: string | null;
   tone_of_voice: string | null;
   target_audience: string | null;
@@ -39,7 +40,7 @@ export default async function AdminClientsPage() {
   const { data } = await supabase
     .from("clients")
     .select(
-      "id, name, objective, tone_of_voice, target_audience, content_pillars, pm_clients(pm_id)"
+      "id, name, tag, objective, tone_of_voice, target_audience, content_pillars, pm_clients(pm_id)"
     )
     // P1 pivot 2026-08-04: excludes soft-deleted ("Excluir cliente") clients
     // from the active list — archived_at stays set, the row is untouched.
@@ -88,6 +89,7 @@ export default async function AdminClientsPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Nome</TableHead>
+              <TableHead>Tag</TableHead>
               <TableHead>PMs atribuídos</TableHead>
               <TableHead>Briefing</TableHead>
               <TableHead>
@@ -118,6 +120,7 @@ export default async function AdminClientsPage() {
                       {client.name}
                     </Link>
                   </TableCell>
+                  <TableCell>{client.tag}</TableCell>
                   <TableCell>{assignedPmEmails || "—"}</TableCell>
                   <TableCell>
                     {briefingEmpty ? (
