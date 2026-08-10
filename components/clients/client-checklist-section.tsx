@@ -63,6 +63,16 @@ type ClientChecklistSectionProps = {
  *    calls the exact same `generateChecklistDraftFromFiles` the automatic
  *    path uses — no new Server Action, no RLS change, PM-usable by the
  *    same boundary already proven for the automatic trigger.
+ * 4. A NEW "Ver/editar checklist" button on an already-CONFIRMED
+ *    checklist, ALSO visible to both PM and Admin — found missing during
+ *    live verification (there was no way back into a checklist's items
+ *    once confirmed, short of the Admin-only standalone
+ *    /admin/checklist-templates screen). Reuses `handleEditTemplate`/
+ *    `confirmChecklistDraft` verbatim: re-saving an already-confirmed
+ *    template's items and re-running the client assignment is a harmless
+ *    no-op on the parts that were already true, so "edit" and "confirm a
+ *    draft" are really the same operation against different starting
+ *    states — no new Server Action, no RLS change.
  *
  * No local optimistic mirror of server state: every action that changes
  * server state calls `router.refresh()` instead (this project's
@@ -128,28 +138,40 @@ export function ClientChecklistSection({
     }
   }
 
-  // -- PM-or-Admin draft review/confirm flow (260808-ci5) — own, separate
-  // Dialog/state so the two flows never collide. --
-  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
-  const [draftForEdit, setDraftForEdit] = useState<ChecklistTemplateInput | null>(
+  // -- PM-or-Admin draft-review AND already-confirmed-checklist edit flow
+  // (260808-ci5) — own, separate Dialog/state so the two flows never
+  // collide with the admin-only AI-regenerate flow above. Generalized
+  // (found missing during live verification) to open for EITHER a pending
+  // draft OR the client's already-confirmed checklist: `confirmChecklistDraft`
+  // is really "save owner-scoped items + ensure this is the client's
+  // active checklist" — re-running it against an already-confirmed
+  // template is a harmless no-op on the assignment/status, so the exact
+  // same action safely covers "edit an existing checklist" too, with no
+  // new Server Action or RLS surface needed.
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(
     null
   );
-  const [isLoadingDraft, startLoadDraftTransition] = useTransition();
-  const [loadDraftError, setLoadDraftError] = useState<string | null>(null);
+  const [templateForEdit, setTemplateForEdit] =
+    useState<ChecklistTemplateInput | null>(null);
+  const [isLoadingForEdit, startLoadForEditTransition] = useTransition();
+  const [loadForEditError, setLoadForEditError] = useState<string | null>(
+    null
+  );
 
-  function handleReviewDraft() {
-    if (!draftTemplate) return;
-    setLoadDraftError(null);
-    startLoadDraftTransition(async () => {
-      const result = await getChecklistTemplateForEdit(draftTemplate.id);
+  function handleEditTemplate(templateId: string) {
+    setLoadForEditError(null);
+    startLoadForEditTransition(async () => {
+      const result = await getChecklistTemplateForEdit(templateId);
       if (!result) {
-        setLoadDraftError(
-          "Não foi possível carregar o rascunho. Tente novamente."
+        setLoadForEditError(
+          "Não foi possível carregar o checklist. Tente novamente."
         );
         return;
       }
-      setDraftForEdit(result);
-      setReviewDialogOpen(true);
+      setTemplateForEdit(result);
+      setEditingTemplateId(templateId);
+      setEditDialogOpen(true);
     });
   }
 
@@ -189,11 +211,22 @@ export function ClientChecklistSection({
         ) : null}
 
         {confirmedTemplate ? (
-          <p className="text-body">
-            <span className="font-medium">{confirmedTemplate.name}</span> —{" "}
-            {confirmedTemplate.itemCount}{" "}
-            {confirmedTemplate.itemCount === 1 ? "item" : "itens"}
-          </p>
+          <div className="flex flex-col gap-2">
+            <p className="text-body">
+              <span className="font-medium">{confirmedTemplate.name}</span> —{" "}
+              {confirmedTemplate.itemCount}{" "}
+              {confirmedTemplate.itemCount === 1 ? "item" : "itens"}
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleEditTemplate(confirmedTemplate.id)}
+              disabled={isLoadingForEdit}
+              className="w-fit"
+            >
+              {isLoadingForEdit ? "Carregando..." : "Ver/editar checklist"}
+            </Button>
+          </div>
         ) : !draftTemplate ? (
           <>
             <EmptyState
@@ -228,15 +261,16 @@ export function ClientChecklistSection({
             <Button
               type="button"
               variant="outline"
-              onClick={handleReviewDraft}
-              disabled={isLoadingDraft}
+              onClick={() => handleEditTemplate(draftTemplate.id)}
+              disabled={isLoadingForEdit}
               className="w-fit"
             >
-              {isLoadingDraft ? "Carregando..." : "Revisar e confirmar"}
+              {isLoadingForEdit ? "Carregando..." : "Revisar e confirmar"}
             </Button>
-            {loadDraftError ? <ErrorBox>{loadDraftError}</ErrorBox> : null}
           </div>
         ) : null}
+
+        {loadForEditError ? <ErrorBox>{loadForEditError}</ErrorBox> : null}
 
         {viewerIsAdmin ? (
           <>
@@ -270,18 +304,22 @@ export function ClientChecklistSection({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={reviewDialogOpen} onOpenChange={setReviewDialogOpen}>
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Revisar e confirmar rascunho gerado pela IA</DialogTitle>
+            <DialogTitle>
+              {draftTemplate && editingTemplateId === draftTemplate.id
+                ? "Revisar e confirmar rascunho gerado pela IA"
+                : "Editar checklist"}
+            </DialogTitle>
           </DialogHeader>
-          {draftForEdit && draftTemplate ? (
+          {templateForEdit && editingTemplateId ? (
             <TemplateForm
               mode="confirm-draft"
-              templateId={draftTemplate.id}
-              defaultValues={draftForEdit}
+              templateId={editingTemplateId}
+              defaultValues={templateForEdit}
               onSuccess={() => {
-                setReviewDialogOpen(false);
+                setEditDialogOpen(false);
                 router.refresh();
               }}
             />
