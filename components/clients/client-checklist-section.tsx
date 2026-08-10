@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   generateChecklistFromFiles,
+  generateChecklistDraftFromFiles,
   assignTemplateToClient,
   getChecklistTemplateForEdit,
   type ClientChecklistSummary,
@@ -45,6 +46,16 @@ type ClientChecklistSectionProps = {
  *    (client-files-section.tsx). Confirming via `TemplateForm
  *    mode="confirm-draft"` is the ONLY moment a draft becomes the client's
  *    active/gating checklist (`clients.checklist_template_id`).
+ * 3. A NEW "Gerar rascunho agora" button, ALSO visible to both PM and
+ *    Admin, shown only when there is neither a confirmed nor a draft
+ *    template yet — found missing during this feature's own live
+ *    verification (260808-ci5): the automatic trigger only fires on a
+ *    NEW successful upload batch, so a client whose files were already
+ *    uploaded before this feature shipped (or on any earlier session)
+ *    has no draft and no way to get one without re-uploading a file. This
+ *    calls the exact same `generateChecklistDraftFromFiles` the automatic
+ *    path uses — no new Server Action, no RLS change, PM-usable by the
+ *    same boundary already proven for the automatic trigger.
  *
  * No local optimistic mirror of server state: every action that changes
  * server state calls `router.refresh()` instead (this project's
@@ -134,6 +145,29 @@ export function ClientChecklistSection({
     });
   }
 
+  // -- PM-or-Admin "generate a draft right now" fallback (260808-ci5,
+  // found missing during live verification) — same generateChecklistDraftFromFiles
+  // the automatic on-upload trigger calls, exposed directly for the case
+  // where a client's files predate this feature (or the auto-trigger
+  // otherwise never ran). --
+  const [isGeneratingDraftNow, startGenerateDraftNowTransition] =
+    useTransition();
+  const [generateDraftNowError, setGenerateDraftNowError] = useState<
+    string | null
+  >(null);
+
+  function handleGenerateDraftNow() {
+    setGenerateDraftNowError(null);
+    startGenerateDraftNowTransition(async () => {
+      const result = await generateChecklistDraftFromFiles(clientId);
+      if ("error" in result) {
+        setGenerateDraftNowError(result.error);
+        return;
+      }
+      router.refresh();
+    });
+  }
+
   return (
     <DataCard
       title="Checklist de revisão"
@@ -147,13 +181,24 @@ export function ClientChecklistSection({
             {confirmedTemplate.itemCount === 1 ? "item" : "itens"}
           </p>
         ) : !draftTemplate ? (
-          <EmptyState
-            title="Nenhum checklist atribuído"
-            description={
-              "Envie um arquivo do cliente para a IA gerar um rascunho automaticamente" +
-              (viewerIsAdmin ? " ou gere manualmente abaixo." : ".")
-            }
-          />
+          <>
+            <EmptyState
+              title="Nenhum checklist atribuído"
+              description="Envie um arquivo do cliente para a IA gerar um rascunho automaticamente, ou gere um agora a partir dos arquivos já enviados."
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleGenerateDraftNow}
+              disabled={isGeneratingDraftNow}
+              className="w-fit"
+            >
+              {isGeneratingDraftNow ? "Gerando rascunho..." : "Gerar rascunho agora"}
+            </Button>
+            {generateDraftNowError ? (
+              <ErrorBox>{generateDraftNowError}</ErrorBox>
+            ) : null}
+          </>
         ) : null}
 
         {draftTemplate ? (
