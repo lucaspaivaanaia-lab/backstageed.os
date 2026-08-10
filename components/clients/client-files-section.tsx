@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   uploadClientFile,
@@ -9,6 +10,7 @@ import {
   type ClientFileRow,
 } from "@/lib/actions/client-files";
 import { autofillBriefingFromFiles } from "@/lib/actions/clients";
+import { generateChecklistDraftFromFiles } from "@/lib/actions/checklist-templates";
 import type { BriefingInput } from "@/lib/validation/clients";
 import { FILE_LIMIT, atFileLimit } from "@/lib/client-files/limit";
 import {
@@ -48,6 +50,7 @@ export function ClientFilesSection({
   initialFiles,
   onBriefingAutofilled,
 }: ClientFilesSectionProps) {
+  const router = useRouter();
   const [files, setFiles] = useState<ClientFileRow[]>(initialFiles);
   const [isUploadPending, startUploadTransition] = useTransition();
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -127,6 +130,17 @@ export function ClientFilesSection({
         if ("success" in autofill) {
           onBriefingAutofilled?.(autofill.briefing);
           toast.success(BRIEFING_AUTOFILLED_TOAST);
+        }
+
+        // 260808-ci5, item 1: same trigger as the briefing autofill above —
+        // every successful upload batch also (re)generates the client's
+        // draft checklist in the background, no button click required.
+        // Silent best-effort, same posture as the autofill call: the
+        // upload itself already succeeded, and this is a convenience, not
+        // a required step — a failure here shows no toast/ErrorBox.
+        const draftResult = await generateChecklistDraftFromFiles(clientId);
+        if ("success" in draftResult) {
+          router.refresh();
         }
       }
       // successCount === 0: keep the current selection so the user can

@@ -820,6 +820,16 @@ function CardDetailDialogBody({
   const [isValidating, startValidateTransition] = useTransition();
   const [validateError, setValidateError] = useState<string | null>(null);
 
+  // 260808-ci5, item 2 (D-06-amendment): non-null only right after a
+  // revalidate call actually rewrote cards.description — holds the
+  // PRE-revision text so "Desfazer revisão" can restore it into
+  // draftDescription. Reset to null on every fresh Dialog instance, same
+  // as aiValidation — a stale Undo target from a previous edit never
+  // lingers silently.
+  const [preRevisionDescription, setPreRevisionDescription] = useState<
+    string | null
+  >(null);
+
   function handleRevalidate() {
     setValidateError(null);
     startValidateTransition(async () => {
@@ -829,7 +839,19 @@ function CardDetailDialogBody({
         return;
       }
       setAiValidation(result.results);
+      if (result.revisedDescription !== null) {
+        setPreRevisionDescription(result.previousDescription);
+        setDraftDescription(result.revisedDescription);
+      } else {
+        setPreRevisionDescription(null);
+      }
     });
+  }
+
+  function handleUndoRevision() {
+    if (preRevisionDescription === null) return;
+    setDraftDescription(preRevisionDescription);
+    setPreRevisionDescription(null);
   }
 
   function handleAdvance() {
@@ -885,6 +907,22 @@ function CardDetailDialogBody({
                   </span>
                 </div>
               ))}
+          </div>
+        ) : null}
+
+        {preRevisionDescription !== null ? (
+          <div className="flex items-center justify-between gap-2 rounded-md border p-3">
+            <span className="text-body">
+              O rascunho foi revisado pela IA para atender ao checklist.
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleUndoRevision}
+            >
+              Desfazer revisão
+            </Button>
           </div>
         ) : null}
 

@@ -13,6 +13,7 @@ import {
 import {
   createTemplate,
   updateTemplate,
+  confirmChecklistDraft,
 } from "@/lib/actions/checklist-templates";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,7 +39,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 type TemplateFormProps = {
-  mode: "create" | "edit";
+  mode: "create" | "edit" | "confirm-draft";
   templateId?: string;
   defaultValues?: ChecklistTemplateInput;
   // Called with the saved template's id (the new id in "create" mode, the
@@ -80,7 +81,9 @@ export function TemplateForm({
       const result =
         mode === "create"
           ? await createTemplate(values)
-          : await updateTemplate(templateId as string, values);
+          : mode === "confirm-draft"
+            ? await confirmChecklistDraft(templateId as string, values)
+            : await updateTemplate(templateId as string, values);
 
       if ("error" in result && result.error) {
         setServerError(result.error);
@@ -89,6 +92,8 @@ export function TemplateForm({
 
       if (mode === "create") {
         toast.success("Checklist criado.");
+      } else if (mode === "confirm-draft") {
+        toast.success("Checklist confirmado e atribuído a este cliente.");
       }
       onSuccess(
         mode === "create"
