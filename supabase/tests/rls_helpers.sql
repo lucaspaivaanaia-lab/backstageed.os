@@ -55,10 +55,10 @@
 -- ---------------------------------------------------------------------------
 -- 1. Clients: two fixed-uuid clients.
 -- ---------------------------------------------------------------------------
-insert into public.clients (id, name)
+insert into public.clients (id, name, tag)
 values
-  ('11111111-1111-1111-1111-111111111111', 'RLS Test Client A (client_a)'),
-  ('22222222-2222-2222-2222-222222222222', 'RLS Test Client B (client_b)')
+  ('11111111-1111-1111-1111-111111111111', 'RLS Test Client A (client_a)', 'RLS-TEST-CLIENT-A'),
+  ('22222222-2222-2222-2222-222222222222', 'RLS Test Client B (client_b)', 'RLS-TEST-CLIENT-B')
 on conflict (id) do nothing;
 
 -- ---------------------------------------------------------------------------
