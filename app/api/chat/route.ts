@@ -48,7 +48,7 @@ export async function POST(request: Request) {
   const { data: client, error: clientError } = await supabase
     .from("clients")
     .select(
-      "id, name, objective, tone_of_voice, target_audience, content_pillars"
+      "id, name, tag, objective, tone_of_voice, target_audience, content_pillars"
     )
     .eq("id", clientId)
     .single();

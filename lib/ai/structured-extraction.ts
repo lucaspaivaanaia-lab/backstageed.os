@@ -23,6 +23,7 @@ import { buildExtractionPrompt, type ExtractionFile } from "./extraction-prompt"
 
 export type StructuredExtractionParams = {
   clientName: string;
+  clientTag: string;
   files: ExtractionFile[];
   instruction: string;
   toolName: string;
@@ -43,6 +44,7 @@ export async function runStructuredExtraction(
 ): Promise<StructuredExtractionResult> {
   const prompt = buildExtractionPrompt(
     params.clientName,
+    params.clientTag,
     params.files,
     params.instruction
   );
