@@ -120,6 +120,13 @@ export function ClientDetailForm({
         return;
       }
       setTagSaved(true);
+      // Without this, `client.tag` (the prop, server-fetched) stays stale
+      // after a successful save — the "Salvar tag" disabled check
+      // (`tagValue.trim() === client.tag`) would then compare against the
+      // PRE-save value forever, making a later edit back toward that old
+      // value look like "no change" and silently refuse to re-enable the
+      // button, even though the database has since moved on.
+      router.refresh();
     });
   }
 
