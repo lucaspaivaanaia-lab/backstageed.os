@@ -90,9 +90,9 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- **Phase 3 is fully complete (9/9).** Phase 4 (Client Approval & Scheduling) and Phase 6 (Admin Oversight Dashboard) are the only phases with zero plans yet.
-- **New: "Excluir peça" action.** Raised by the developer during wave 9's checkpoint (2026-08-08) — no way to delete a piece once created, even if the title was a mistake. Small, well-scoped; candidate for a `/gsd-quick` task mirroring `createPiece`'s ownership/RLS checks.
-- **New: AI-driven checklist generation at client creation + AI self-correcting content validation.** Raised by the developer during wave 9's checkpoint (2026-08-08). Proposal: when a PM creates a client, AI reads that client's briefings/materials and proposes the checklist automatically (rather than requiring the existing manual Admin "Gerar checklist com IA" button from the 2026-08-04 P0 pivot); AI content validation should self-correct against checklist gaps it finds rather than only reporting them (current "Revalidar com IA" is advisory-only by design, D-06 of the P0 pivot). Substantial new scope touching client creation, `lib/ai/`, and the checklist-gate contract (CHK-03's per-piece gate must stay PM-driven — auto-advance would regress it) — needs its own discussion/planning pass before building, not an inline change.
+- **Phase 3 is fully complete (9/9).** Phase 4 (Client Approval & Scheduling) and Phase 6 (Admin Oversight Dashboard) are the only phases with zero plans yet — both still `Plans: TBD` in ROADMAP.md, neither discussed/planned.
+- ~~"Excluir peça" action~~ — done, quick task 260808-c9s, 2026-08-08.
+- ~~AI-driven checklist generation + self-correcting content validation~~ — done, quick task 260808-ci5, 2026-08-10.
 
 ### Quick Tasks Completed
 
@@ -121,8 +121,6 @@ Recent decisions affecting current work:
 
 ### Blockers/Concerns
 
-- **No auth path into the app for a live user.** Phase 5's login (05-02) and admin-approval queue (05-02) are paused; only signup → `/pending` exists. Phase 1 (Client Records) needs someone authenticated as PM/Admin to exercise its UI. Needs resolution during Phase 1 discuss/plan — flagged above and in ROADMAP.md.
-- Historical: Phase 5 (formerly Phase 1) decision-coverage gate (`check.decision-coverage-plan`) flagged 9/10 CONTEXT.md decisions (D-01 through D-09) as lacking a literal "D-NN" citation string in the plan text. User chose to proceed anyway: the plan-checker's semantic review (3 rounds) already confirmed all 10 decisions are substantively implemented. Flagging for `/gsd:verify-work` to re-surface and double-check when Phase 5 resumes.
 - **Non-blocking: local `npm run dev` (Turbopack) intermittently crashes the chat stream.** Found 2026-08-05 while running Phase 2's 02-06 checkpoint locally: `app/api/chat/route.ts`'s `ReadableStream` occasionally throws `TypeError: Invalid state: Controller is already closed` (roughly 3 of 4 attempts), even on a brand-new client with no history and a freshly cleared `.next` cache. Root-caused via elimination: a direct Anthropic SDK call (bypassing Next.js) never fails, and production (`https://backstageed-os.vercel.app`, a pre-compiled build, not Turbopack dev-mode) has never shown this error across many live tests this session. Points at a timing-sensitive interaction between the Anthropic streaming SDK's async iteration and Next.js 16 Turbopack's dev-mode response-streaming path (this project's `middleware.ts` "proxy" deprecation warning suggests that plumbing is genuinely new). Does not affect real users. Worth a future look (e.g. `next dev --webpack` to confirm Turbopack-specific) but is not a phase gap — 02-06's actual live verification ran against production instead and passed cleanly.
 
 ## Deferred Items
