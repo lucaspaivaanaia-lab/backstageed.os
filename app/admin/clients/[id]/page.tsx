@@ -31,7 +31,7 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
     supabase
       .from("clients")
       .select(
-        "id, name, objective, tone_of_voice, target_audience, content_pillars"
+        "id, name, tag, objective, tone_of_voice, target_audience, content_pillars"
       )
       .eq("id", id)
       .single(),
@@ -61,6 +61,7 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
         client={{
           id: client.id,
           name: client.name,
+          tag: client.tag,
           objective: client.objective,
           toneOfVoice: client.tone_of_voice,
           targetAudience: client.target_audience,

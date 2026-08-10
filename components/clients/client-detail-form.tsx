@@ -10,7 +10,12 @@ import {
   briefingSchema,
   type BriefingInput,
 } from "@/lib/validation/clients";
-import { updateBriefing, assignPms, archiveClient } from "@/lib/actions/clients";
+import {
+  updateBriefing,
+  assignPms,
+  archiveClient,
+  updateClientTag,
+} from "@/lib/actions/clients";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -57,6 +62,7 @@ type ClientDetailFormProps = {
   client: {
     id: string;
     name: string;
+    tag: string;
     objective: string | null;
     toneOfVoice: string | null;
     targetAudience: string | null;
@@ -97,6 +103,25 @@ export function ClientDetailForm({
   backHref,
 }: ClientDetailFormProps) {
   const router = useRouter();
+
+  // -- Tag do cliente (updateClientTag), available to both Admin and PM --
+  const [tagValue, setTagValue] = useState(client.tag);
+  const [isTagPending, startTagTransition] = useTransition();
+  const [tagError, setTagError] = useState<string | null>(null);
+  const [tagSaved, setTagSaved] = useState(false);
+
+  function handleSaveTag() {
+    setTagError(null);
+    setTagSaved(false);
+    startTagTransition(async () => {
+      const result = await updateClientTag(client.id, tagValue);
+      if ("error" in result) {
+        setTagError(result.error);
+        return;
+      }
+      setTagSaved(true);
+    });
+  }
 
   // -- Excluir cliente (archiveClient), Admin-only, soft delete --
   const [isArchivePending, startArchiveTransition] = useTransition();
@@ -253,6 +278,31 @@ export function ClientDetailForm({
         Voltar para clientes
       </Link>
       <PageTitle className="mb-0">{client.name}</PageTitle>
+
+      <DataCard
+        title="Tag do cliente"
+        description="Identificador único usado para diferenciar este cliente de outros com nomes parecidos."
+      >
+        <div className="flex flex-col gap-3">
+          <Input
+            value={tagValue}
+            onChange={(e) => {
+              setTagValue(e.target.value);
+              setTagSaved(false);
+            }}
+            disabled={isTagPending}
+          />
+          <Button
+            type="button"
+            onClick={handleSaveTag}
+            disabled={isTagPending || tagValue.trim() === client.tag}
+            className="w-fit"
+          >
+            {isTagPending ? "Salvando..." : tagSaved ? "Salvo" : "Salvar tag"}
+          </Button>
+          {tagError ? <ErrorBox>{tagError}</ErrorBox> : null}
+        </div>
+      </DataCard>
 
       <DataCard
         title="Briefing estratégico"
