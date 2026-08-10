@@ -3,7 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { listPmRoster, resolvePmNames } from "@/lib/actions/clients";
 import { listClientFiles } from "@/lib/actions/client-files";
-import { getClientChecklistTemplate } from "@/lib/actions/checklist-templates";
+import {
+  getClientChecklistTemplate,
+  getClientChecklistDraft,
+} from "@/lib/actions/checklist-templates";
 import { ClientDetailForm } from "@/components/clients/client-detail-form";
 
 type PageProps = { params: Promise<{ id: string }> };
@@ -50,6 +53,7 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
   const pmRoster = await listPmRoster();
   const initialFiles = await listClientFiles(client.id);
   const checklistTemplate = await getClientChecklistTemplate(client.id);
+  const checklistDraft = await getClientChecklistDraft(client.id);
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-8">
@@ -68,6 +72,7 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
         viewerIsAdmin={profile?.role === "admin"}
         initialFiles={initialFiles}
         checklistTemplate={checklistTemplate}
+        checklistDraft={checklistDraft}
         backHref="/admin/clients"
       />
     </div>

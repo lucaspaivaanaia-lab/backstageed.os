@@ -68,6 +68,7 @@ type ClientDetailFormProps = {
   viewerIsAdmin: boolean;
   initialFiles: ClientFileRow[];
   checklistTemplate: ClientChecklistSummary | null;
+  checklistDraft: ClientChecklistSummary | null;
   // P1 pivot 2026-08-04: "/admin/clients" or "/pm/clients" — passed by the
   // route wrapper rather than derived from `viewerIsAdmin` here, since an
   // Admin can browse a client via the PM route too and the back arrow must
@@ -92,6 +93,7 @@ export function ClientDetailForm({
   viewerIsAdmin,
   initialFiles,
   checklistTemplate,
+  checklistDraft,
   backHref,
 }: ClientDetailFormProps) {
   const router = useRouter();
@@ -461,12 +463,12 @@ export function ClientDetailForm({
         onBriefingAutofilled={handleBriefingAutofilled}
       />
 
-      {viewerIsAdmin ? (
-        <ClientChecklistSection
-          clientId={client.id}
-          currentTemplate={checklistTemplate}
-        />
-      ) : null}
+      <ClientChecklistSection
+        clientId={client.id}
+        viewerIsAdmin={viewerIsAdmin}
+        confirmedTemplate={checklistTemplate}
+        draftTemplate={checklistDraft}
+      />
 
       {viewerIsAdmin ? (
         <DataCard

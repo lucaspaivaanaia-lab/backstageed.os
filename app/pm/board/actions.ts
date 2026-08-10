@@ -536,7 +536,12 @@ export type ChecklistValidationItemResult = {
 };
 
 export type ValidateCardResult =
-  | { success: true; results: ChecklistValidationItemResult[] }
+  | {
+      success: true;
+      results: ChecklistValidationItemResult[];
+      revisedDescription: string | null;
+      previousDescription: string;
+    }
   | { error: string };
 
 const VALIDATE_NO_CHECKLIST_ERROR =
@@ -545,17 +550,28 @@ const VALIDATE_INVALID_RESULT_ERROR =
   "A IA retornou um resultado inesperado. Revise o checklist manualmente.";
 
 /**
- * "Revalidar" (P0 pivot 2026-08-04, item 3). Purely advisory and NEVER
- * persisted — no new table, no write to `card_checklist_items`. Every
- * click re-reads the card's CURRENT title/description, the client's
- * CURRENT `client_files`, and the card's CURRENT checklist items, and
- * returns a fresh pass/fail-with-justification verdict per item. The
- * result lives only in the calling component's local state for as long as
- * the detail Dialog stays open — it does NOT touch `completed_at`/
- * `completed_by` (the PM's own manual check-off, CHK-03/CHK-04's actual
- * audit trail) and it does NOT gate "Avançar" in any way (explicit
- * requirement: no new state machine, no auto-advance — the PM can ignore
- * the AI's verdict and advance manually exactly as before).
+ * "Revalidar" (P0 pivot 2026-08-04, item 3; content self-correction added
+ * by quick task 260808-ci5, item 2 — D-06-amendment). Every click re-reads
+ * the card's CURRENT title/description, the client's CURRENT
+ * `client_files`, and the card's CURRENT checklist items, and returns a
+ * fresh pass/fail-with-justification verdict per item — this per-item
+ * report is STILL purely advisory and NEVER persisted (no write to
+ * `card_checklist_items`), exactly as before. It does NOT touch
+ * `completed_at`/`completed_by` (the PM's own manual check-off, CHK-03/
+ * CHK-04's actual audit trail) and it does NOT gate "Avançar" in any way
+ * (no new state machine, no auto-advance — the PM can ignore the AI's
+ * verdict and advance manually exactly as before).
+ *
+ * NEW in 260808-ci5 (D-06-amendment — supersedes D-06 for `description`
+ * ONLY): the same call also asks the model to return a full rewritten post
+ * text that maximizes the chance of passing every checklist item, and — if
+ * that text differs from the card's current description — WRITES it
+ * straight to `cards.description` in this same request, no confirmation
+ * dialog first. This is the ONLY behavioral change from the original
+ * advisory-only version; the hard boundary (see the write below) is that
+ * this function NEVER writes `card_checklist_items` and NEVER calls
+ * `advanceStage`/`moveCard` — CHK-03's manual-conference gate stays
+ * completely untouched.
  *
  * Items are matched to results BY ARRAY POSITION, not by asking the model
  * to echo back a UUID — the instruction lists items as "1. label\n2.
@@ -627,10 +643,17 @@ export async function validateCardAgainstChecklist(
       "listada, diga se o conteúdo PASSA ou NÃO PASSA nesse critério, com " +
       "uma justificativa curta (1 frase, em português). Retorne exatamente " +
       `${items.length} resultado(s), um por item, na mesma ordem.\n\n` +
-      `Checklist:\n${itemsList}`,
+      `Checklist:\n${itemsList}\n\n` +
+      "Além disso, reescreva o TEXTO COMPLETO do rascunho do post " +
+      "('revisedDescription') de forma a maximizar a chance de passar em " +
+      "TODOS os itens do checklist, preservando o tom de voz e a intenção " +
+      "original do cliente — não invente informações novas, apenas " +
+      "ajuste/corrija o texto existente. Se o conteúdo já passa em todos " +
+      "os itens, retorne o texto original sem alterações em " +
+      "'revisedDescription'.",
     toolName: "report_validation",
     toolDescription:
-      "Registra o resultado da validação de cada item do checklist, na ordem dada.",
+      "Registra o resultado da validação de cada item do checklist, na ordem dada, e o texto revisado do rascunho do post.",
     inputSchema: {
       type: "object",
       properties: {
@@ -645,8 +668,13 @@ export async function validateCardAgainstChecklist(
             required: ["passed", "justification"],
           },
         },
+        revisedDescription: {
+          type: "string",
+          description:
+            "Texto completo do rascunho do post, revisado para maximizar a chance de passar em todos os itens do checklist (ou o texto original, sem alterações, se já passa em todos).",
+        },
       },
-      required: ["results"],
+      required: ["results", "revisedDescription"],
     },
   });
 
@@ -654,7 +682,7 @@ export async function validateCardAgainstChecklist(
     return { error: result.error };
   }
 
-  const raw = result.data as { results?: unknown };
+  const raw = result.data as { results?: unknown; revisedDescription?: unknown };
   if (!Array.isArray(raw.results) || raw.results.length !== items.length) {
     console.error(
       "[validateCardAgainstChecklist] AI result length mismatch",
@@ -674,7 +702,49 @@ export async function validateCardAgainstChecklist(
         : "",
   }));
 
-  return { success: true, results };
+  const previousDescription = card.description ?? "";
+
+  // D-06-amendment (260808-ci5): the per-item report above is unaffected by
+  // anything below — a model that misbehaves on this NEW field must never
+  // break the existing pass/fail report, so a missing/invalid
+  // revisedDescription is logged and treated as "no rewrite", not a
+  // function-level error.
+  let revisedDescription: string | null = null;
+  if (
+    typeof raw.revisedDescription !== "string" ||
+    raw.revisedDescription.trim().length === 0
+  ) {
+    console.error(
+      "[validateCardAgainstChecklist] AI omitted or returned an empty revisedDescription",
+      raw
+    );
+  } else {
+    const revisedTrimmed = raw.revisedDescription.trim();
+    if (revisedTrimmed !== previousDescription.trim()) {
+      // D-06-amendment hard boundary: this write touches ONLY
+      // `cards.description`/`updated_at`. It must NEVER be extended to
+      // touch `stage`, `assignee_id`, or `card_checklist_items`, and this
+      // function must NEVER call `advanceStage`/`moveCard` — CHK-03's
+      // manual-conference gate stays completely untouched by this
+      // self-correction feature. Uses the SAME RLS-scoped `supabase`
+      // client already constructed above (`cards_update_scoped` is the
+      // real boundary, identical to `updateCardDetails`).
+      const { error: descriptionUpdateError } = await supabase
+        .from("cards")
+        .update({ description: revisedTrimmed, updated_at: new Date().toISOString() })
+        .eq("id", cardId);
+      if (descriptionUpdateError) {
+        console.error(
+          "[validateCardAgainstChecklist] failed to persist revisedDescription",
+          descriptionUpdateError
+        );
+      } else {
+        revisedDescription = revisedTrimmed;
+      }
+    }
+  }
+
+  return { success: true, results, revisedDescription, previousDescription };
 }
 
 export type CreatePieceResult =

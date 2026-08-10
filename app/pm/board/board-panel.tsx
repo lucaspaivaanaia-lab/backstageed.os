@@ -791,6 +791,18 @@ function CardDetailDialogBody({
   const [detailsError, setDetailsError] = useState<string | null>(null);
   const [isSavingDetails, startDetailsTransition] = useTransition();
 
+  // 260808-ci5, item 2 (D-06-amendment bugfix): `validateCardAgainstChecklist`
+  // persists its AI rewrite straight to `cards.description` WITHOUT calling
+  // `revalidatePath`, so the `card` prop below stays stale (still holding the
+  // PRE-revision text) until the next navigation. That means comparing
+  // `draftDescription` back against `card.description` after "Desfazer
+  // revisão" reverts the TEXTAREA to match the (stale) prop and makes
+  // `hasDetailChanges` false — disabling "Salvar alterações" and silently
+  // leaving the AI's rewrite persisted in the database even though the PM
+  // just asked to undo it. This flag forces the Save button back on after an
+  // undo so the PM's revert actually reaches the server.
+  const [descriptionRevertPending, setDescriptionRevertPending] = useState(false);
+
   // T-03-55: if the card's current assignee has since been unassigned from
   // the client, `pmRoster` no longer contains it — append it explicitly so
   // the Select can still represent (and round-trip) the current value
@@ -807,7 +819,8 @@ function CardDetailDialogBody({
   const currentAssigneeValue = card.assignee_id ?? NONE_VALUE;
   const hasDetailChanges =
     normalizedDraftDescription !== (card.description ?? "") ||
-    draftAssignee !== currentAssigneeValue;
+    draftAssignee !== currentAssigneeValue ||
+    descriptionRevertPending;
 
   // P0 pivot 2026-08-04, item 3: "Revalidar" runs the AI checklist check on
   // demand — purely advisory, never persisted (see validateCardAgainstChecklist's
@@ -820,6 +833,16 @@ function CardDetailDialogBody({
   const [isValidating, startValidateTransition] = useTransition();
   const [validateError, setValidateError] = useState<string | null>(null);
 
+  // 260808-ci5, item 2 (D-06-amendment): non-null only right after a
+  // revalidate call actually rewrote cards.description — holds the
+  // PRE-revision text so "Desfazer revisão" can restore it into
+  // draftDescription. Reset to null on every fresh Dialog instance, same
+  // as aiValidation — a stale Undo target from a previous edit never
+  // lingers silently.
+  const [preRevisionDescription, setPreRevisionDescription] = useState<
+    string | null
+  >(null);
+
   function handleRevalidate() {
     setValidateError(null);
     startValidateTransition(async () => {
@@ -829,7 +852,23 @@ function CardDetailDialogBody({
         return;
       }
       setAiValidation(result.results);
+      if (result.revisedDescription !== null) {
+        setPreRevisionDescription(result.previousDescription);
+        setDraftDescription(result.revisedDescription);
+      } else {
+        setPreRevisionDescription(null);
+      }
     });
+  }
+
+  function handleUndoRevision() {
+    if (preRevisionDescription === null) return;
+    setDraftDescription(preRevisionDescription);
+    setPreRevisionDescription(null);
+    // The AI's rewrite is already persisted server-side (see the state
+    // comment above) — force "Salvar alterações" back on so this revert
+    // isn't purely cosmetic.
+    setDescriptionRevertPending(true);
   }
 
   function handleAdvance() {
@@ -855,6 +894,7 @@ function CardDetailDialogBody({
         setDetailsError(result.error);
         return;
       }
+      setDescriptionRevertPending(false);
       toast.success(CARD_DETAILS_SAVED_TOAST);
     });
   }
@@ -885,6 +925,22 @@ function CardDetailDialogBody({
                   </span>
                 </div>
               ))}
+          </div>
+        ) : null}
+
+        {preRevisionDescription !== null ? (
+          <div className="flex items-center justify-between gap-2 rounded-md border p-3">
+            <span className="text-body">
+              O rascunho foi revisado pela IA para atender ao checklist.
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleUndoRevision}
+            >
+              Desfazer revisão
+            </Button>
           </div>
         ) : null}
 
