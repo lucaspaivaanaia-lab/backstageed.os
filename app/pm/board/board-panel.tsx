@@ -41,6 +41,7 @@ import {
   createPiece,
   removePiece,
   validateCardAgainstChecklist,
+  proposePackagePieces,
   type ChecklistValidationItemResult,
 } from "./actions";
 import {
@@ -48,10 +49,12 @@ import {
   attachDriveLinkSchema,
   type CreateCardInput,
   type AttachDriveLinkInput,
+  type PackagePieceProposal,
 } from "@/lib/validation/cards";
 import { STAGE_LABELS, STAGE_ORDER, type CardStage } from "@/lib/cards/stages";
 import { CHANNEL_LABELS, type CardChannel } from "@/lib/cards/channel";
 import { packageRollupLabel } from "@/lib/cards/package-rollup";
+import { PLANNING_DOC_MAX_LENGTH } from "@/lib/cards/package-proposal";
 import { cardFieldsFromChatText } from "@/lib/cards/chat-import";
 import {
   checklistProgress,
@@ -242,6 +245,11 @@ function CreateCardDialog({
   const [assigneeValue, setAssigneeValue] = useState(NONE_VALUE);
   const [mediaAssigneeValue, setMediaAssigneeValue] = useState(NONE_VALUE);
   const [pastedText, setPastedText] = useState("");
+  // Item 2, 260811-nnw: the AI-proposed pieces live ONLY in this component's
+  // state until the PM confirms (D-4, no intermediate table). Reset on every
+  // dialog open, same as pastedText.
+  const [planningDocText, setPlanningDocText] = useState("");
+  const [proposedPieces, setProposedPieces] = useState<PackagePieceProposal[]>([]);
 
   const targetStage = stage ?? "briefing";
   // Task 2, action D (rescope_notice point 1): the card-type selector
@@ -278,6 +286,8 @@ function CreateCardDialog({
       setMediaAssigneeValue(NONE_VALUE);
       setActiveTab("escrever");
       setPastedText("");
+      setPlanningDocText("");
+      setProposedPieces([]);
     }
   }
 
@@ -340,6 +350,76 @@ function CreateCardDialog({
         setServerError(result.error);
         return;
       }
+      toast.success(CARD_CREATED_TOAST);
+      setOpen(false);
+    });
+  }
+
+  function handleRemoveProposedPiece(index: number) {
+    setProposedPieces((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function handleGeneratePieces() {
+    if (!clientId) return;
+    setServerError(null);
+    startTransition(async () => {
+      const result = await proposePackagePieces({
+        clientId,
+        text: planningDocText,
+      });
+      if ("error" in result) {
+        setServerError(result.error);
+        return;
+      }
+      setProposedPieces(result.pieces);
+    });
+  }
+
+  // Item 2, 260811-nnw (D-3): confirming creates the Pacote first, then
+  // walks the (possibly pruned) proposedPieces list SEQUENTIALLY -- one
+  // awaited createPiece call at a time, never Promise.all (RESEARCH.md
+  // "Don't Hand-Roll" table, same rule 260805-dkr's multi-upload already
+  // established). A piece-creation failure is never silent: the Pacote and
+  // any already-created pieces remain (no rollback), and the failed
+  // titles are named in the error so the PM can add them manually.
+  function handleConfirmPackageWithPieces() {
+    if (!clientId) return;
+    const title = form.getValues("title").trim();
+    if (title.length === 0) {
+      setServerError("Título obrigatório.");
+      return;
+    }
+    setServerError(null);
+    startTransition(async () => {
+      const packageResult = await createCard({
+        clientId,
+        title,
+        cardType: "package",
+        channel: form.getValues("channel"),
+        stage: targetStage,
+      });
+      if ("error" in packageResult) {
+        setServerError(packageResult.error);
+        return;
+      }
+
+      const failures: string[] = [];
+      for (const piece of proposedPieces) {
+        const pieceResult = await createPiece({
+          parentCardId: packageResult.cardId,
+          title: piece.title,
+          description: piece.description,
+        });
+        if ("error" in pieceResult) failures.push(piece.title);
+      }
+
+      if (failures.length > 0) {
+        setServerError(
+          `Pacote criado, mas estas peças não puderam ser criadas: ${failures.join(", ")}. Adicione-as manualmente pelo pacote.`
+        );
+        return;
+      }
+
       toast.success(CARD_CREATED_TOAST);
       setOpen(false);
     });
@@ -439,6 +519,66 @@ function CreateCardDialog({
                     </FormItem>
                   )}
                 />
+                {isPackageType ? (
+                  <div className="flex flex-col gap-2 rounded-md border p-3">
+                    <Label>
+                      Gerar peças com IA a partir de um documento de planejamento
+                    </Label>
+                    <Textarea
+                      value={planningDocText}
+                      onChange={(event) => setPlanningDocText(event.target.value)}
+                      rows={6}
+                      maxLength={PLANNING_DOC_MAX_LENGTH}
+                      placeholder="Cole aqui o texto do documento de planejamento (ex: pauta semanal, calendário de conteúdo)..."
+                      disabled={isPending}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleGeneratePieces}
+                      disabled={isPending || planningDocText.trim().length === 0}
+                      className="w-fit"
+                    >
+                      {isPending ? "Gerando..." : "Gerar peças"}
+                    </Button>
+                    {proposedPieces.length > 0 ? (
+                      <div className="flex flex-col gap-2">
+                        <span className="text-body font-medium">
+                          {proposedPieces.length} peça
+                          {proposedPieces.length === 1 ? "" : "s"} proposta
+                          {proposedPieces.length === 1 ? "" : "s"} — revise e
+                          remova o que não quiser antes de confirmar
+                        </span>
+                        {proposedPieces.map((piece, index) => (
+                          <div
+                            key={`${piece.title}-${index}`}
+                            className="flex items-start justify-between gap-2 rounded-md border p-2"
+                          >
+                            <div className="flex min-w-0 flex-col gap-0.5">
+                              <span className="text-body font-medium">
+                                {piece.title}
+                              </span>
+                              <span className="text-meta text-muted-foreground whitespace-pre-wrap">
+                                {piece.description}
+                              </span>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="size-8 shrink-0"
+                              aria-label="Remover peça proposta"
+                              onClick={() => handleRemoveProposedPiece(index)}
+                              disabled={isPending}
+                            >
+                              <XIcon className="size-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
                 {!isPackageType ? (
                   <FormField
                     control={form.control}
@@ -509,9 +649,22 @@ function CreateCardDialog({
                   </div>
                 ) : null}
                 {serverError ? <ErrorBox>{serverError}</ErrorBox> : null}
-                <Button type="submit" disabled={isPending} className="w-fit">
-                  {isPending ? "Criando..." : "Criar card"}
-                </Button>
+                {isPackageType && proposedPieces.length > 0 ? (
+                  <Button
+                    type="button"
+                    onClick={handleConfirmPackageWithPieces}
+                    disabled={isPending}
+                    className="w-fit"
+                  >
+                    {isPending
+                      ? "Criando..."
+                      : `Confirmar e criar pacote com ${proposedPieces.length} peça${proposedPieces.length === 1 ? "" : "s"}`}
+                  </Button>
+                ) : (
+                  <Button type="submit" disabled={isPending} className="w-fit">
+                    {isPending ? "Criando..." : "Criar card"}
+                  </Button>
+                )}
               </form>
             </Form>
           </TabsContent>
