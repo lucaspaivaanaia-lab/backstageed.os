@@ -113,6 +113,24 @@ export const updateCardDetailsSchema = z.object({
 });
 export type UpdateCardDetailsInput = z.infer<typeof updateCardDetailsSchema>;
 
+/**
+ * updateCardDescriptionAsEditor's input (item 3 of the 2026-08-05 action
+ * plan's P3, "novo papel de acesso Editor", 260811-oe0-CONTEXT.md).
+ * Deliberately has ONLY cardId/description -- stage/assigneeId/
+ * mediaAssigneeId/channel/dueDate are structurally ABSENT from this type,
+ * not merely ignored, so an Editor caller has no field to even attempt to
+ * set them through. Nullable, mirroring updateCardDetailsSchema's own
+ * description field exactly -- "sem descrição" is a legitimate, explicit
+ * state.
+ */
+export const updateCardDescriptionAsEditorSchema = z.object({
+  cardId: z.string().uuid(),
+  description: z.string().trim().max(5000).nullable(),
+});
+export type UpdateCardDescriptionAsEditorInput = z.infer<
+  typeof updateCardDescriptionAsEditorSchema
+>;
+
 export const toggleChecklistItemSchema = z.object({
   itemId: z.string().uuid(),
   completed: z.boolean(),
