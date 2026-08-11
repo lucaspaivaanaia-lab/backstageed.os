@@ -209,6 +209,19 @@ function formatCompletedAt(iso: string): string {
   }).format(new Date(iso));
 }
 
+function formatDueDateShort(iso: string): string {
+  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(
+    new Date(iso)
+  );
+}
+
+function toDatetimeLocalValue(iso: string | null): string {
+  if (!iso) return "";
+  const date = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 /**
  * "Criar card" Dialog (KAN-01, single AND package paths, plan 03-06).
  * Generalized from a PageTitle-only button (03-02/03-03) into a reusable
@@ -1014,6 +1027,7 @@ function CardDetailDialogBody({
   const [draftAssignee, setDraftAssignee] = useState(card.assignee_id ?? NONE_VALUE);
   const [draftMediaAssignee, setDraftMediaAssignee] = useState(card.media_assignee_id ?? NONE_VALUE);
   const [draftChannel, setDraftChannel] = useState<CardChannel>(card.channel);
+  const [draftDueDate, setDraftDueDate] = useState(toDatetimeLocalValue(card.due_date));
   const [detailsError, setDetailsError] = useState<string | null>(null);
   const [isSavingDetails, startDetailsTransition] = useTransition();
 
@@ -1067,6 +1081,7 @@ function CardDetailDialogBody({
     draftAssignee !== currentAssigneeValue ||
     draftMediaAssignee !== currentMediaAssigneeValue ||
     draftChannel !== card.channel ||
+    draftDueDate !== toDatetimeLocalValue(card.due_date) ||
     descriptionRevertPending;
 
   // P0 pivot 2026-08-04, item 3: "Revalidar" runs the AI checklist check on
@@ -1138,6 +1153,7 @@ function CardDetailDialogBody({
         assigneeId: draftAssignee === NONE_VALUE ? null : draftAssignee,
         mediaAssigneeId: draftMediaAssignee === NONE_VALUE ? null : draftMediaAssignee,
         channel: draftChannel,
+        dueDate: draftDueDate ? new Date(draftDueDate).toISOString() : null,
       });
       if (result.error) {
         setDetailsError(result.error);
@@ -1278,6 +1294,30 @@ function CardDetailDialogBody({
         </div>
 
         <div className="flex flex-col gap-2">
+          <SectionTitle>Prazo</SectionTitle>
+          <div className="flex items-center gap-2">
+            <Input
+              type="datetime-local"
+              value={draftDueDate}
+              onChange={(event) => setDraftDueDate(event.target.value)}
+              disabled={isSavingDetails}
+              className="w-fit"
+            />
+            {draftDueDate ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setDraftDueDate("")}
+                disabled={isSavingDetails}
+              >
+                Limpar
+              </Button>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2">
           <SectionTitle>Anexos</SectionTitle>
           {card.attachments.length === 0 ? (
             <EmptyState
@@ -1388,6 +1428,9 @@ function BoardCardItem({
     metaSegments.push(
       `Designer/Mídia: ${pmNames[card.media_assignee_id] ?? card.media_assignee_id}`
     );
+  }
+  if (card.due_date) {
+    metaSegments.push(`Prazo: ${formatDueDateShort(card.due_date)}`);
   }
   if (card.attachments.length === 1) {
     metaSegments.push("1 anexo");

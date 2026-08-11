@@ -49,6 +49,7 @@ export type BoardCard = {
   assignee_id: string | null;
   media_assignee_id: string | null;
   channel: CardChannel;
+  due_date: string | null;
   created_at: string;
   checklistItems: BoardChecklistItem[];
   attachments: BoardAttachment[];
@@ -112,7 +113,7 @@ export default async function PmBoardPage({
         ? supabase
             .from("cards")
             .select(
-              "id, title, card_type, stage, parent_card_id, description, assignee_id, media_assignee_id, channel, created_at"
+              "id, title, card_type, stage, parent_card_id, description, assignee_id, media_assignee_id, channel, due_date, created_at"
             )
             .eq("client_id", clientId)
             .order("created_at", { ascending: true })

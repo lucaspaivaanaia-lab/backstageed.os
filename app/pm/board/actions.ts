@@ -457,6 +457,7 @@ export async function updateCardDetails(
       assignee_id: parsed.data.assigneeId,
       media_assignee_id: parsed.data.mediaAssigneeId,
       channel: parsed.data.channel,
+      due_date: parsed.data.dueDate,
       updated_at: new Date().toISOString(),
     })
     .eq("id", parsed.data.cardId);

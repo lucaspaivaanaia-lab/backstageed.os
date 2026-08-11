@@ -89,8 +89,9 @@ export type MoveCardInput = z.infer<typeof moveCardSchema>;
 
 /**
  * updateCardDetails' input (KAN-01, D-16/D-19; channel added by quick task
- * 260811-m0t; mediaAssigneeId added by quick task 260811-n0i): edits the
- * fields createCard can also set at creation time. `description`/
+ * 260811-m0t; mediaAssigneeId added by quick task 260811-n0i; dueDate added
+ * by item 3 of the 2026-08-05 action plan's P3, 260811-oe0-CONTEXT.md):
+ * edits the fields createCard can also set at creation time. `description`/
  * `assigneeId`/`mediaAssigneeId` are nullable rather than optional -- the
  * form always submits a value (possibly null) to explicitly clear a
  * description or unassign a card, never omits the key. `channel` is never
@@ -110,6 +111,20 @@ export const updateCardDetailsSchema = z.object({
   // Never nullable -- unlike description/assigneeId there is no "clear"
   // state for channel, a card always has exactly one of the two values.
   channel: z.enum(CARD_CHANNEL_VALUES),
+  // Item 3 of the 2026-08-05 action plan's P3 (260811-oe0-CONTEXT.md): lets
+  // a PM/Admin set/change/clear a card's due date from the detail dialog.
+  // NEVER accepted by updateCardDescriptionAsEditorSchema (this same file,
+  // lib/validation/cards.ts) -- that schema has no dueDate field at all,
+  // structurally, not just by convention (260811-oe0-RESEARCH.md Section
+  // 3/4). A plain ISO datetime string (or null to clear) -- the client
+  // always sends `new Date(...).toISOString()`, never a raw
+  // datetime-local value.
+  dueDate: z
+    .string()
+    .refine((value) => !Number.isNaN(Date.parse(value)), {
+      message: "Data inválida.",
+    })
+    .nullable(),
 });
 export type UpdateCardDetailsInput = z.infer<typeof updateCardDetailsSchema>;
 
