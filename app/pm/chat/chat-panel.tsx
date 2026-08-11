@@ -467,7 +467,7 @@ export function ChatPanel({ clients }: ChatPanelProps) {
                     className={
                       isUser
                         ? "max-w-[80%] rounded-2xl bg-secondary px-4 py-2 text-body text-secondary-foreground"
-                        : "max-w-[80%] rounded-2xl border bg-card px-4 py-2 text-body text-card-foreground"
+                        : "max-w-[80%] rounded-2xl border bg-card px-4 py-2 text-body text-card-foreground whitespace-pre-wrap"
                     }
                   >
                     {message.content}
