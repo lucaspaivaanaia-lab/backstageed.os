@@ -45,6 +45,15 @@ export const createCardSchema = z.object({
   // rows is enforced by the cards_assignee_membership_trg trigger, not
   // here.
   assigneeId: z.string().uuid().optional(),
+  // Item 4, 2026-08-05 action plan P3 (260811-lp5-CONTEXT.md), quick task
+  // 260811-n0i: a SECOND, purely informational assignee (e.g. Designer/
+  // Mídia), coexisting with assigneeId above, never replacing it. Optional
+  // like assigneeId -- deliberately NOT required (unlike channel in item 1,
+  // 260811-m0t), so no createCard call site needs to change. Membership in
+  // the client's pm_clients rows is enforced by the SAME
+  // cards_assignee_membership_trg trigger (extended by migration 0029), not
+  // here.
+  mediaAssigneeId: z.string().uuid().optional(),
   // Item 1, 2026-08-05 action plan P3 (260811-lp5-CONTEXT.md): required,
   // orthogonal to cardType -- every card, single or package, carries this
   // label. No default in the schema itself (the DB column default only
@@ -79,16 +88,22 @@ export type MoveCardInput = z.infer<typeof moveCardSchema>;
 
 /**
  * updateCardDetails' input (KAN-01, D-16/D-19; channel added by quick task
- * 260811-m0t): edits the fields createCard can also set at creation time.
- * `description`/`assigneeId` are nullable rather than optional -- the form
- * always submits a value (possibly null) to explicitly clear a description
- * or unassign a card, never omits the key. `channel` is never nullable --
- * unlike those two, there is no "clear" state for it.
+ * 260811-m0t; mediaAssigneeId added by quick task 260811-n0i): edits the
+ * fields createCard can also set at creation time. `description`/
+ * `assigneeId`/`mediaAssigneeId` are nullable rather than optional -- the
+ * form always submits a value (possibly null) to explicitly clear a
+ * description or unassign a card, never omits the key. `channel` is never
+ * nullable -- unlike those, there is no "clear" state for it.
  */
 export const updateCardDetailsSchema = z.object({
   cardId: z.string().uuid(),
   description: z.string().trim().max(5000).nullable(),
   assigneeId: z.string().uuid().nullable(),
+  // Item 4, 260811-n0i: lets a PM set/change/clear a card's second,
+  // purely-informational assignee from the detail dialog, alongside
+  // Descrição/Responsável/Canal. Nullable, mirroring assigneeId exactly --
+  // "sem designer/mídia" is a legitimate, explicit state.
+  mediaAssigneeId: z.string().uuid().nullable(),
   // Item 1, 2026-08-05 action plan P3: lets a PM reclassify an existing
   // card's channel from the detail dialog, alongside Descrição/Responsável.
   // Never nullable -- unlike description/assigneeId there is no "clear"
