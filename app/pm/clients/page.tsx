@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { PlusIcon, UsersIcon, ChevronRightIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { resolvePmNames } from "@/lib/actions/clients";
 import { ClientListLink } from "@/components/clients/client-list-link";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -26,7 +25,6 @@ type ClientRow = {
   tone_of_voice: string | null;
   target_audience: string | null;
   content_pillars: string[] | null;
-  pm_clients: { pm_id: string }[] | null;
 };
 
 /**
@@ -40,20 +38,13 @@ export default async function PmClientsPage() {
   const { data } = await supabase
     .from("clients")
     .select(
-      "id, name, objective, tone_of_voice, target_audience, content_pillars, pm_clients(pm_id)"
+      "id, name, objective, tone_of_voice, target_audience, content_pillars"
     )
     // P1 pivot 2026-08-04: excludes soft-deleted ("Excluir cliente") clients
     // from the active list — archived_at stays set, the row is untouched.
     .is("archived_at", null);
 
   const clients = (data ?? []) as ClientRow[];
-
-  const pmIds = Array.from(
-    new Set(
-      clients.flatMap((c) => (c.pm_clients ?? []).map((pc) => pc.pm_id))
-    )
-  );
-  const pmNames = await resolvePmNames(pmIds);
 
   return (
     <PageShell width="wide">
@@ -89,7 +80,6 @@ export default async function PmClientsPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Nome</TableHead>
-              <TableHead>PMs atribuídos</TableHead>
               <TableHead>Briefing</TableHead>
               <TableHead>
                 <span className="sr-only">Abrir</span>
@@ -103,11 +93,6 @@ export default async function PmClientsPage() {
                 !client.tone_of_voice &&
                 !client.target_audience &&
                 (client.content_pillars ?? []).length === 0;
-
-              const assignedPmEmails = (client.pm_clients ?? [])
-                .map((pc) => pmNames[pc.pm_id])
-                .filter(Boolean)
-                .join(", ");
 
               // Navigation-flow correction 2026-08-05: a client whose
               // briefing is already filled goes straight to Produção — the
@@ -134,7 +119,6 @@ export default async function PmClientsPage() {
                       {client.name}
                     </ClientListLink>
                   </TableCell>
-                  <TableCell>{assignedPmEmails || "—"}</TableCell>
                   <TableCell>
                     {briefingEmpty ? (
                       <StatusBadge tone="neutral">Vazio</StatusBadge>
