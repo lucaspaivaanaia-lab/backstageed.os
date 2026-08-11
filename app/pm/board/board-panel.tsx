@@ -161,6 +161,12 @@ type BoardPanelProps = {
   // listClientPmRoster), used to scope the assignee picker (D-19). Empty
   // array when no client is active.
   pmRoster: BoardPmRosterEntry[];
+  // Cross-client roster of the active client's assigned PMs PLUS every
+  // approved Editor (lib/actions/clients.ts, listPmRoster + listEditorRoster,
+  // merged in app/pm/board/page.tsx) -- item 3, 260811-oe0-CONTEXT.md. Feeds
+  // ONLY the Designer/Mídia picker; the Responsável picker stays scoped to
+  // pmRoster alone, since an Editor can never become a card's Responsável.
+  mediaAssigneeRoster: BoardPmRosterEntry[];
   // Whether the active client has a checklist template assigned. Drives
   // the "Nenhum checklist configurado" informational notice — never used
   // to disable "Avançar" (that stays gated by isGateBlocked alone).
@@ -231,11 +237,13 @@ function CreateCardDialog({
   clientId,
   stage,
   pmRoster,
+  mediaAssigneeRoster,
   trigger,
 }: {
   clientId: string | null;
   stage?: CardStage;
   pmRoster: BoardPmRosterEntry[];
+  mediaAssigneeRoster: BoardPmRosterEntry[];
   trigger: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -639,7 +647,7 @@ function CreateCardDialog({
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value={NONE_VALUE}>Sem designer/mídia</SelectItem>
-                        {pmRoster.map((pm) => (
+                        {mediaAssigneeRoster.map((pm) => (
                           <SelectItem key={pm.id} value={pm.id}>
                             {pm.email}
                           </SelectItem>
@@ -979,11 +987,13 @@ function CardDetailDialogBody({
   card,
   pmNames,
   pmRoster,
+  mediaAssigneeRoster,
   hasChecklistTemplate,
 }: {
   card: BoardCard;
   pmNames: Record<string, string>;
   pmRoster: BoardPmRosterEntry[];
+  mediaAssigneeRoster: BoardPmRosterEntry[];
   hasChecklistTemplate: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
@@ -1031,20 +1041,23 @@ function CardDetailDialogBody({
         ]
       : pmRoster;
 
-  // T-03-55 shape, applied to the second assignee field (Item 4, 260811-n0i):
-  // if the card's current media assignee has since been unassigned from the
-  // client, `pmRoster` no longer contains it -- append it explicitly so the
-  // Select can still represent (and round-trip) the current value.
+  // T-03-55 shape, applied to the second assignee field (Item 4, 260811-n0i;
+  // item 3, 260811-oe0: now sourced from the roster below, since an Editor
+  // is a valid Designer/Mídia value too): if the card's current media
+  // assignee has since been unassigned from the client (or is an Editor no
+  // longer approved), that roster no longer contains it -- append it
+  // explicitly so the Select can still represent (and round-trip) the
+  // current value.
   const mediaAssigneeOptions =
-    card.media_assignee_id && !pmRoster.some((pm) => pm.id === card.media_assignee_id)
+    card.media_assignee_id && !mediaAssigneeRoster.some((pm) => pm.id === card.media_assignee_id)
       ? [
-          ...pmRoster,
+          ...mediaAssigneeRoster,
           {
             id: card.media_assignee_id,
             email: pmNames[card.media_assignee_id] ?? card.media_assignee_id,
           },
         ]
-      : pmRoster;
+      : mediaAssigneeRoster;
 
   const normalizedDraftDescription = draftDescription.trim();
   const currentAssigneeValue = card.assignee_id ?? NONE_VALUE;
@@ -1352,12 +1365,14 @@ function BoardCardItem({
   card,
   pmNames,
   pmRoster,
+  mediaAssigneeRoster,
   hasChecklistTemplate,
   parentTitleById,
 }: {
   card: BoardCard;
   pmNames: Record<string, string>;
   pmRoster: BoardPmRosterEntry[];
+  mediaAssigneeRoster: BoardPmRosterEntry[];
   hasChecklistTemplate: boolean;
   parentTitleById: Record<string, string>;
 }) {
@@ -1420,6 +1435,7 @@ function BoardCardItem({
           card={card}
           pmNames={pmNames}
           pmRoster={pmRoster}
+          mediaAssigneeRoster={mediaAssigneeRoster}
           hasChecklistTemplate={hasChecklistTemplate}
         />
       </DialogContent>
@@ -1440,12 +1456,14 @@ function PieceDetailDialog({
   onOpenChange,
   pmNames,
   pmRoster,
+  mediaAssigneeRoster,
   hasChecklistTemplate,
 }: {
   card: BoardCard | null;
   onOpenChange: (open: boolean) => void;
   pmNames: Record<string, string>;
   pmRoster: BoardPmRosterEntry[];
+  mediaAssigneeRoster: BoardPmRosterEntry[];
   hasChecklistTemplate: boolean;
 }) {
   return (
@@ -1456,6 +1474,7 @@ function PieceDetailDialog({
             card={card}
             pmNames={pmNames}
             pmRoster={pmRoster}
+            mediaAssigneeRoster={mediaAssigneeRoster}
             hasChecklistTemplate={hasChecklistTemplate}
           />
         ) : null}
@@ -1687,6 +1706,7 @@ export function BoardPanel({
   parentTitleById,
   pmNames,
   pmRoster,
+  mediaAssigneeRoster,
   hasChecklistTemplate,
 }: BoardPanelProps) {
   const router = useRouter();
@@ -1881,6 +1901,7 @@ export function BoardPanel({
             <CreateCardDialog
               clientId={activeClientId}
               pmRoster={pmRoster}
+              mediaAssigneeRoster={mediaAssigneeRoster}
               trigger={
                 <Button type="button" disabled={!activeClientId}>
                   <PlusIcon className="size-4" />
@@ -1969,6 +1990,7 @@ export function BoardPanel({
         }}
         pmNames={pmNames}
         pmRoster={pmRoster}
+        mediaAssigneeRoster={mediaAssigneeRoster}
         hasChecklistTemplate={hasChecklistTemplate}
       />
 
@@ -1985,6 +2007,7 @@ export function BoardPanel({
             <CreateCardDialog
               clientId={activeClientId}
               pmRoster={pmRoster}
+              mediaAssigneeRoster={mediaAssigneeRoster}
               trigger={
                 <Button type="button" disabled={!activeClientId}>
                   <PlusIcon className="size-4" />
@@ -2025,6 +2048,7 @@ export function BoardPanel({
                       clientId={activeClientId}
                       stage={column.stage}
                       pmRoster={pmRoster}
+                      mediaAssigneeRoster={mediaAssigneeRoster}
                       trigger={
                         <Button
                           type="button"
@@ -2047,6 +2071,7 @@ export function BoardPanel({
                         card={card}
                         pmNames={pmNames}
                         pmRoster={pmRoster}
+                        mediaAssigneeRoster={mediaAssigneeRoster}
                         hasChecklistTemplate={hasChecklistTemplate}
                         parentTitleById={parentTitleById}
                       />

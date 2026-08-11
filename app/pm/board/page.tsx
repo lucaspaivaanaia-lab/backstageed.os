@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { STAGE_ORDER, type CardStage } from "@/lib/cards/stages";
 import type { CardChannel } from "@/lib/cards/channel";
-import { resolvePmNames, listClientPmRoster } from "@/lib/actions/clients";
+import { resolvePmNames, listClientPmRoster, listEditorRoster } from "@/lib/actions/clients";
 import { BoardPanel } from "./board-panel";
 
 export type BoardCardType = "single" | "package" | "piece";
@@ -99,7 +99,7 @@ export default async function PmBoardPage({
   const { client: clientId } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: clients }, { data: cards }, { data: activeClient }, pmRoster] =
+  const [{ data: clients }, { data: cards }, { data: activeClient }, pmRoster, editorRoster] =
     await Promise.all([
       supabase
         .from("clients")
@@ -127,7 +127,10 @@ export default async function PmBoardPage({
       clientId
         ? listClientPmRoster(clientId)
         : Promise.resolve([] as BoardPmRosterEntry[]),
+      listEditorRoster(),
     ]);
+
+  const mediaAssigneeRoster: BoardPmRosterEntry[] = [...pmRoster, ...editorRoster];
 
   const cardIds = (cards ?? []).map((c) => c.id);
 
@@ -256,6 +259,7 @@ export default async function PmBoardPage({
       parentTitleById={parentTitleById}
       pmNames={pmNames}
       pmRoster={pmRoster}
+      mediaAssigneeRoster={mediaAssigneeRoster}
       hasChecklistTemplate={Boolean(activeClient?.checklist_template_id)}
     />
   );
