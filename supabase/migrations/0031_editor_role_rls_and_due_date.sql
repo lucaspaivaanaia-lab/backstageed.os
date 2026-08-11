@@ -278,10 +278,20 @@ begin
     new.id,
     new.email,
     coalesce((new.raw_user_meta_data->>'role')::public.user_role, 'pm'),
-    case
+    -- Deviation (Rule 1 auto-fix, found during Task 2's pgTAP run): a bare
+    -- `case ... in (...) then 'approved' else 'pending' end` resolves to
+    -- Postgres type `text` here (unlike migration 0001's original single-
+    -- branch `= 'client'` form, which resolved to the unknown-literal type
+    -- that implicitly casts to the target column) -- `text` has no implicit
+    -- cast to `public.approval_status`, so every INSERT through this
+    -- trigger failed with "column status is of type approval_status but
+    -- expression is of type text" for EVERY new signup, not just Editor.
+    -- The explicit cast below removes the ambiguity regardless of
+    -- surrounding literal context.
+    (case
       when (new.raw_user_meta_data->>'role') in ('client', 'editor') then 'approved'
       else 'pending'
-    end,
+    end)::public.approval_status,
     coalesce((new.raw_user_meta_data->>'must_change_password')::boolean, false),
     (new.raw_user_meta_data->>'client_id')::uuid
   );
