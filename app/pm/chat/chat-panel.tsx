@@ -257,6 +257,12 @@ export function ChatPanel({ clients }: ChatPanelProps) {
           cardType: "single",
           stage: STAGE_ORDER[0],
           description,
+          // Item 1, 260811-m0t: chat-to-Kanban always defaults to Conteúdo,
+          // no picker -- same reasoning as the board's "Colar do chat" tab
+          // (handlePasteImport in board-panel.tsx): text sent from a chat
+          // conversation via "Enviar pro Kanban" is definitionally
+          // finished content, never a planning document.
+          channel: "conteudo",
         });
         if ("error" in result) {
           toast.error(result.error);

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { STAGE_ORDER, type CardStage } from "@/lib/cards/stages";
+import type { CardChannel } from "@/lib/cards/channel";
 import { resolvePmNames, listClientPmRoster } from "@/lib/actions/clients";
 import { BoardPanel } from "./board-panel";
 
@@ -46,6 +47,7 @@ export type BoardCard = {
   parent_card_id: string | null;
   description: string | null;
   assignee_id: string | null;
+  channel: CardChannel;
   created_at: string;
   checklistItems: BoardChecklistItem[];
   attachments: BoardAttachment[];
@@ -109,7 +111,7 @@ export default async function PmBoardPage({
         ? supabase
             .from("cards")
             .select(
-              "id, title, card_type, stage, parent_card_id, description, assignee_id, created_at"
+              "id, title, card_type, stage, parent_card_id, description, assignee_id, channel, created_at"
             )
             .eq("client_id", clientId)
             .order("created_at", { ascending: true })

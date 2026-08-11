@@ -121,6 +121,7 @@ export async function createCard(
           ? parsed.data.description
           : null,
       assignee_id: parsed.data.assigneeId ?? null,
+      channel: parsed.data.channel,
     })
     .select("id")
     .single();
@@ -430,6 +431,7 @@ export async function updateCardDetails(
           ? parsed.data.description
           : null,
       assignee_id: parsed.data.assigneeId,
+      channel: parsed.data.channel,
       updated_at: new Date().toISOString(),
     })
     .eq("id", parsed.data.cardId);
