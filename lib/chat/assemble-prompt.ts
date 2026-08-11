@@ -24,7 +24,7 @@
  * what makes identification unambiguous now — see the quick-task note below.
  *
  * T-2-02 (accept, prompt injection): the system instructions are placed
- * AFTER the briefing/files content, a low-cost habit that makes injected
+ * BEFORE the briefing/files content, a low-cost habit that makes injected
  * text in a client's own uploaded files less able to override them.
  *
  * Quick task 260810-ivr: changed the client-identification key from `name`
@@ -33,6 +33,13 @@
  * ambiguous/common name, and `name` — the prompt's only identification
  * signal at the time — was not enough to keep the model anchored on the
  * right client.
+ *
+ * Quick task 260811-du5 (item 6 of the 2026-08-05 Juliano action plan): added
+ * user-approved LinkedIn formatting rules (no em dash, no asterisk, short
+ * paragraphs) and an edit-in-place instruction for correction requests, both
+ * inside the same trusted preamble as the existing T-2-02 note — purely
+ * additive text, zero change to the client-identification logic from
+ * 260810-ivr.
  */
 
 type Briefing = {
@@ -70,6 +77,11 @@ export function assembleSystemPrompt(
         .join("\n\n")}`
     : "";
 
+  // Quick task 260811-du5 (item 6 of the 2026-08-05 Juliano action plan):
+  // user-approved verbatim instruction text — do not paraphrase, shorten,
+  // or reword any part of it.
+  const formattingBlock = `Ao gerar conteúdo para publicação, siga estas regras de formatação: nunca use travessão (—) nem asterisco (*) no texto; escreva parágrafos curtos, de no máximo 2 linhas cada, com uma linha em branco entre parágrafos; otimize a formatação para leitura no LinkedIn. Se o usuário pedir uma correção ou ajuste em um conteúdo que você já gerou nesta conversa (ex: "corrija X", "ajuste o começo"), edite o conteúdo existente e devolva a versão corrigida completa — nunca recomece do zero nem gere um conteúdo novo e desconectado do anterior.`;
+
   return (
     `Você é um assistente de produção de conteúdo para redes sociais, ` +
     `trabalhando exclusivamente no contexto do cliente abaixo. Nunca mencione ` +
@@ -79,6 +91,6 @@ export function assembleSystemPrompt(
     `exclusivamente pelo código de referência indicado abaixo (não pelo nome). Se os ` +
     `arquivos de referência mencionarem outras empresas ou pessoas por nome, NÃO as ` +
     `confunda com o cliente — considere apenas o conteúdo relativo ao cliente ` +
-    `identificado por esse código.\n\n${briefingBlock}${filesBlock}`
+    `identificado por esse código.\n\n${formattingBlock}\n\n${briefingBlock}${filesBlock}`
   );
 }

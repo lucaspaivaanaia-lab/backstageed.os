@@ -92,3 +92,32 @@ test("assembleSystemPrompt: POSITIVE - tag remains the labeled identifier even w
   assert.match(prompt, /código de referência: CLIENTE-A/);
   assert.match(prompt, /NÃO as confunda com o cliente/);
 });
+
+test("assembleSystemPrompt: POSITIVE - LinkedIn formatting rules are present (260811-du5, item 6 of the 2026-08-05 action plan)", () => {
+  const prompt = assembleSystemPrompt(CLIENT_A, []);
+  assert.match(prompt, /nunca use travessão/);
+  assert.match(prompt, /nem asterisco/);
+  assert.match(prompt, /parágrafos curtos/);
+  assert.match(prompt, /no máximo 2 linhas/);
+  assert.match(prompt, /uma linha em branco entre parágrafos/);
+  assert.match(prompt, /otimize a formatação para leitura no LinkedIn/);
+});
+
+test("assembleSystemPrompt: POSITIVE - edit-in-place correction instruction is present (260811-du5)", () => {
+  const prompt = assembleSystemPrompt(CLIENT_A, []);
+  assert.match(prompt, /edite o conteúdo existente/);
+  assert.match(prompt, /devolva a versão corrigida completa/);
+  assert.match(prompt, /nunca recomece do zero/);
+});
+
+test("assembleSystemPrompt: POSITIVE - formatting/edit-in-place instructions appear before the client's briefing content (T-2-02 ordering, 260811-du5)", () => {
+  const prompt = assembleSystemPrompt(CLIENT_A, []);
+  const formattingIndex = prompt.indexOf("nunca use travessão");
+  const briefingIndex = prompt.indexOf(CLIENT_A.name);
+  assert.ok(formattingIndex >= 0, "formatting instruction should be present");
+  assert.ok(briefingIndex >= 0, "client name should be present");
+  assert.ok(
+    formattingIndex < briefingIndex,
+    "formatting instruction should appear before the client's briefing content"
+  );
+});
