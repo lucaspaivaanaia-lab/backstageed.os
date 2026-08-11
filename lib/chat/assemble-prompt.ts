@@ -49,15 +49,19 @@
  * is empty until Juliano's cross-client document arrives, so the rendered
  * prompt stays byte-identical to before this plan in that (today's real)
  * state.
+ *
+ * Quick task 260811-kl3: the previous 4 fixed briefing fields collapsed
+ * into a single free-text Markdown `briefing` field — the labelled-fields
+ * list in `briefingBlock` collapses into one "Briefing estratégico:" block
+ * containing the client's own Markdown as-is. The client-identification
+ * line (`Cliente (código de referência: ...)`, T-2-01/T-hnm-01 anchor) is
+ * unchanged in text and position.
  */
 
 type Briefing = {
   name: string;
   tag: string;
-  objective: string | null;
-  tone_of_voice: string | null;
-  target_audience: string | null;
-  content_pillars: string[];
+  briefing: string | null;
 };
 
 export type ClientFileContext = { filename: string; content: string };
@@ -69,15 +73,10 @@ export function assembleSystemPrompt(
 ): string {
   const briefingBlock = [
     `Cliente (código de referência: ${client.tag}): ${client.name}`,
-    client.objective ? `Objetivo: ${client.objective}` : null,
-    client.tone_of_voice ? `Tom de voz: ${client.tone_of_voice}` : null,
-    client.target_audience ? `Público-alvo: ${client.target_audience}` : null,
-    client.content_pillars.length
-      ? `Pilares de conteúdo: ${client.content_pillars.join(", ")}`
-      : null,
+    client.briefing ? `Briefing estratégico:\n${client.briefing}` : null,
   ]
     .filter(Boolean)
-    .join("\n");
+    .join("\n\n");
 
   // D-07: briefing is ALWAYS present; the files block is appended only
   // when non-empty — no branching code path, just an empty-array no-op.
