@@ -22,10 +22,7 @@ type ClientRow = {
   id: string;
   name: string;
   tag: string;
-  objective: string | null;
-  tone_of_voice: string | null;
-  target_audience: string | null;
-  content_pillars: string[] | null;
+  briefing: string | null;
   pm_clients: { pm_id: string }[] | null;
 };
 
@@ -39,9 +36,7 @@ export default async function AdminClientsPage() {
 
   const { data } = await supabase
     .from("clients")
-    .select(
-      "id, name, tag, objective, tone_of_voice, target_audience, content_pillars, pm_clients(pm_id)"
-    )
+    .select("id, name, tag, briefing, pm_clients(pm_id)")
     // P1 pivot 2026-08-04: excludes soft-deleted ("Excluir cliente") clients
     // from the active list — archived_at stays set, the row is untouched.
     .is("archived_at", null);
@@ -99,11 +94,7 @@ export default async function AdminClientsPage() {
           </TableHeader>
           <TableBody>
             {clients.map((client) => {
-              const briefingEmpty =
-                !client.objective &&
-                !client.tone_of_voice &&
-                !client.target_audience &&
-                (client.content_pillars ?? []).length === 0;
+              const briefingEmpty = !client.briefing?.trim();
 
               const assignedPmEmails = (client.pm_clients ?? [])
                 .map((pc) => pmNames[pc.pm_id])

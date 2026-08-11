@@ -21,10 +21,7 @@ import {
 type ClientRow = {
   id: string;
   name: string;
-  objective: string | null;
-  tone_of_voice: string | null;
-  target_audience: string | null;
-  content_pillars: string[] | null;
+  briefing: string | null;
 };
 
 /**
@@ -37,9 +34,7 @@ export default async function PmClientsPage() {
 
   const { data } = await supabase
     .from("clients")
-    .select(
-      "id, name, objective, tone_of_voice, target_audience, content_pillars"
-    )
+    .select("id, name, briefing")
     // P1 pivot 2026-08-04: excludes soft-deleted ("Excluir cliente") clients
     // from the active list — archived_at stays set, the row is untouched.
     .is("archived_at", null);
@@ -88,11 +83,7 @@ export default async function PmClientsPage() {
           </TableHeader>
           <TableBody>
             {clients.map((client) => {
-              const briefingEmpty =
-                !client.objective &&
-                !client.tone_of_voice &&
-                !client.target_audience &&
-                (client.content_pillars ?? []).length === 0;
+              const briefingEmpty = !client.briefing?.trim();
 
               // Navigation-flow correction 2026-08-05: a client whose
               // briefing is already filled goes straight to Produção — the

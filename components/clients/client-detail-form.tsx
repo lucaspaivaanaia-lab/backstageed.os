@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { XIcon, PlusIcon, ArrowLeftIcon } from "lucide-react";
@@ -65,10 +65,7 @@ type ClientDetailFormProps = {
     id: string;
     name: string;
     tag: string;
-    objective: string | null;
-    toneOfVoice: string | null;
-    targetAudience: string | null;
-    contentPillars: string[];
+    briefing: string | null;
   };
   pmRoster: PmRosterEntry[];
   assignedPmIds: string[];
@@ -156,7 +153,6 @@ export function ClientDetailForm({
   const [briefingServerError, setBriefingServerError] = useState<
     string | null
   >(null);
-  const [pillarInput, setPillarInput] = useState("");
   // P1 pivot 2026-08-04: "Salvo" only shows once a save has actually
   // succeeded THIS session, gated together with `!form.formState.isDirty`
   // below — without this flag, a freshly loaded (never-dirty) form would
@@ -166,41 +162,17 @@ export function ClientDetailForm({
   const form = useForm<BriefingInput>({
     resolver: zodResolver(briefingSchema),
     defaultValues: {
-      objective: client.objective ?? "",
-      toneOfVoice: client.toneOfVoice ?? "",
-      targetAudience: client.targetAudience ?? "",
-      contentPillars: client.contentPillars,
+      briefing: client.briefing ?? "",
     },
   });
 
-  const { fields, append, remove, replace } = useFieldArray({
-    control: form.control,
-    name: "contentPillars" as never,
-  });
-
-  const contentPillars = form.watch("contentPillars");
-
-  function addPillar() {
-    const value = pillarInput.trim();
-    if (!value) return;
-    append(value as never);
-    setPillarInput("");
-  }
-
   // P0 pivot 2026-08-04, item 5: bubbled up from ClientFilesSection after a
-  // successful upload + AI proposal. `replace` (not `append`/`setValue`) is
-  // useFieldArray's own array-safe bulk-update — it keeps `fields` (what
-  // the pillar Badge list below renders) in sync with form state, which a
-  // plain `form.setValue("contentPillars", ...)` is not guaranteed to do.
-  // The proposal only fills the form — it is NEVER submitted automatically;
-  // the PM/Admin still has to review and click "Salvar briefing".
+  // successful upload + AI proposal. The proposal only fills the form — it
+  // is NEVER submitted automatically; the PM/Admin still has to review and
+  // click "Salvar briefing". Quick task 260811-kl3: the AI now proposes one
+  // free-form Markdown document (no fixed fields) into this single field.
   function handleBriefingAutofilled(briefing: BriefingInput) {
-    form.setValue("objective", briefing.objective, { shouldDirty: true });
-    form.setValue("toneOfVoice", briefing.toneOfVoice, { shouldDirty: true });
-    form.setValue("targetAudience", briefing.targetAudience, {
-      shouldDirty: true,
-    });
-    replace(briefing.contentPillars as never[]);
+    form.setValue("briefing", briefing.briefing, { shouldDirty: true });
   }
 
   // 260810-jl0: consumes the `?autofillBriefing=1` redirect signal appended
@@ -245,13 +217,7 @@ export function ClientDetailForm({
     setBriefingServerError(null);
 
     const formData = new FormData();
-    if (values.objective) formData.append("objective", values.objective);
-    if (values.toneOfVoice) formData.append("toneOfVoice", values.toneOfVoice);
-    if (values.targetAudience)
-      formData.append("targetAudience", values.targetAudience);
-    for (const pillar of values.contentPillars) {
-      formData.append("contentPillars", pillar);
-    }
+    if (values.briefing) formData.append("briefing", values.briefing);
 
     startBriefingTransition(async () => {
       const result = await updateBriefing(client.id, formData);
@@ -358,108 +324,23 @@ export function ClientDetailForm({
           >
             <FormField
               control={form.control}
-              name="objective"
+              name="briefing"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Objetivo</FormLabel>
+                  <FormLabel>Briefing estratégico</FormLabel>
                   <FormControl>
                     <Textarea
                       {...field}
                       value={field.value ?? ""}
                       disabled={isBriefingPending}
+                      className="min-h-[400px]"
+                      placeholder="Escreva o briefing estratégico deste cliente em Markdown -- objetivo, tom de voz, público-alvo, pilares de conteúdo, ou qualquer outra estrutura que fizer sentido."
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
-            <FormField
-              control={form.control}
-              name="toneOfVoice"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tom de voz</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      {...field}
-                      value={field.value ?? ""}
-                      disabled={isBriefingPending}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="targetAudience"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Público-alvo</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      {...field}
-                      value={field.value ?? ""}
-                      disabled={isBriefingPending}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="flex flex-col gap-2">
-              <FormLabel>Pilares de conteúdo</FormLabel>
-              <div className="flex gap-2">
-                <Input
-                  value={pillarInput}
-                  onChange={(e) => setPillarInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      addPillar();
-                    }
-                  }}
-                  disabled={isBriefingPending}
-                  placeholder="Adicionar pilar de conteúdo"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={addPillar}
-                  disabled={isBriefingPending}
-                >
-                  Adicionar
-                </Button>
-              </div>
-              {fields.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {fields.map((fieldItem, index) => {
-                    const pillar = contentPillars[index] ?? "";
-                    return (
-                      <Badge
-                        key={fieldItem.id}
-                        variant="secondary"
-                        className="gap-1"
-                      >
-                        {pillar}
-                        <button
-                          type="button"
-                          aria-label={`Remover ${pillar}`}
-                          onClick={() => remove(index)}
-                          disabled={isBriefingPending}
-                          className="ml-1"
-                        >
-                          <XIcon className="size-3" />
-                        </button>
-                      </Badge>
-                    );
-                  })}
-                </div>
-              ) : null}
-            </div>
 
             {briefingServerError ? (
               <ErrorBox>{briefingServerError}</ErrorBox>

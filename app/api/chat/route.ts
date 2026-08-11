@@ -47,9 +47,7 @@ export async function POST(request: Request) {
   // client, RLS makes the row invisible and `client` comes back null.
   const { data: client, error: clientError } = await supabase
     .from("clients")
-    .select(
-      "id, name, tag, objective, tone_of_voice, target_audience, content_pillars"
-    )
+    .select("id, name, tag, briefing")
     .eq("id", clientId)
     .single();
 

@@ -186,10 +186,7 @@ export async function updateBriefing(
   formData: FormData
 ): Promise<ActionResult> {
   const parsed = briefingSchema.safeParse({
-    objective: formData.get("objective"),
-    toneOfVoice: formData.get("toneOfVoice"),
-    targetAudience: formData.get("targetAudience"),
-    contentPillars: formData.getAll("contentPillars"),
+    briefing: formData.get("briefing"),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
@@ -199,10 +196,7 @@ export async function updateBriefing(
   const { error } = await supabase
     .from("clients")
     .update({
-      objective: parsed.data.objective,
-      tone_of_voice: parsed.data.toneOfVoice,
-      target_audience: parsed.data.targetAudience,
-      content_pillars: parsed.data.contentPillars,
+      briefing: parsed.data.briefing,
       updated_at: new Date().toISOString(),
     })
     .eq("id", clientId);
@@ -321,31 +315,29 @@ export async function autofillBriefingFromFiles(
     files,
     sharedFiles,
     instruction:
-      "Leia os arquivos de referência acima e proponha o briefing estratégico " +
-      "deste cliente para uma operação de social media. Preencha: Objetivo " +
-      "(o que o cliente quer alcançar nas redes sociais, 1-2 frases), Tom de " +
-      "voz (como a marca se comunica, 1-2 frases), Público-alvo (quem o " +
-      "conteúdo busca atingir, 1-2 frases), e Pilares de conteúdo (uma lista " +
-      "curta de 3 a 6 temas/categorias recorrentes de conteúdo, cada um como " +
-      "uma frase curta, não um parágrafo). Se um arquivo não trouxer " +
-      "informação suficiente para algum campo, retorne uma string vazia " +
-      "para ele em vez de inventar conteúdo.",
+      "Leia os arquivos de referência acima e escreva o briefing estratégico " +
+      "completo deste cliente para uma operação de social media, como um " +
+      "único documento em Markdown. Proponha você mesmo a estrutura de " +
+      "seções que fizer mais sentido para os arquivos deste cliente " +
+      "específico (por exemplo, mas não se limitando a: ## Objetivo, ## " +
+      "Tom de voz, ## Público-alvo, ## Pilares de conteúdo) — não existe " +
+      "um schema fixo, use seu julgamento para refletir o que os arquivos " +
+      "realmente trazem. Se os arquivos não trouxerem informação " +
+      "suficiente para alguma seção óbvia, omita essa seção em vez de " +
+      "inventar conteúdo.",
     toolName: "propose_briefing",
     toolDescription:
-      "Registra a proposta de briefing estratégico extraída dos arquivos do cliente.",
+      "Registra a proposta de briefing estratégico (documento único em Markdown) extraída dos arquivos do cliente.",
     inputSchema: {
       type: "object",
       properties: {
-        objective: { type: "string", description: "Objetivo do cliente nas redes sociais." },
-        toneOfVoice: { type: "string", description: "Tom de voz da marca." },
-        targetAudience: { type: "string", description: "Público-alvo do conteúdo." },
-        contentPillars: {
-          type: "array",
-          items: { type: "string" },
-          description: "3 a 6 pilares/temas de conteúdo recorrentes, cada um curto.",
+        briefing: {
+          type: "string",
+          description:
+            "Briefing estratégico completo, em Markdown, com a estrutura de seções que a IA propôs para este cliente específico.",
         },
       },
-      required: ["objective", "toneOfVoice", "targetAudience", "contentPillars"],
+      required: ["briefing"],
     },
   });
 

@@ -42,26 +42,17 @@ export const clientTagUpdateSchema = z.object({ tag: tagSchema });
 export type ClientTagUpdateInput = z.infer<typeof clientTagUpdateSchema>;
 
 /**
- * Strategic briefing edit form validation (CLI-04). D-05: objective/
- * toneOfVoice/targetAudience are free-text narrative fields (single
- * textarea each). D-04: contentPillars is a structured add/remove chip
- * list. D-10: briefing editing is fully decoupled from RAG readiness — no
- * field references any RAG/context-storage mechanism (client_files or
- * otherwise) — briefing editing is fully decoupled from context readiness.
+ * Strategic briefing edit form validation (CLI-04). Quick task 260811-kl3
+ * collapses the previous 4 fixed narrative/list fields into a single
+ * free-text Markdown field — the AI (`autofillBriefingFromFiles`) now
+ * proposes its own section structure inside this one field instead of
+ * filling fixed keys, and the human still reviews/edits it in one large
+ * textarea. D-10: briefing editing remains fully decoupled from RAG
+ * readiness — no field references any RAG/context-storage mechanism
+ * (client_files or otherwise).
  */
 export const briefingSchema = z.object({
-  objective: z.string().trim().max(5000).optional().nullable(),
-  toneOfVoice: z.string().trim().max(5000).optional().nullable(),
-  targetAudience: z.string().trim().max(5000).optional().nullable(),
-  // No `.default([])` here: same zod input/output type-identity requirement
-  // documented for `clientCreateSchema.pmIds` in Plan 01-03 — a `.default()`
-  // makes the schema's *input* type `string[] | undefined` while its
-  // *output* type (z.infer, what `useForm<BriefingInput>()` is built from)
-  // stays `string[]`, breaking `zodResolver`'s typed Resolver assignment.
-  // Every caller (Server Action `formData.getAll("contentPillars")`, this
-  // form's `defaultValues: { contentPillars: client.contentPillars }`)
-  // always supplies an array, empty or not, so no default is needed.
-  contentPillars: z.array(z.string().trim().min(1)),
+  briefing: z.string().trim().max(20000).optional().nullable(),
 });
 
 export type BriefingInput = z.infer<typeof briefingSchema>;

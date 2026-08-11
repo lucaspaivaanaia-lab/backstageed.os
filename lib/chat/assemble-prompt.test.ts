@@ -5,22 +5,18 @@ import { assembleSystemPrompt } from "./assemble-prompt.ts";
 const CLIENT_A = {
   name: "Cliente A",
   tag: "CLIENTE-A",
-  objective: "Crescer no LinkedIn",
-  tone_of_voice: "Formal e direto",
-  target_audience: "Gestores de RH",
-  content_pillars: ["Carreira", "Liderança"],
+  briefing:
+    "## Objetivo\nCrescer no LinkedIn\n\n## Tom de voz\nFormal e direto\n\n## Público-alvo\nGestores de RH\n\n## Pilares de conteúdo\nCarreira, Liderança",
 };
 
 const CLIENT_B = {
   name: "Cliente B",
   tag: "CLIENTE-B",
-  objective: "Vender produtos de skincare",
-  tone_of_voice: "Descontraído",
-  target_audience: "Consumidoras 20-35",
-  content_pillars: ["Beleza", "Autocuidado"],
+  briefing:
+    "## Objetivo\nVender produtos de skincare\n\n## Tom de voz\nDescontraído\n\n## Público-alvo\nConsumidoras 20-35\n\n## Pilares de conteúdo\nBeleza, Autocuidado",
 };
 
-test("assembleSystemPrompt: POSITIVE - includes the client's own name and briefing fields", () => {
+test("assembleSystemPrompt: POSITIVE - includes the client's own name and free-form briefing text", () => {
   const prompt = assembleSystemPrompt(CLIENT_A, [], []);
   assert.match(prompt, /Cliente A/);
   assert.match(prompt, /Crescer no LinkedIn/);
@@ -29,7 +25,7 @@ test("assembleSystemPrompt: POSITIVE - includes the client's own name and briefi
   assert.match(prompt, /Carreira/);
 });
 
-test("assembleSystemPrompt: NEGATIVE - never includes another client's name/fields (CTX-01/CTX-02 leakage guard)", () => {
+test("assembleSystemPrompt: NEGATIVE - never includes another client's name/briefing (CTX-01/CTX-02 leakage guard)", () => {
   const promptA = assembleSystemPrompt(CLIENT_A, [], []);
   assert.doesNotMatch(promptA, /Cliente B/);
   assert.doesNotMatch(promptA, /Vender produtos de skincare/);
@@ -60,21 +56,15 @@ test("assembleSystemPrompt: POSITIVE - non-empty files list appends filename + c
   assert.doesNotMatch(withoutFiles, /Trecho recuperado X/);
 });
 
-test("assembleSystemPrompt: POSITIVE - null briefing fields are omitted cleanly, not rendered as 'null'", () => {
+test("assembleSystemPrompt: POSITIVE - null briefing is omitted cleanly, not rendered as 'null' or an empty 'Briefing estratégico:' block", () => {
   const prompt = assembleSystemPrompt(
-    {
-      name: "Cliente C",
-      tag: "CLIENTE-C",
-      objective: null,
-      tone_of_voice: null,
-      target_audience: null,
-      content_pillars: [],
-    },
+    { name: "Cliente C", tag: "CLIENTE-C", briefing: null },
     [],
     []
   );
   assert.match(prompt, /Cliente C/);
   assert.doesNotMatch(prompt, /null/);
+  assert.doesNotMatch(prompt, /Briefing estratégico:/);
 });
 
 test("assembleSystemPrompt: POSITIVE - tag renders as a labeled reference code, and the anti-confusion instruction is present", () => {
@@ -129,7 +119,7 @@ test("assembleSystemPrompt: POSITIVE - formatting/edit-in-place instructions app
   );
 });
 
-test("assembleSystemPrompt: POSITIVE - sharedFiles content appears regardless of which client's briefing/files are also passed (quick task 260811-imw, item 9)", () => {
+test("assembleSystemPrompt: POSITIVE - sharedFiles content appears regardless of which client's briefing/files are also passed (260811-imw, item 9)", () => {
   const prompt = assembleSystemPrompt(CLIENT_A, [], [
     { filename: "guia-marca.md", content: "Nunca use gírias regionais." },
   ]);
@@ -154,4 +144,12 @@ test("assembleSystemPrompt: POSITIVE - empty sharedFiles yields a byte-identical
   assert.doesNotMatch(withEmptySharedFiles, /guia-marca\.md/);
   assert.doesNotMatch(withEmptySharedFiles, /Conhecimento comum a todos os clientes/);
   assert.match(withNonEmptySharedFiles, /Conhecimento comum a todos os clientes/);
+});
+
+test("assembleSystemPrompt: POSITIVE - the briefing renders as a single 'Briefing estratégico:' block containing the client's free-form Markdown as-is, not the old per-field labels (260811-kl3)", () => {
+  const prompt = assembleSystemPrompt(CLIENT_A, [], []);
+  assert.match(prompt, /Briefing estratégico:\n## Objetivo\nCrescer no LinkedIn/);
+  assert.doesNotMatch(prompt, /Tom de voz:/);
+  assert.doesNotMatch(prompt, /Público-alvo:/);
+  assert.doesNotMatch(prompt, /Pilares de conteúdo:/);
 });

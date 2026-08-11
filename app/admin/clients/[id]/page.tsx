@@ -30,9 +30,7 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
   const [{ data: client }, { data: profile }] = await Promise.all([
     supabase
       .from("clients")
-      .select(
-        "id, name, tag, objective, tone_of_voice, target_audience, content_pillars"
-      )
+      .select("id, name, tag, briefing")
       .eq("id", id)
       .single(),
     user
@@ -62,10 +60,7 @@ export default async function AdminClientDetailPage({ params }: PageProps) {
           id: client.id,
           name: client.name,
           tag: client.tag,
-          objective: client.objective,
-          toneOfVoice: client.tone_of_voice,
-          targetAudience: client.target_audience,
-          contentPillars: client.content_pillars ?? [],
+          briefing: client.briefing,
         }}
         pmRoster={pmRoster}
         assignedPmIds={assignedPmIds}
