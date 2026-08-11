@@ -8,6 +8,7 @@ import { snapshotChecklistForCard } from "@/lib/cards/checklist-snapshot";
 import { evaluateMove } from "@/lib/cards/move-rules";
 import { isLikelyDriveLink, INVALID_DRIVE_LINK_MESSAGE } from "@/lib/attachments/drive-url";
 import { runStructuredExtraction } from "@/lib/ai/structured-extraction";
+import { planningDocToExtractionFile } from "@/lib/cards/package-proposal";
 import {
   createCardSchema,
   advanceStageSchema,
@@ -18,6 +19,8 @@ import {
   removeAttachmentSchema,
   createPieceSchema,
   removePieceSchema,
+  proposePackagePiecesSchema,
+  packagePiecesProposalSchema,
   type CreateCardInput,
   type AdvanceStageInput,
   type ToggleChecklistItemInput,
@@ -27,6 +30,8 @@ import {
   type RemoveAttachmentInput,
   type CreatePieceInput,
   type RemovePieceInput,
+  type ProposePackagePiecesInput,
+  type PackagePieceProposal,
 } from "@/lib/validation/cards";
 
 const CARD_CREATE_ERROR = "Não foi possível criar o card. Tente novamente.";
@@ -48,6 +53,9 @@ const PIECE_CREATE_ERROR = "Não foi possível criar a peça. Tente novamente.";
 const PIECE_NOT_FOUND_ERROR = "Peça não encontrada.";
 const PIECE_MUST_BE_PIECE_ERROR = "Só é possível excluir peças.";
 const PIECE_DELETE_ERROR = "Não foi possível excluir a peça. Tente novamente.";
+const PACKAGE_PROPOSAL_CLIENT_NOT_FOUND_ERROR = "Cliente não encontrado.";
+const PACKAGE_PROPOSAL_INVALID_RESULT_ERROR =
+  "A IA retornou um resultado inesperado. Tente novamente ou crie as peças manualmente.";
 
 /**
  * Maps migration 0017's deliberate `assignee_not_assigned_to_client`
@@ -837,7 +845,15 @@ export async function createPiece(
       stage: "briefing",
       title: parsed.data.title,
       created_by: user.id,
-      description: null,
+      // Item 2, 260811-nnw (Pitfall 1): was hardcoded null -- now persists
+      // an AI-proposed (or manually typed, once the detail Dialog gains a
+      // create-time field, out of this plan's scope) description instead of
+      // silently discarding it. Same trim-then-null-if-empty rule createCard
+      // already applies to its own description field.
+      description:
+        parsed.data.description && parsed.data.description.length > 0
+          ? parsed.data.description
+          : null,
       assignee_id: null,
       media_assignee_id: null,
     })
@@ -903,4 +919,125 @@ export async function removePiece(
 
   revalidatePath("/pm/board");
   return {};
+}
+
+export type ProposePackagePiecesResult =
+  | { success: true; pieces: PackagePieceProposal[] }
+  | { error: string };
+
+/**
+ * AI proposal step of "IA propõe, humano confirma" for batch package-piece
+ * generation (item 2 of the 2026-08-05 action plan's P3,
+ * 260811-nnw-CONTEXT.md D-2/D-3/D-4). Mirrors `proposeChecklistFromFiles`'s
+ * (lib/actions/checklist-templates.ts) NO-intermediate-write shape exactly,
+ * per D-4 -- returns the proposal, writes NOTHING to the database. The
+ * PM-pasted text is wrapped as a synthetic "arquivo"
+ * (`planningDocToExtractionFile`, lib/cards/package-proposal.ts) and placed
+ * FIRST in `files`, ahead of the client's own `client_files` -- the planning
+ * document is the PRIMARY source of the proposed pieces here,
+ * `client_files`/`sharedFiles` are supporting context for tone/brand only,
+ * the reverse of `validateCardAgainstChecklist`'s own ordering where the
+ * card's text is the thing BEING checked against the client's files.
+ *
+ * Callable by any PM assigned to the client (NOT admin-only) -- the
+ * RLS-scoped client re-read below is the real boundary, same authorization
+ * shape as `generateChecklistDraftFromFiles`.
+ */
+export async function proposePackagePieces(
+  input: ProposePackagePiecesInput
+): Promise<ProposePackagePiecesResult> {
+  const parsed = proposePackagePiecesSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: NOT_AUTHENTICATED_ERROR };
+
+  // Re-read the client through RLS -- never trust that clientId is valid on
+  // its own; clients_select_scoped is the real boundary (admin-or-assigned-PM).
+  const { data: client } = await supabase
+    .from("clients")
+    .select("id, name, tag")
+    .eq("id", parsed.data.clientId)
+    .single();
+  if (!client) {
+    return { error: PACKAGE_PROPOSAL_CLIENT_NOT_FOUND_ERROR };
+  }
+
+  const { data: clientFiles } = await supabase
+    .from("client_files")
+    .select("filename, content")
+    .eq("client_id", client.id);
+
+  // Quick task 260811-imw pattern: unfiltered select -- shared_knowledge_files
+  // has no client_id column; shared_knowledge_files_select_all_authenticated
+  // is the real boundary here, via the SAME RLS-scoped supabase client above.
+  const { data: sharedKnowledgeFiles } = await supabase
+    .from("shared_knowledge_files")
+    .select("filename, content");
+  const sharedFiles = sharedKnowledgeFiles ?? [];
+
+  const planningDocFile = planningDocToExtractionFile(parsed.data.text);
+
+  const result = await runStructuredExtraction({
+    clientName: client.name,
+    clientTag: client.tag,
+    files: [planningDocFile, ...(clientFiles ?? [])],
+    sharedFiles,
+    instruction:
+      "Leia o documento de planejamento acima (arquivo " +
+      `'${planningDocFile.filename}') e proponha peças de conteúdo ` +
+      "(posts) a partir dele -- cada peça com um título curto e uma " +
+      "descrição (o texto completo do post, pronto para revisão interna). " +
+      "Proponha no máximo 10 peças. Use os demais arquivos de referência " +
+      "do cliente (manual de marca, briefing, regras de conteúdo, etc.) " +
+      "apenas como contexto de tom e estilo -- a fonte das peças em si é " +
+      "sempre o documento de planejamento, nunca os arquivos de referência.",
+    toolName: "propose_package_pieces",
+    toolDescription:
+      "Registra a proposta de peças de conteúdo extraídas do documento de planejamento.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        pieces: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              title: { type: "string", description: "Título curto da peça." },
+              description: {
+                type: "string",
+                description: "Texto completo proposto para o post.",
+              },
+            },
+            required: ["title", "description"],
+          },
+          description: "Peças propostas a partir do documento (no máximo 10).",
+        },
+      },
+      required: ["pieces"],
+    },
+  });
+
+  if (!result.ok) {
+    return { error: result.error };
+  }
+
+  const raw = result.data as { pieces?: unknown };
+  const parsedProposal = packagePiecesProposalSchema.safeParse({
+    pieces: raw.pieces,
+  });
+  if (!parsedProposal.success) {
+    console.error(
+      "[proposePackagePieces] AI output failed packagePiecesProposalSchema validation",
+      parsedProposal.error
+    );
+    return { error: PACKAGE_PROPOSAL_INVALID_RESULT_ERROR };
+  }
+
+  return { success: true, pieces: parsedProposal.data.pieces };
 }
