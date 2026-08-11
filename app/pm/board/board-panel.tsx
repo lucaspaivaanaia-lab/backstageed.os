@@ -240,6 +240,7 @@ function CreateCardDialog({
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
   const [assigneeValue, setAssigneeValue] = useState(NONE_VALUE);
+  const [mediaAssigneeValue, setMediaAssigneeValue] = useState(NONE_VALUE);
   const [pastedText, setPastedText] = useState("");
 
   const targetStage = stage ?? "briefing";
@@ -274,6 +275,7 @@ function CreateCardDialog({
       setServerError(null);
       form.reset(defaultValues);
       setAssigneeValue(NONE_VALUE);
+      setMediaAssigneeValue(NONE_VALUE);
       setActiveTab("escrever");
       setPastedText("");
     }
@@ -294,6 +296,11 @@ function CreateCardDialog({
       : assigneeValue === NONE_VALUE
         ? undefined
         : assigneeValue;
+    const mediaAssigneeId = isPackageType
+      ? undefined
+      : mediaAssigneeValue === NONE_VALUE
+        ? undefined
+        : mediaAssigneeValue;
     const description = isPackageType ? undefined : values.description;
     startTransition(async () => {
       const result = await createCard({
@@ -301,6 +308,7 @@ function CreateCardDialog({
         stage: targetStage,
         description,
         assigneeId,
+        mediaAssigneeId,
       });
       if ("error" in result) {
         setServerError(result.error);
@@ -476,6 +484,28 @@ function CreateCardDialog({
                         Nenhum PM atribuído a este cliente.
                       </span>
                     ) : null}
+                  </div>
+                ) : null}
+                {!isPackageType ? (
+                  <div className="flex flex-col gap-1">
+                    <Label>Designer/Mídia</Label>
+                    <Select
+                      value={mediaAssigneeValue}
+                      onValueChange={setMediaAssigneeValue}
+                      disabled={isPending}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Sem designer/mídia" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={NONE_VALUE}>Sem designer/mídia</SelectItem>
+                        {pmRoster.map((pm) => (
+                          <SelectItem key={pm.id} value={pm.id}>
+                            {pm.email}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 ) : null}
                 {serverError ? <ErrorBox>{serverError}</ErrorBox> : null}
@@ -819,6 +849,7 @@ function CardDetailDialogBody({
   // Select are always editable (Task 2, action C.1).
   const [draftDescription, setDraftDescription] = useState(card.description ?? "");
   const [draftAssignee, setDraftAssignee] = useState(card.assignee_id ?? NONE_VALUE);
+  const [draftMediaAssignee, setDraftMediaAssignee] = useState(card.media_assignee_id ?? NONE_VALUE);
   const [draftChannel, setDraftChannel] = useState<CardChannel>(card.channel);
   const [detailsError, setDetailsError] = useState<string | null>(null);
   const [isSavingDetails, startDetailsTransition] = useTransition();
@@ -847,11 +878,28 @@ function CardDetailDialogBody({
         ]
       : pmRoster;
 
+  // T-03-55 shape, applied to the second assignee field (Item 4, 260811-n0i):
+  // if the card's current media assignee has since been unassigned from the
+  // client, `pmRoster` no longer contains it -- append it explicitly so the
+  // Select can still represent (and round-trip) the current value.
+  const mediaAssigneeOptions =
+    card.media_assignee_id && !pmRoster.some((pm) => pm.id === card.media_assignee_id)
+      ? [
+          ...pmRoster,
+          {
+            id: card.media_assignee_id,
+            email: pmNames[card.media_assignee_id] ?? card.media_assignee_id,
+          },
+        ]
+      : pmRoster;
+
   const normalizedDraftDescription = draftDescription.trim();
   const currentAssigneeValue = card.assignee_id ?? NONE_VALUE;
+  const currentMediaAssigneeValue = card.media_assignee_id ?? NONE_VALUE;
   const hasDetailChanges =
     normalizedDraftDescription !== (card.description ?? "") ||
     draftAssignee !== currentAssigneeValue ||
+    draftMediaAssignee !== currentMediaAssigneeValue ||
     draftChannel !== card.channel ||
     descriptionRevertPending;
 
@@ -922,6 +970,7 @@ function CardDetailDialogBody({
         description:
           normalizedDraftDescription.length > 0 ? normalizedDraftDescription : null,
         assigneeId: draftAssignee === NONE_VALUE ? null : draftAssignee,
+        mediaAssigneeId: draftMediaAssignee === NONE_VALUE ? null : draftMediaAssignee,
         channel: draftChannel,
       });
       if (result.error) {
@@ -1022,6 +1071,27 @@ function CardDetailDialogBody({
             {isSavingDetails ? "Salvando..." : "Salvar alterações"}
           </Button>
           {detailsError ? <ErrorBox>{detailsError}</ErrorBox> : null}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <SectionTitle>Designer/Mídia</SectionTitle>
+          <Select
+            value={draftMediaAssignee}
+            onValueChange={setDraftMediaAssignee}
+            disabled={isSavingDetails}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Sem designer/mídia" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NONE_VALUE}>Sem designer/mídia</SelectItem>
+              {mediaAssigneeOptions.map((pm) => (
+                <SelectItem key={pm.id} value={pm.id}>
+                  {pm.email}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="flex flex-col gap-2">
@@ -1144,6 +1214,11 @@ function BoardCardItem({
   if (card.assignee_id) {
     metaSegments.push(
       `Responsável: ${pmNames[card.assignee_id] ?? card.assignee_id}`
+    );
+  }
+  if (card.media_assignee_id) {
+    metaSegments.push(
+      `Designer/Mídia: ${pmNames[card.media_assignee_id] ?? card.media_assignee_id}`
     );
   }
   if (card.attachments.length === 1) {
