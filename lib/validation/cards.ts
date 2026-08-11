@@ -20,6 +20,13 @@ export const CARD_STAGE_VALUES = [
   "agendamento",
 ] as const;
 
+// `CARD_CHANNEL_VALUES` exists only because `z.enum` needs a literal tuple.
+// `lib/cards/channel.ts`'s `CardChannel`/`CHANNEL_LABELS` remain the single
+// source of truth for channel semantics/display -- this tuple is a
+// validation-surface mirror of the Postgres `card_channel` enum, never a
+// second meaning. Mirrors CARD_STAGE_VALUES's own comment above.
+export const CARD_CHANNEL_VALUES = ["planejamento", "conteudo"] as const;
+
 export const createCardSchema = z.object({
   clientId: z.string().uuid({ message: "Cliente inválido." }),
   title: z
@@ -38,6 +45,15 @@ export const createCardSchema = z.object({
   // rows is enforced by the cards_assignee_membership_trg trigger, not
   // here.
   assigneeId: z.string().uuid().optional(),
+  // Item 1, 2026-08-05 action plan P3 (260811-lp5-CONTEXT.md): required,
+  // orthogonal to cardType -- every card, single or package, carries this
+  // label. No default in the schema itself (the DB column default only
+  // covers rows that omit the field entirely, like createPiece's insert --
+  // every FORM-driven create always sends an explicit value). Because this
+  // is REQUIRED (not .optional()/.default()), every createCard call site
+  // in the repo must pass it explicitly -- confirmed during revision that
+  // all three call sites (board-panel.tsx x2, chat-panel.tsx x1) do.
+  channel: z.enum(CARD_CHANNEL_VALUES),
 });
 
 export type CreateCardInput = z.infer<typeof createCardSchema>;
@@ -62,15 +78,22 @@ export const moveCardSchema = z.object({
 export type MoveCardInput = z.infer<typeof moveCardSchema>;
 
 /**
- * updateCardDetails' input (KAN-01, D-16/D-19): edits the two fields
- * createCard can also set at creation time. Both fields are nullable rather
- * than optional -- the form always submits a value (possibly null) to
- * explicitly clear a description or unassign a card, never omits the key.
+ * updateCardDetails' input (KAN-01, D-16/D-19; channel added by quick task
+ * 260811-m0t): edits the fields createCard can also set at creation time.
+ * `description`/`assigneeId` are nullable rather than optional -- the form
+ * always submits a value (possibly null) to explicitly clear a description
+ * or unassign a card, never omits the key. `channel` is never nullable --
+ * unlike those two, there is no "clear" state for it.
  */
 export const updateCardDetailsSchema = z.object({
   cardId: z.string().uuid(),
   description: z.string().trim().max(5000).nullable(),
   assigneeId: z.string().uuid().nullable(),
+  // Item 1, 2026-08-05 action plan P3: lets a PM reclassify an existing
+  // card's channel from the detail dialog, alongside Descrição/Responsável.
+  // Never nullable -- unlike description/assigneeId there is no "clear"
+  // state for channel, a card always has exactly one of the two values.
+  channel: z.enum(CARD_CHANNEL_VALUES),
 });
 export type UpdateCardDetailsInput = z.infer<typeof updateCardDetailsSchema>;
 
