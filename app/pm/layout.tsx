@@ -1,4 +1,4 @@
-import { UsersIcon } from "lucide-react";
+import { UsersIcon, UserCogIcon } from "lucide-react";
 
 import { AppSidebar } from "@/components/layout/app-sidebar";
 
@@ -22,6 +22,7 @@ export default function PmLayout({
           // reachable via the button on the Produção page. The sidebar no
           // longer duplicates any of that navigation.
           { href: "/pm/clients", label: "Clientes", icon: <UsersIcon /> },
+          { href: "/pm/editors", label: "Editores", icon: <UserCogIcon /> },
         ]}
       />
       <main className="flex min-w-0 flex-1 flex-col overflow-y-auto">

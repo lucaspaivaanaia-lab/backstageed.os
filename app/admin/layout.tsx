@@ -1,5 +1,6 @@
 import {
   UsersIcon,
+  UserCogIcon,
   ClipboardCheckIcon,
   ListChecksIcon,
   KanbanIcon,
@@ -22,6 +23,7 @@ export default function AdminLayout({
       <AppSidebar
         items={[
           { href: "/admin/clients", label: "Clientes", icon: <UsersIcon /> },
+          { href: "/admin/editors", label: "Editores", icon: <UserCogIcon /> },
           {
             href: "/admin/approvals",
             label: "Aprovações",
