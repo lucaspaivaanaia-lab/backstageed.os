@@ -93,6 +93,7 @@ Recent decisions affecting current work:
 - **Phase 3 is fully complete (9/9).** Phase 4 (Client Approval & Scheduling) and Phase 6 (Admin Oversight Dashboard) are the only phases with zero plans yet — both still `Plans: TBD` in ROADMAP.md, neither discussed/planned.
 - ~~"Excluir peça" action~~ — done, quick task 260808-c9s, 2026-08-08.
 - ~~AI-driven checklist generation + self-correcting content validation~~ — done, quick task 260808-ci5, 2026-08-10.
+- **New idea (2026-08-11, not scoped yet): self-improving per-client prompt from PM correction patterns.** Raised by the developer while reviewing item 6 of the 2026-08-05 action plan. If the AI notices a recurring correction pattern in a given client's chat (the PM keeps asking for the same kind of fix on generated content), the system should update that client's effective prompt/context automatically so the same correction stops being needed every time. Real design work needed before building: how "recurring pattern" gets detected (algorithmic diff vs. asking the model to self-reflect after each correction), where the learned guidance is stored (new column on `clients`? a separate table, mirroring `client_files`?), and whether it needs a human review/confirm step before taking effect (matching this codebase's established "AI proposes, human confirms" pattern used everywhere else — checklist drafts, briefing autofill). Needs its own `/gsd-quick --discuss` (or larger) before any code.
 
 ### Quick Tasks Completed
 
