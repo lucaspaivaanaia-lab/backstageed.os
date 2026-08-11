@@ -265,7 +265,7 @@ export function ClientFilesSection({
                 >
                   {isUploadPending
                     ? progress && progress.total > 1
-                      ? `Enviando ${progress.done + 1} de ${progress.total}...`
+                      ? `Enviando ${Math.min(progress.done + 1, progress.total)} de ${progress.total}...`
                       : "Enviando..."
                     : "Enviar arquivo(s)"}
                 </Button>

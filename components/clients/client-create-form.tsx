@@ -308,7 +308,7 @@ export function ClientCreateForm({
         <Button type="submit" disabled={isPending} className="w-full">
           {isPending
             ? uploadProgress && uploadProgress.total > 1
-              ? `Enviando ${uploadProgress.done + 1} de ${uploadProgress.total}...`
+              ? `Enviando ${Math.min(uploadProgress.done + 1, uploadProgress.total)} de ${uploadProgress.total}...`
               : "Criando..."
             : "Criar cliente"}
         </Button>
