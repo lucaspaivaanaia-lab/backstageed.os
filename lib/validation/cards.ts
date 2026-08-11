@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PLANNING_DOC_MAX_LENGTH } from "@/lib/cards/package-proposal";
 
 /**
  * Content card creation + stage-advance form/request validation (KAN-01,
@@ -163,10 +164,14 @@ export type ForceAdvanceInput = z.infer<typeof forceAdvanceSchema>;
  * T-03-31). Deliberately has NO `clientId` field -- a piece's client is
  * always copied server-side from its re-read parent package row inside
  * `createPiece`, never taken from the browser (03-RESEARCH.md Security
- * Domain, the Information Disclosure row). A piece is created title-only;
- * its description and assignee are set afterwards through the piece's own
- * card detail Dialog via `updateCardDetails`, so no duplicate creation
- * surface is introduced.
+ * Domain, the Information Disclosure row). A piece created manually
+ * (PackageRow's "Adicionar peça") is still title-only, its description set
+ * afterwards through the piece's own card detail Dialog via
+ * `updateCardDetails` -- `description` below is OPTIONAL specifically so
+ * that call site needs zero changes. Item 2 of the 2026-08-05 action plan's
+ * P3 (260811-nnw-CONTEXT.md, Pitfall 1): batch-generated pieces
+ * (proposePackagePieces) DO send it, so the AI-authored content survives
+ * creation instead of being silently discarded.
  */
 export const createPieceSchema = z.object({
   parentCardId: z.string().uuid(),
@@ -175,6 +180,8 @@ export const createPieceSchema = z.object({
     .trim()
     .min(1, { message: "Título obrigatório." })
     .max(200),
+  // Mirrors createCardSchema's own `.max(5000)` description limit exactly.
+  description: z.string().trim().max(5000).optional(),
 });
 export type CreatePieceInput = z.infer<typeof createPieceSchema>;
 
@@ -189,3 +196,53 @@ export const removePieceSchema = z.object({
   cardId: z.string().uuid(),
 });
 export type RemovePieceInput = z.infer<typeof removePieceSchema>;
+
+/**
+ * proposePackagePieces' input (KAN-01 package half, item 2 of the
+ * 2026-08-05 action plan's P3, 260811-nnw-CONTEXT.md D-2/D-6). `text` is the
+ * PM-pasted planning document, treated as a synthetic "arquivo" by
+ * `planningDocToExtractionFile` (lib/cards/package-proposal.ts) -- the exact
+ * pattern `validateCardAgainstChecklist`'s `cardContentFile` already uses.
+ * `.max()` mirrors PLANNING_DOC_MAX_LENGTH exactly (imported from the same
+ * module, never a second copy of the number) -- Pitfall 2,
+ * 260811-nnw-RESEARCH.md: no other paste-text flow in this codebase caps
+ * INPUT length, this is the first one to.
+ */
+export const proposePackagePiecesSchema = z.object({
+  clientId: z.string().uuid({ message: "Cliente inválido." }),
+  text: z
+    .string()
+    .trim()
+    .min(1, { message: "Cole o texto do documento de planejamento." })
+    .max(PLANNING_DOC_MAX_LENGTH, {
+      message: "Documento muito longo. Cole um trecho menor.",
+    }),
+});
+export type ProposePackagePiecesInput = z.infer<
+  typeof proposePackagePiecesSchema
+>;
+
+/**
+ * Shape of the AI's proposal after `proposePackagePieces` (app/pm/board/
+ * actions.ts) re-validates its `runStructuredExtraction` output -- never
+ * trusted as pre-shaped for a database write (Security Domain V5), same
+ * discipline `checklistTemplateSchema` already applies to checklist
+ * generation. Deliberately NO `.max()` on the array -- mirrors
+ * `checklistTemplateSchema.items`'s own precedent (lib/validation/
+ * checklist.ts, no Zod upper bound, the item-count ceiling is requested
+ * only in the AI instruction text); a PM reviewing a slightly-over-10
+ * proposal can simply remove the extras rather than the whole generation
+ * failing outright (260811-nnw-RESEARCH.md Assumption A2).
+ */
+export const packagePiecesProposalSchema = z.object({
+  pieces: z
+    .array(
+      z.object({
+        title: z.string().trim().min(1).max(200),
+        description: z.string().trim().max(5000),
+      })
+    )
+    .min(1, { message: "A IA não propôs nenhuma peça." }),
+});
+export type PackagePiecesProposal = z.infer<typeof packagePiecesProposalSchema>;
+export type PackagePieceProposal = PackagePiecesProposal["pieces"][number];
