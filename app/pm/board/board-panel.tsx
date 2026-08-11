@@ -50,6 +50,7 @@ import {
   type AttachDriveLinkInput,
 } from "@/lib/validation/cards";
 import { STAGE_LABELS, STAGE_ORDER, type CardStage } from "@/lib/cards/stages";
+import { CHANNEL_LABELS, type CardChannel } from "@/lib/cards/channel";
 import { packageRollupLabel } from "@/lib/cards/package-rollup";
 import { cardFieldsFromChatText } from "@/lib/cards/chat-import";
 import {
@@ -254,6 +255,7 @@ function CreateCardDialog({
     clientId: clientId ?? "",
     title: "",
     cardType: "single",
+    channel: "conteudo",
     stage: targetStage,
     description: "",
   };
@@ -321,6 +323,10 @@ function CreateCardDialog({
         cardType: "single",
         stage: targetStage,
         description,
+        // Item 1, 260811-m0t: paste-from-chat always defaults to Conteúdo,
+        // no picker -- pasted chat text is definitionally finished content,
+        // never a planning document.
+        channel: "conteudo",
       });
       if ("error" in result) {
         setServerError(result.error);
@@ -387,6 +393,31 @@ function CreateCardDialog({
                     )}
                   />
                 ) : null}
+                <FormField
+                  control={form.control}
+                  name="channel"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Canal</FormLabel>
+                      <FormControl>
+                        <Select
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          disabled={isPending}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="planejamento">{CHANNEL_LABELS.planejamento}</SelectItem>
+                            <SelectItem value="conteudo">{CHANNEL_LABELS.conteudo}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name="title"
@@ -788,6 +819,7 @@ function CardDetailDialogBody({
   // Select are always editable (Task 2, action C.1).
   const [draftDescription, setDraftDescription] = useState(card.description ?? "");
   const [draftAssignee, setDraftAssignee] = useState(card.assignee_id ?? NONE_VALUE);
+  const [draftChannel, setDraftChannel] = useState<CardChannel>(card.channel);
   const [detailsError, setDetailsError] = useState<string | null>(null);
   const [isSavingDetails, startDetailsTransition] = useTransition();
 
@@ -820,6 +852,7 @@ function CardDetailDialogBody({
   const hasDetailChanges =
     normalizedDraftDescription !== (card.description ?? "") ||
     draftAssignee !== currentAssigneeValue ||
+    draftChannel !== card.channel ||
     descriptionRevertPending;
 
   // P0 pivot 2026-08-04, item 3: "Revalidar" runs the AI checklist check on
@@ -889,6 +922,7 @@ function CardDetailDialogBody({
         description:
           normalizedDraftDescription.length > 0 ? normalizedDraftDescription : null,
         assigneeId: draftAssignee === NONE_VALUE ? null : draftAssignee,
+        channel: draftChannel,
       });
       if (result.error) {
         setDetailsError(result.error);
@@ -988,6 +1022,23 @@ function CardDetailDialogBody({
             {isSavingDetails ? "Salvando..." : "Salvar alterações"}
           </Button>
           {detailsError ? <ErrorBox>{detailsError}</ErrorBox> : null}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <SectionTitle>Canal</SectionTitle>
+          <Select
+            value={draftChannel}
+            onValueChange={(value) => setDraftChannel(value as CardChannel)}
+            disabled={isSavingDetails}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="planejamento">{CHANNEL_LABELS.planejamento}</SelectItem>
+              <SelectItem value="conteudo">{CHANNEL_LABELS.conteudo}</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="flex flex-col gap-2">
@@ -1116,17 +1167,22 @@ function BoardCardItem({
             title={card.title}
             meta={cardMeta}
             badge={
-              card.stage === "revisao_interna" ? (
-                hasChecklistTemplate ? (
-                  <StatusBadge
-                    tone={progress.checked === progress.total ? "success" : "warning"}
-                  >
-                    {progress.checked}/{progress.total} concluídos
-                  </StatusBadge>
-                ) : (
-                  <StatusBadge tone="neutral">Sem checklist</StatusBadge>
-                )
-              ) : undefined
+              <div className="flex flex-col items-end gap-1">
+                <StatusBadge tone={card.channel === "planejamento" ? "info" : "neutral"}>
+                  {CHANNEL_LABELS[card.channel]}
+                </StatusBadge>
+                {card.stage === "revisao_interna" ? (
+                  hasChecklistTemplate ? (
+                    <StatusBadge
+                      tone={progress.checked === progress.total ? "success" : "warning"}
+                    >
+                      {progress.checked}/{progress.total} concluídos
+                    </StatusBadge>
+                  ) : (
+                    <StatusBadge tone="neutral">Sem checklist</StatusBadge>
+                  )
+                ) : null}
+              </div>
             }
           />
         </div>
@@ -1307,7 +1363,12 @@ function PackageRow({
     <div className="flex items-center justify-between gap-4 rounded-md border p-4">
       <div className="flex flex-col gap-1">
         <span className="text-body font-medium">{pkg.title}</span>
-        <StatusBadge tone="info">{packageRollupLabel(pieceStages)}</StatusBadge>
+        <div className="flex items-center gap-1">
+          <StatusBadge tone={pkg.channel === "planejamento" ? "info" : "neutral"}>
+            {CHANNEL_LABELS[pkg.channel]}
+          </StatusBadge>
+          <StatusBadge tone="info">{packageRollupLabel(pieceStages)}</StatusBadge>
+        </div>
       </div>
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogTrigger asChild>
@@ -1411,6 +1472,11 @@ export function BoardPanel({
   // `null` means none — `PieceDetailDialog` treats a null card as closed.
   const [openPieceId, setOpenPieceId] = useState<string | null>(null);
 
+  // Item 1, 260811-m0t: board-level channel filter (Todos/Planejamento/
+  // Conteúdo). Purely client-side -- no new query, no new RLS -- narrows
+  // which cards render per stage column and in the Pacotes section.
+  const [channelFilter, setChannelFilter] = useState<CardChannel | "all">("all");
+
   // Optimistic layer only — removes the round-trip flicker while `moveCard`
   // is in flight. `moveCard`'s own `revalidatePath("/pm/board")` is the
   // authority; React discards this optimistic state automatically once the
@@ -1442,6 +1508,21 @@ export function BoardPanel({
   // card is — across every column's `cards` array, since a piece lives in
   // its own stage column exactly like a standalone card.
   const openPieceCard = openPieceId ? findCard(optimisticColumns, openPieceId) : null;
+
+  // Item 1, 260811-m0t: filtered derivations for the channel filter --
+  // optimisticColumns/packages themselves stay UNCHANGED (still the source
+  // findCard/drag logic reads from).
+  const visibleColumns =
+    channelFilter === "all"
+      ? optimisticColumns
+      : optimisticColumns.map((column) => ({
+          ...column,
+          cards: column.cards.filter((c) => c.channel === channelFilter),
+        }));
+  const visiblePackages =
+    channelFilter === "all"
+      ? packages
+      : packages.filter((p) => p.channel === channelFilter);
 
   const sensors = useSensors(
     // 8px activation distance lets a plain click on the card body still
@@ -1603,6 +1684,22 @@ export function BoardPanel({
         </Select>
 
         {activeClient ? (
+          <Select
+            value={channelFilter}
+            onValueChange={(value) => setChannelFilter(value as CardChannel | "all")}
+          >
+            <SelectTrigger className="w-full max-w-[200px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os canais</SelectItem>
+              <SelectItem value="planejamento">{CHANNEL_LABELS.planejamento}</SelectItem>
+              <SelectItem value="conteudo">{CHANNEL_LABELS.conteudo}</SelectItem>
+            </SelectContent>
+          </Select>
+        ) : null}
+
+        {activeClient ? (
           <div className="flex items-center gap-2">
             <Button variant="outline" asChild>
               <Link href="/pm/chat">
@@ -1620,10 +1717,10 @@ export function BoardPanel({
         ) : null}
       </div>
 
-      {activeClient && packages.length > 0 ? (
+      {activeClient && visiblePackages.length > 0 ? (
         <div className="mb-8 flex flex-col gap-4">
           <SectionTitle>Pacotes</SectionTitle>
-          {packages.map((pkg) => (
+          {visiblePackages.map((pkg) => (
             <PackageRow
               key={pkg.id}
               pkg={pkg}
@@ -1685,7 +1782,7 @@ export function BoardPanel({
             className="flex gap-6 overflow-x-auto pb-4"
             aria-busy={isMoving}
           >
-            {optimisticColumns.map((column) => (
+            {visibleColumns.map((column) => (
               <div
                 key={column.stage}
                 className="flex w-[280px] shrink-0 flex-col gap-2"
