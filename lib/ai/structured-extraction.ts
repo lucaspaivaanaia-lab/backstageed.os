@@ -1,4 +1,4 @@
-import { getAnthropicClient } from "@/lib/anthropic/client";
+import { getAnthropicClient, AI_MODEL } from "@/lib/anthropic/client";
 import { buildExtractionPrompt, type ExtractionFile } from "./extraction-prompt";
 
 /**
@@ -54,7 +54,7 @@ export async function runStructuredExtraction(
   let message;
   try {
     message = await anthropic.messages.create({
-      model: process.env.ANTHROPIC_CHAT_MODEL ?? "claude-sonnet-4-5",
+      model: AI_MODEL,
       max_tokens: 2048,
       tools: [
         {

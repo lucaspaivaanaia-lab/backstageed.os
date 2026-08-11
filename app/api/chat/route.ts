@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getAnthropicClient } from "@/lib/anthropic/client";
+import { getAnthropicClient, AI_MODEL } from "@/lib/anthropic/client";
 import { assembleSystemPrompt } from "@/lib/chat/assemble-prompt";
 import { sendMessageSchema } from "@/lib/validation/chat";
 
@@ -97,7 +97,7 @@ export async function POST(request: Request) {
   const system = assembleSystemPrompt(client, files);
   const anthropic = getAnthropicClient();
   const stream = anthropic.messages.stream({
-    model: process.env.ANTHROPIC_CHAT_MODEL ?? "claude-sonnet-4-5",
+    model: AI_MODEL,
     max_tokens: 1024,
     system,
     messages: [

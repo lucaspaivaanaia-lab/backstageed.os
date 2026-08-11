@@ -14,6 +14,17 @@ import Anthropic from "@anthropic-ai/sdk";
  * server-side (lib/chat/assemble-prompt.ts), no external RAG service.
  */
 
+/**
+ * Item 8 of the 2026-08-05 Juliano action plan: single source of truth for
+ * the model used by every AI call in this codebase (chat streaming in
+ * app/api/chat/route.ts, and the shared structured-extraction engine in
+ * lib/ai/structured-extraction.ts) — previously the same
+ * `process.env.ANTHROPIC_CHAT_MODEL ?? "claude-sonnet-4-5"` fallback was
+ * duplicated in both files. No model change, no user-facing selector —
+ * that's a future decision; this is purely deduplication.
+ */
+export const AI_MODEL = process.env.ANTHROPIC_CHAT_MODEL ?? "claude-sonnet-4-5";
+
 let cached: Anthropic | null = null;
 
 export function getAnthropicClient(): Anthropic {
