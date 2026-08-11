@@ -47,6 +47,7 @@ export type BoardCard = {
   parent_card_id: string | null;
   description: string | null;
   assignee_id: string | null;
+  media_assignee_id: string | null;
   channel: CardChannel;
   created_at: string;
   checklistItems: BoardChecklistItem[];
@@ -111,7 +112,7 @@ export default async function PmBoardPage({
         ? supabase
             .from("cards")
             .select(
-              "id, title, card_type, stage, parent_card_id, description, assignee_id, channel, created_at"
+              "id, title, card_type, stage, parent_card_id, description, assignee_id, media_assignee_id, channel, created_at"
             )
             .eq("client_id", clientId)
             .order("created_at", { ascending: true })
@@ -168,9 +169,16 @@ export default async function PmBoardPage({
   const assigneeIds = (cards ?? [])
     .map((card) => card.assignee_id)
     .filter((id): id is string => Boolean(id));
+  // Item 4, 260811-n0i: same batched-resolve treatment as assigneeIds above
+  // -- pmNames must cover media_assignee_id too, so BoardCardItem's meta
+  // line and the detail dialog's stale-id fallback can display a name
+  // instead of a raw uuid.
+  const mediaAssigneeIds = (cards ?? [])
+    .map((card) => card.media_assignee_id)
+    .filter((id): id is string => Boolean(id));
   const overriddenByIds = (overrides ?? []).map((o) => o.overridden_by);
   const idsToResolve = Array.from(
-    new Set([...completedByIds, ...assigneeIds, ...overriddenByIds])
+    new Set([...completedByIds, ...assigneeIds, ...mediaAssigneeIds, ...overriddenByIds])
   );
   const pmNames = await resolvePmNames(idsToResolve);
 
