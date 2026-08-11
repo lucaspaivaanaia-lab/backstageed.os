@@ -1,0 +1,16 @@
+-- Item 3 of the 2026-08-05 Juliano action plan's P3 ("novo papel de acesso
+-- Editor", 260811-lp5-CONTEXT.md item 3; full design in
+-- 260811-oe0-RESEARCH.md/-CONTEXT.md). Adds the fourth value to
+-- public.user_role (today admin/pm/client).
+--
+-- THIS FILE MUST CONTAIN ONLY THE STATEMENT BELOW. Postgres forbids using a
+-- newly added enum value in the same transaction that adds it (55P04
+-- unsafe_new_enum_value_usage), and Supabase's migration runner applies
+-- each .sql file as a single transaction (260811-oe0-RESEARCH.md Section 1,
+-- citing postgresql.org/docs/current/sql-altertype.html and
+-- github.com/supabase/supabase/issues/20118). No policy, function body,
+-- CASE branch, or literal 'editor' reference may ever be added to this
+-- file -- everything that USES the new value lives in
+-- 0031_editor_role_rls_and_due_date.sql, which runs strictly after this
+-- file commits.
+alter type public.user_role add value 'editor';
