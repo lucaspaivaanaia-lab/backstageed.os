@@ -36,6 +36,8 @@ const NOT_AUTHENTICATED_ERROR = "Não autenticado.";
 const MOVE_FAILED_ERROR = "Não foi possível mover o card. Tente novamente.";
 const ASSIGNEE_NOT_ON_CLIENT_ERROR =
   "Este PM não está atribuído a este cliente.";
+const MEDIA_ASSIGNEE_NOT_ON_CLIENT_ERROR =
+  "Este Designer/Mídia não está atribuído a este cliente.";
 const CARD_ROLLBACK_FAILED_ERROR =
   "O card foi criado mas o checklist falhou e não foi possível desfazer. Avise o administrador antes de usar este card.";
 const CARD_SAVE_ERROR = "Não foi possível salvar o card. Tente novamente.";
@@ -55,6 +57,16 @@ const PIECE_DELETE_ERROR = "Não foi possível excluir a peça. Tente novamente.
  */
 function isAssigneeMembershipError(error: { message?: string } | null): boolean {
   return Boolean(error?.message?.includes("assignee_not_assigned_to_client"));
+}
+
+/**
+ * Maps this plan's (0029) distinct 'media_assignee_not_on_roster' exception
+ * token to user-facing Portuguese -- a SEPARATE token from
+ * isAssigneeMembershipError's 'assignee_not_assigned_to_client' above,
+ * deliberately non-overlapping, so the two violations are never confused.
+ */
+function isMediaAssigneeMembershipError(error: { message?: string } | null): boolean {
+  return Boolean(error?.message?.includes("media_assignee_not_on_roster"));
 }
 
 export type CreateCardResult =
@@ -121,6 +133,7 @@ export async function createCard(
           ? parsed.data.description
           : null,
       assignee_id: parsed.data.assigneeId ?? null,
+      media_assignee_id: parsed.data.mediaAssigneeId ?? null,
       channel: parsed.data.channel,
     })
     .select("id")
@@ -129,6 +142,9 @@ export async function createCard(
   if (insertError || !card) {
     if (isAssigneeMembershipError(insertError)) {
       return { error: ASSIGNEE_NOT_ON_CLIENT_ERROR };
+    }
+    if (isMediaAssigneeMembershipError(insertError)) {
+      return { error: MEDIA_ASSIGNEE_NOT_ON_CLIENT_ERROR };
     }
     return { error: CARD_CREATE_ERROR };
   }
@@ -431,6 +447,7 @@ export async function updateCardDetails(
           ? parsed.data.description
           : null,
       assignee_id: parsed.data.assigneeId,
+      media_assignee_id: parsed.data.mediaAssigneeId,
       channel: parsed.data.channel,
       updated_at: new Date().toISOString(),
     })
@@ -439,6 +456,9 @@ export async function updateCardDetails(
   if (error) {
     if (isAssigneeMembershipError(error)) {
       return { error: ASSIGNEE_NOT_ON_CLIENT_ERROR };
+    }
+    if (isMediaAssigneeMembershipError(error)) {
+      return { error: MEDIA_ASSIGNEE_NOT_ON_CLIENT_ERROR };
     }
     return { error: CARD_SAVE_ERROR };
   }
@@ -819,6 +839,7 @@ export async function createPiece(
       created_by: user.id,
       description: null,
       assignee_id: null,
+      media_assignee_id: null,
     })
     .select("id")
     .single();
