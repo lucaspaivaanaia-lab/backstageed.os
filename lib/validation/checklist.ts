@@ -6,8 +6,8 @@ import { z } from "zod";
  * plans (03-01-PLAN.md Task 3).
  *
  * No `.default([])` on `items`: same zod input/output type-identity
- * requirement documented for `clientCreateSchema.pmIds` and
- * `briefingSchema.contentPillars` in `lib/validation/clients.ts` — a
+ * requirement documented for `clientCreateSchema.pmIds` in
+ * `lib/validation/clients.ts` — a
  * `.default()` makes the schema's *input* type `{label:string}[] |
  * undefined` while its *output* type (z.infer, what
  * `useForm<ChecklistTemplateInput>()` is built from) stays
