@@ -40,6 +40,15 @@
  * inside the same trusted preamble as the existing T-2-02 note — purely
  * additive text, zero change to the client-identification logic from
  * 260810-ivr.
+ *
+ * Quick task 260811-imw (item 9, o ultimo, do plano de acao de 2026-08-05):
+ * added the required `sharedFiles` parameter — content from
+ * `public.shared_knowledge_files` (NOT scoped to any client), always
+ * injected regardless of which client is active, following the exact same
+ * non-empty-only-appended pattern already used by `files`. `sharedFiles`
+ * is empty until Juliano's cross-client document arrives, so the rendered
+ * prompt stays byte-identical to before this plan in that (today's real)
+ * state.
  */
 
 type Briefing = {
@@ -55,7 +64,8 @@ export type ClientFileContext = { filename: string; content: string };
 
 export function assembleSystemPrompt(
   client: Briefing,
-  files: ClientFileContext[]
+  files: ClientFileContext[],
+  sharedFiles: ClientFileContext[]
 ): string {
   const briefingBlock = [
     `Cliente (código de referência: ${client.tag}): ${client.name}`,
@@ -77,6 +87,16 @@ export function assembleSystemPrompt(
         .join("\n\n")}`
     : "";
 
+  // Quick task 260811-imw: same non-empty-only pattern as filesBlock — a
+  // trailing "\n\n" so it composes cleanly before briefingBlock when
+  // non-empty, and contributes nothing when sharedFiles is [] (today's
+  // real state, until Juliano's cross-client document arrives).
+  const sharedKnowledgeBlock = sharedFiles.length
+    ? `Conhecimento comum a todos os clientes:\n${sharedFiles
+        .map((f) => `Arquivo: ${f.filename}\n${f.content}`)
+        .join("\n\n")}\n\n`
+    : "";
+
   // Quick task 260811-du5 (item 6 of the 2026-08-05 Juliano action plan):
   // user-approved verbatim instruction text — do not paraphrase, shorten,
   // or reword any part of it.
@@ -91,6 +111,6 @@ export function assembleSystemPrompt(
     `exclusivamente pelo código de referência indicado abaixo (não pelo nome). Se os ` +
     `arquivos de referência mencionarem outras empresas ou pessoas por nome, NÃO as ` +
     `confunda com o cliente — considere apenas o conteúdo relativo ao cliente ` +
-    `identificado por esse código.\n\n${formattingBlock}\n\n${briefingBlock}${filesBlock}`
+    `identificado por esse código.\n\n${formattingBlock}\n\n${sharedKnowledgeBlock}${briefingBlock}${filesBlock}`
   );
 }

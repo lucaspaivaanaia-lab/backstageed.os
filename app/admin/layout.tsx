@@ -3,6 +3,7 @@ import {
   ClipboardCheckIcon,
   ListChecksIcon,
   KanbanIcon,
+  BookOpenIcon,
 } from "lucide-react";
 
 import { AppSidebar } from "@/components/layout/app-sidebar";
@@ -32,6 +33,11 @@ export default function AdminLayout({
             icon: <ListChecksIcon />,
           },
           { href: "/admin/cards", label: "Cards", icon: <KanbanIcon /> },
+          {
+            href: "/admin/shared-knowledge",
+            label: "Base de conhecimento",
+            icon: <BookOpenIcon />,
+          },
         ]}
       />
       <main className="flex min-w-0 flex-1 flex-col overflow-y-auto">

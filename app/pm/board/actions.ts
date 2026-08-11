@@ -632,10 +632,20 @@ export async function validateCardAgainstChecklist(
     .map((item, i) => `${i + 1}. ${item.label}`)
     .join("\n");
 
+  // Quick task 260811-imw: unfiltered select — shared_knowledge_files has
+  // no client_id column; shared_knowledge_files_select_all_authenticated
+  // (open to any authenticated role by design) is the real boundary here,
+  // via the SAME RLS-scoped supabase client already in scope above.
+  const { data: sharedKnowledgeFiles } = await supabase
+    .from("shared_knowledge_files")
+    .select("filename, content");
+  const sharedFiles = sharedKnowledgeFiles ?? [];
+
   const result = await runStructuredExtraction({
     clientName: client.name,
     clientTag: client.tag,
     files: [cardContentFile, ...(clientFiles ?? [])],
+    sharedFiles,
     instruction:
       "Avalie o conteúdo do card acima (arquivo 'Conteúdo do card') " +
       "contra CADA item do checklist de revisão abaixo, usando também os " +

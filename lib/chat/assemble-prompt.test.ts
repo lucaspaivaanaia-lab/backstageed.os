@@ -21,7 +21,7 @@ const CLIENT_B = {
 };
 
 test("assembleSystemPrompt: POSITIVE - includes the client's own name and briefing fields", () => {
-  const prompt = assembleSystemPrompt(CLIENT_A, []);
+  const prompt = assembleSystemPrompt(CLIENT_A, [], []);
   assert.match(prompt, /Cliente A/);
   assert.match(prompt, /Crescer no LinkedIn/);
   assert.match(prompt, /Formal e direto/);
@@ -30,29 +30,31 @@ test("assembleSystemPrompt: POSITIVE - includes the client's own name and briefi
 });
 
 test("assembleSystemPrompt: NEGATIVE - never includes another client's name/fields (CTX-01/CTX-02 leakage guard)", () => {
-  const promptA = assembleSystemPrompt(CLIENT_A, []);
+  const promptA = assembleSystemPrompt(CLIENT_A, [], []);
   assert.doesNotMatch(promptA, /Cliente B/);
   assert.doesNotMatch(promptA, /Vender produtos de skincare/);
   assert.doesNotMatch(promptA, /Descontraído/);
   assert.doesNotMatch(promptA, /Consumidoras 20-35/);
   assert.doesNotMatch(promptA, /Beleza/);
 
-  const promptB = assembleSystemPrompt(CLIENT_B, []);
+  const promptB = assembleSystemPrompt(CLIENT_B, [], []);
   assert.doesNotMatch(promptB, /Cliente A/);
   assert.doesNotMatch(promptB, /Crescer no LinkedIn/);
 });
 
 test("assembleSystemPrompt: POSITIVE - empty files list still yields a briefing-inclusive prompt (degraded mode, D-07)", () => {
-  const prompt = assembleSystemPrompt(CLIENT_A, []);
+  const prompt = assembleSystemPrompt(CLIENT_A, [], []);
   assert.match(prompt, /Cliente A/);
   assert.match(prompt, /Crescer no LinkedIn/);
 });
 
 test("assembleSystemPrompt: POSITIVE - non-empty files list appends filename + content (same code path, no separate branch)", () => {
-  const withFiles = assembleSystemPrompt(CLIENT_A, [
-    { filename: "notas.md", content: "Trecho recuperado X" },
-  ]);
-  const withoutFiles = assembleSystemPrompt(CLIENT_A, []);
+  const withFiles = assembleSystemPrompt(
+    CLIENT_A,
+    [{ filename: "notas.md", content: "Trecho recuperado X" }],
+    []
+  );
+  const withoutFiles = assembleSystemPrompt(CLIENT_A, [], []);
   assert.match(withFiles, /notas\.md/);
   assert.match(withFiles, /Trecho recuperado X/);
   assert.doesNotMatch(withoutFiles, /Trecho recuperado X/);
@@ -68,6 +70,7 @@ test("assembleSystemPrompt: POSITIVE - null briefing fields are omitted cleanly,
       target_audience: null,
       content_pillars: [],
     },
+    [],
     []
   );
   assert.match(prompt, /Cliente C/);
@@ -75,26 +78,30 @@ test("assembleSystemPrompt: POSITIVE - null briefing fields are omitted cleanly,
 });
 
 test("assembleSystemPrompt: POSITIVE - tag renders as a labeled reference code, and the anti-confusion instruction is present", () => {
-  const prompt = assembleSystemPrompt(CLIENT_A, []);
+  const prompt = assembleSystemPrompt(CLIENT_A, [], []);
   assert.match(prompt, /código de referência: CLIENTE-A/);
   assert.match(prompt, /Cliente A/);
   assert.match(prompt, /NÃO as confunda com o cliente/);
 });
 
 test("assembleSystemPrompt: POSITIVE - tag remains the labeled identifier even when a client's own file mentions another client's name in full", () => {
-  const prompt = assembleSystemPrompt(CLIENT_A, [
-    {
-      filename: "ata-reuniao.md",
-      content:
-        "A reunião também citou o Cliente B e sua estratégia de skincare.",
-    },
-  ]);
+  const prompt = assembleSystemPrompt(
+    CLIENT_A,
+    [
+      {
+        filename: "ata-reuniao.md",
+        content:
+          "A reunião também citou o Cliente B e sua estratégia de skincare.",
+      },
+    ],
+    []
+  );
   assert.match(prompt, /código de referência: CLIENTE-A/);
   assert.match(prompt, /NÃO as confunda com o cliente/);
 });
 
 test("assembleSystemPrompt: POSITIVE - LinkedIn formatting rules are present (260811-du5, item 6 of the 2026-08-05 action plan)", () => {
-  const prompt = assembleSystemPrompt(CLIENT_A, []);
+  const prompt = assembleSystemPrompt(CLIENT_A, [], []);
   assert.match(prompt, /nunca use travessão/);
   assert.match(prompt, /nem asterisco/);
   assert.match(prompt, /parágrafos curtos/);
@@ -104,14 +111,14 @@ test("assembleSystemPrompt: POSITIVE - LinkedIn formatting rules are present (26
 });
 
 test("assembleSystemPrompt: POSITIVE - edit-in-place correction instruction is present (260811-du5)", () => {
-  const prompt = assembleSystemPrompt(CLIENT_A, []);
+  const prompt = assembleSystemPrompt(CLIENT_A, [], []);
   assert.match(prompt, /edite o conteúdo existente/);
   assert.match(prompt, /devolva a versão corrigida completa/);
   assert.match(prompt, /nunca recomece do zero/);
 });
 
 test("assembleSystemPrompt: POSITIVE - formatting/edit-in-place instructions appear before the client's briefing content (T-2-02 ordering, 260811-du5)", () => {
-  const prompt = assembleSystemPrompt(CLIENT_A, []);
+  const prompt = assembleSystemPrompt(CLIENT_A, [], []);
   const formattingIndex = prompt.indexOf("nunca use travessão");
   const briefingIndex = prompt.indexOf(CLIENT_A.name);
   assert.ok(formattingIndex >= 0, "formatting instruction should be present");
@@ -120,4 +127,31 @@ test("assembleSystemPrompt: POSITIVE - formatting/edit-in-place instructions app
     formattingIndex < briefingIndex,
     "formatting instruction should appear before the client's briefing content"
   );
+});
+
+test("assembleSystemPrompt: POSITIVE - sharedFiles content appears regardless of which client's briefing/files are also passed (quick task 260811-imw, item 9)", () => {
+  const prompt = assembleSystemPrompt(CLIENT_A, [], [
+    { filename: "guia-marca.md", content: "Nunca use gírias regionais." },
+  ]);
+  assert.match(prompt, /guia-marca\.md/);
+  assert.match(prompt, /Nunca use gírias regionais\./);
+});
+
+test("assembleSystemPrompt: POSITIVE - sharedFiles content is present even when client is Client A and files is [] (not accidentally gated behind a non-empty client-files list, 260811-imw)", () => {
+  const prompt = assembleSystemPrompt(CLIENT_A, [], [
+    { filename: "guia-marca.md", content: "Nunca use gírias regionais." },
+  ]);
+  assert.match(prompt, /Cliente A/);
+  assert.match(prompt, /guia-marca\.md/);
+  assert.match(prompt, /Nunca use gírias regionais\./);
+});
+
+test("assembleSystemPrompt: POSITIVE - empty sharedFiles yields a byte-identical prompt to the pre-260811-imw 2-argument behavior (no regression when the table is empty, its real state today)", () => {
+  const withEmptySharedFiles = assembleSystemPrompt(CLIENT_A, [], []);
+  const withNonEmptySharedFiles = assembleSystemPrompt(CLIENT_A, [], [
+    { filename: "guia-marca.md", content: "Nunca use gírias regionais." },
+  ]);
+  assert.doesNotMatch(withEmptySharedFiles, /guia-marca\.md/);
+  assert.doesNotMatch(withEmptySharedFiles, /Conhecimento comum a todos os clientes/);
+  assert.match(withNonEmptySharedFiles, /Conhecimento comum a todos os clientes/);
 });

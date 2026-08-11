@@ -25,6 +25,7 @@ export type StructuredExtractionParams = {
   clientName: string;
   clientTag: string;
   files: ExtractionFile[];
+  sharedFiles: ExtractionFile[];
   instruction: string;
   toolName: string;
   toolDescription: string;
@@ -46,6 +47,7 @@ export async function runStructuredExtraction(
     params.clientName,
     params.clientTag,
     params.files,
+    params.sharedFiles,
     params.instruction
   );
 
