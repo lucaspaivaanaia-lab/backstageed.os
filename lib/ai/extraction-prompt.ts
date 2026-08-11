@@ -17,6 +17,15 @@
  * production leakage bug where a client's own uploaded file mentioned an
  * ambiguous/common name and `clientName` alone was not enough to keep the
  * model anchored on the right client.
+ *
+ * Quick task 260811-imw (item 9, o ultimo, do plano de acao de 2026-08-05):
+ * added the required `sharedFiles` parameter — content from
+ * `public.shared_knowledge_files` (NOT scoped to any client), always
+ * forwarded regardless of which client triggered the extraction call.
+ * Inserted BEFORE the trusted, task-specific `instruction` parameter,
+ * which MUST remain the LAST content in the returned string (T-ivr-03's
+ * established prompt-injection-resistance ordering, quick task 260810-ivr
+ * — preserved here, not weakened).
  */
 
 export type ExtractionFile = { filename: string; content: string };
@@ -25,6 +34,7 @@ export function buildExtractionPrompt(
   clientName: string,
   clientTag: string,
   files: ExtractionFile[],
+  sharedFiles: ExtractionFile[],
   instruction: string
 ): string {
   const filesBlock = files.length
@@ -33,6 +43,16 @@ export function buildExtractionPrompt(
         .join("\n\n")
     : "(nenhum arquivo de referência disponível para este cliente)";
 
+  // Quick task 260811-imw: same non-empty-only pattern as filesBlock, with
+  // a leading "\n\n" so it composes cleanly after the client-files block
+  // when non-empty, and contributes nothing when sharedFiles is [] (today's
+  // real state, until Juliano's cross-client document arrives).
+  const sharedFilesBlock = sharedFiles.length
+    ? `\n\nConhecimento comum a todos os clientes:\n${sharedFiles
+        .map((f) => `Arquivo: ${f.filename}\n${f.content}`)
+        .join("\n\n")}`
+    : "";
+
   return (
     `Cliente (código de referência: ${clientTag}): ${clientName}\n\n` +
     `O cliente que você atende é identificado exclusivamente pelo código de ` +
@@ -40,7 +60,7 @@ export function buildExtractionPrompt(
     `mencionarem outras empresas ou pessoas por nome, NÃO as confunda com o ` +
     `cliente — considere apenas o conteúdo relativo ao cliente identificado ` +
     `por esse código.\n\n` +
-    `Arquivos de referência do cliente:\n${filesBlock}\n\n` +
+    `Arquivos de referência do cliente:\n${filesBlock}${sharedFilesBlock}\n\n` +
     `---\n\n${instruction}`
   );
 }

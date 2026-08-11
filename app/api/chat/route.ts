@@ -76,6 +76,20 @@ export async function POST(request: Request) {
     content: f.content,
   }));
 
+  // Quick task 260811-imw: unfiltered select — shared_knowledge_files has
+  // no client_id column; the shared_knowledge_files_select_all_authenticated
+  // RLS policy (open to any authenticated role by design) is the real
+  // boundary here, not this route's own filter. Same RLS-scoped `supabase`
+  // client as everything above — never createAdminClient().
+  const { data: sharedKnowledgeFiles } = await supabase
+    .from("shared_knowledge_files")
+    .select("filename, content");
+
+  const sharedFiles = (sharedKnowledgeFiles ?? []).map((f) => ({
+    filename: f.filename,
+    content: f.content,
+  }));
+
   const { data: history } = await supabase
     .from("messages")
     .select("role, content")
@@ -94,7 +108,7 @@ export async function POST(request: Request) {
     });
   }
 
-  const system = assembleSystemPrompt(client, files);
+  const system = assembleSystemPrompt(client, files, sharedFiles);
   const anthropic = getAnthropicClient();
   const stream = anthropic.messages.stream({
     model: AI_MODEL,
