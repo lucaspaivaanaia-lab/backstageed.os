@@ -1154,6 +1154,17 @@ function CardDetailDialogBody({
         mediaAssigneeId: draftMediaAssignee === NONE_VALUE ? null : draftMediaAssignee,
         channel: draftChannel,
         dueDate: draftDueDate ? new Date(draftDueDate).toISOString() : null,
+        // Deviation (Rule 3 auto-fix, plan 04-01 Task 3): publishAt was just
+        // added as a required (nullable) field on updateCardDetailsSchema,
+        // sibling to dueDate -- this dialog's own `card` prop type (app/pm/
+        // board/page.tsx) has no publish_at column selected yet (SCH-01's
+        // actual UI wiring, including the query/type change, is Wave 2's
+        // 04-03 plan), so this call site hardcodes null, mirroring quick
+        // task 260811-m0t's own "channel: 'conteudo'" placeholder for the
+        // one call site a required-field addition couldn't immediately wire
+        // a selector for. Since nothing in this codebase writes publish_at
+        // yet, this can never clobber a real value.
+        publishAt: null,
       });
       if (result.error) {
         setDetailsError(result.error);

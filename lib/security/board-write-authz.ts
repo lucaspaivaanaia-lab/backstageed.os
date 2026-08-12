@@ -1,7 +1,10 @@
 /**
  * Pure authorization predicate for the PM/Admin-facing card-write Server
  * Actions in app/pm/board/actions.ts (updateCardDetails, advanceStage,
- * moveCard). Mirrors the exact "profiles.status === 'approved' &&
+ * moveCard, toggleChecklistItem, addAttachment, removeAttachment,
+ * validateCardAgainstChecklist, createPiece, removePiece — 9 call sites as
+ * of 04-01 Task 4, up from the original 3). Mirrors the exact
+ * "profiles.status === 'approved' &&
  * role in ('admin','pm')" app-layer check already established by
  * createClientRecord (lib/actions/clients.ts) and forceAdvanceOverride's
  * own stricter admin-only variant (lib/actions/card-overrides.ts) -- RLS
@@ -20,6 +23,16 @@
  * reassign, or edit Canal/Prazo, breaking this plan's own locked
  * must-have ("Editor nunca pode... estruturalmente, não só por
  * convenção").
+ *
+ * Extended by 04-01 Task 4: migration 0032 (Phase 4, Client Approval &
+ * Scheduling) widens cards_select_scoped/cards_update_scoped with a FOURTH,
+ * Client-specific branch — the exact same class of gap recurs, this time
+ * for 6 MORE pre-existing PM/Admin Server Actions this predicate did not
+ * previously gate (toggleChecklistItem, addAttachment, removeAttachment,
+ * validateCardAgainstChecklist, createPiece, removePiece). All 6 now call
+ * this same predicate via assertPmOrAdminCaller, closing the gap in the
+ * SAME wave as the RLS migration that opens it — see 04-01-PLAN.md's own
+ * threat register, T-04-01.
  *
  * Free of any Supabase client import or I/O, exercised by its sibling
  * board-write-authz.test.ts with Node's built-in test runner -- no live

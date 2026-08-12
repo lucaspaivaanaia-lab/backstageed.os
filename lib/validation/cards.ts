@@ -125,8 +125,46 @@ export const updateCardDetailsSchema = z.object({
       message: "Data inválida.",
     })
     .nullable(),
+  // SCH-01 (Phase 4, plan 04-01/04-03): lets a PM/Admin register/change/
+  // clear a card's publish date/time from the detail dialog, alongside
+  // dueDate. Identical refine-shape to dueDate above (same message, same
+  // nullable ISO-string contract) -- publish_at is a NEW, distinct column
+  // (D-03), never aliased to or derived from dueDate. NEVER accepted by
+  // approveCardSchema/requestAdjustmentSchema below -- a Client never sets
+  // this field, only a PM/Admin does, after the card is already approved.
+  publishAt: z
+    .string()
+    .refine((value) => !Number.isNaN(Date.parse(value)), {
+      message: "Data inválida.",
+    })
+    .nullable(),
 });
 export type UpdateCardDetailsInput = z.infer<typeof updateCardDetailsSchema>;
+
+/**
+ * approveCard's input (APR-02, Wave 2's 04-02). Deliberately narrow --
+ * mirrors updateCardDescriptionAsEditorSchema's own "structurally absent,
+ * not merely ignored" framing: a Client caller has no field here to even
+ * attempt to set stage/comment/any other column through, the target stage
+ * is always derived server-side from nextStage(card.stage) after an
+ * explicit stage re-check (never trusted from the browser).
+ */
+export const approveCardSchema = z.object({
+  cardId: z.string().uuid(),
+});
+export type ApproveCardInput = z.infer<typeof approveCardSchema>;
+
+/**
+ * requestAdjustment's input (APR-03, KAN-04, Wave 2's 04-02). Deliberately
+ * narrow, same framing as approveCardSchema above -- `comment` is the ONLY
+ * additional field a Client caller may supply; the target stage
+ * ('producao') is always hardcoded server-side, never caller-supplied.
+ */
+export const requestAdjustmentSchema = z.object({
+  cardId: z.string().uuid(),
+  comment: z.string().trim().min(1).max(2000),
+});
+export type RequestAdjustmentInput = z.infer<typeof requestAdjustmentSchema>;
 
 /**
  * updateCardDescriptionAsEditor's input (item 3 of the 2026-08-05 action

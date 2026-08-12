@@ -362,6 +362,15 @@ export async function toggleChecklistItem(
   } = await supabase.auth.getUser();
   if (!user) return { error: NOT_AUTHENTICATED_ERROR };
 
+  // App-layer authorization — the PRIMARY boundary (04-01 Task 4, closes
+  // T-04-01: migration 0032's Client branch on cards_update_scoped makes
+  // this action newly reachable by an authenticated Client caller, who has
+  // no legitimate reason to toggle a checklist item). See
+  // assertPmOrAdminCaller's own doc comment above.
+  if (!(await assertPmOrAdminCaller(supabase, user.id))) {
+    return { error: PM_ADMIN_ONLY_ERROR };
+  }
+
   const { error } = await supabase
     .from("card_checklist_items")
     .update({
@@ -581,6 +590,15 @@ export async function addAttachment(
   } = await supabase.auth.getUser();
   if (!user) return { error: NOT_AUTHENTICATED_ERROR };
 
+  // App-layer authorization — the PRIMARY boundary (04-01 Task 4, closes
+  // T-04-01: migration 0032's Client branch on cards_update_scoped makes
+  // this action newly reachable by an authenticated Client caller, who has
+  // no legitimate reason to attach a Drive link). See assertPmOrAdminCaller's
+  // own doc comment above.
+  if (!(await assertPmOrAdminCaller(supabase, user.id))) {
+    return { error: PM_ADMIN_ONLY_ERROR };
+  }
+
   // Re-read the card through RLS — never trust that cardId belongs to a
   // client the caller can reach; cards_select_scoped is the real boundary.
   const { data: card } = await supabase
@@ -623,6 +641,20 @@ export async function removeAttachment(
   }
 
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: NOT_AUTHENTICATED_ERROR };
+
+  // App-layer authorization — the PRIMARY boundary (04-01 Task 4, closes
+  // T-04-01). This function previously had NO auth.getUser()/role check at
+  // all, relying entirely on card_attachments_delete_scoped (0018), which
+  // migration 0032 does not touch — but a Client caller reaching this
+  // action directly has no legitimate reason to delete an attachment. See
+  // assertPmOrAdminCaller's own doc comment above.
+  if (!(await assertPmOrAdminCaller(supabase, user.id))) {
+    return { error: PM_ADMIN_ONLY_ERROR };
+  }
 
   const { error } = await supabase
     .from("card_attachments")
@@ -700,6 +732,16 @@ export async function validateCardAgainstChecklist(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: NOT_AUTHENTICATED_ERROR };
+
+  // App-layer authorization — the PRIMARY boundary (04-01 Task 4, closes
+  // T-04-01). Before this migration wave, this function was only
+  // incidentally blocked by an unrelated, unaudited RLS gap in
+  // card_checklist_items_select_scoped, not a designed control — a Client
+  // caller could otherwise reach the Claude API call directly. See
+  // assertPmOrAdminCaller's own doc comment above.
+  if (!(await assertPmOrAdminCaller(supabase, user.id))) {
+    return { error: PM_ADMIN_ONLY_ERROR };
+  }
 
   // Re-read the card through RLS — never trust that cardId belongs to a
   // client the caller can reach; cards_select_scoped is the real boundary.
@@ -895,6 +937,12 @@ export async function createPiece(
   } = await supabase.auth.getUser();
   if (!user) return { error: NOT_AUTHENTICATED_ERROR };
 
+  // App-layer authorization — the PRIMARY boundary (04-01 Task 4, closes
+  // T-04-01). See assertPmOrAdminCaller's own doc comment above.
+  if (!(await assertPmOrAdminCaller(supabase, user.id))) {
+    return { error: PM_ADMIN_ONLY_ERROR };
+  }
+
   // Re-read the parent through RLS — never trust that parentCardId belongs
   // to a client the caller can reach; cards_select_scoped is the real
   // boundary (T-03-31).
@@ -974,6 +1022,20 @@ export async function removePiece(
   }
 
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: NOT_AUTHENTICATED_ERROR };
+
+  // App-layer authorization — the PRIMARY boundary (04-01 Task 4, closes
+  // T-04-01). This function previously had NO auth.getUser()/role check at
+  // all — under migration 0032's widened RLS, a Client caller would have
+  // this delete silently no-op at zero rows (misleadingly returning `{}`
+  // success) rather than being rejected outright. See assertPmOrAdminCaller's
+  // own doc comment above.
+  if (!(await assertPmOrAdminCaller(supabase, user.id))) {
+    return { error: PM_ADMIN_ONLY_ERROR };
+  }
 
   // Re-read the target through RLS — never trust a card_type implied by the
   // caller; cards_delete_scoped is the client-scope boundary, but it is NOT
