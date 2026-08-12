@@ -50,6 +50,13 @@ export type BoardCard = {
   media_assignee_id: string | null;
   channel: CardChannel;
   due_date: string | null;
+  // APR-04/SCH-01 (Phase 4, plan 04-01/04-03): client_adjustment_comment is
+  // Client-write-only (set via requestAdjustment, plan 04-02), read-only
+  // here. publish_at is PM/Admin-write-only via updateCardDetails below --
+  // the Client's own approveCard/requestAdjustment never touch it (see
+  // 04-01's FORBIDDEN_KEYS negative test set).
+  client_adjustment_comment: string | null;
+  publish_at: string | null;
   created_at: string;
   checklistItems: BoardChecklistItem[];
   attachments: BoardAttachment[];
@@ -113,7 +120,7 @@ export default async function PmBoardPage({
         ? supabase
             .from("cards")
             .select(
-              "id, title, card_type, stage, parent_card_id, description, assignee_id, media_assignee_id, channel, due_date, created_at"
+              "id, title, card_type, stage, parent_card_id, description, assignee_id, media_assignee_id, channel, due_date, client_adjustment_comment, publish_at, created_at"
             )
             .eq("client_id", clientId)
             .order("created_at", { ascending: true })

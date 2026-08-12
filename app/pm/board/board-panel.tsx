@@ -62,6 +62,7 @@ import {
   GATE_BLOCKED_MESSAGE,
 } from "@/lib/cards/checklist-gate";
 import { evaluateMove } from "@/lib/cards/move-rules";
+import { isReadyToPublish } from "@/lib/cards/publish-status";
 import {
   isLikelyDriveLink,
   driveLinkType,
@@ -1028,6 +1029,10 @@ function CardDetailDialogBody({
   const [draftMediaAssignee, setDraftMediaAssignee] = useState(card.media_assignee_id ?? NONE_VALUE);
   const [draftChannel, setDraftChannel] = useState<CardChannel>(card.channel);
   const [draftDueDate, setDraftDueDate] = useState(toDatetimeLocalValue(card.due_date));
+  // SCH-01 (Phase 4, plan 04-03): identical seeding pattern to draftDueDate
+  // above -- same toDatetimeLocalValue helper, no second date-parsing
+  // helper introduced.
+  const [draftPublishAt, setDraftPublishAt] = useState(toDatetimeLocalValue(card.publish_at));
   const [detailsError, setDetailsError] = useState<string | null>(null);
   const [isSavingDetails, startDetailsTransition] = useTransition();
 
@@ -1082,6 +1087,7 @@ function CardDetailDialogBody({
     draftMediaAssignee !== currentMediaAssigneeValue ||
     draftChannel !== card.channel ||
     draftDueDate !== toDatetimeLocalValue(card.due_date) ||
+    draftPublishAt !== toDatetimeLocalValue(card.publish_at) ||
     descriptionRevertPending;
 
   // P0 pivot 2026-08-04, item 3: "Revalidar" runs the AI checklist check on
@@ -1154,17 +1160,10 @@ function CardDetailDialogBody({
         mediaAssigneeId: draftMediaAssignee === NONE_VALUE ? null : draftMediaAssignee,
         channel: draftChannel,
         dueDate: draftDueDate ? new Date(draftDueDate).toISOString() : null,
-        // Deviation (Rule 3 auto-fix, plan 04-01 Task 3): publishAt was just
-        // added as a required (nullable) field on updateCardDetailsSchema,
-        // sibling to dueDate -- this dialog's own `card` prop type (app/pm/
-        // board/page.tsx) has no publish_at column selected yet (SCH-01's
-        // actual UI wiring, including the query/type change, is Wave 2's
-        // 04-03 plan), so this call site hardcodes null, mirroring quick
-        // task 260811-m0t's own "channel: 'conteudo'" placeholder for the
-        // one call site a required-field addition couldn't immediately wire
-        // a selector for. Since nothing in this codebase writes publish_at
-        // yet, this can never clobber a real value.
-        publishAt: null,
+        // SCH-01 (Phase 4, plan 04-03): real wiring, replacing 04-01's
+        // `publishAt: null` placeholder now that draftPublishAt/card.publish_at
+        // exist end-to-end.
+        publishAt: draftPublishAt ? new Date(draftPublishAt).toISOString() : null,
       });
       if (result.error) {
         setDetailsError(result.error);
@@ -1184,6 +1183,18 @@ function CardDetailDialogBody({
         <StatusBadge tone="neutral">
           {card.stage ? STAGE_LABELS[card.stage] : "—"}
         </StatusBadge>
+        {isReadyToPublish(card) ? (
+          <StatusBadge tone="success">Pronto para publicar</StatusBadge>
+        ) : null}
+
+        {card.stage === "producao" && card.client_adjustment_comment ? (
+          <div className="flex flex-col gap-2 rounded-md border p-3">
+            <span className="text-body font-medium">Comentário do cliente</span>
+            <span className="text-body whitespace-pre-wrap">
+              {card.client_adjustment_comment}
+            </span>
+          </div>
+        ) : null}
 
         {aiValidation ? (
           <div className="flex flex-col gap-2 rounded-md border p-3">
@@ -1328,6 +1339,32 @@ function CardDetailDialogBody({
           </div>
         </div>
 
+        {card.stage === "agendamento" ? (
+          <div className="flex flex-col gap-2">
+            <SectionTitle>Data de publicação</SectionTitle>
+            <div className="flex items-center gap-2">
+              <Input
+                type="datetime-local"
+                value={draftPublishAt}
+                onChange={(event) => setDraftPublishAt(event.target.value)}
+                disabled={isSavingDetails}
+                className="w-fit"
+              />
+              {draftPublishAt ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setDraftPublishAt("")}
+                  disabled={isSavingDetails}
+                >
+                  Limpar
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
         <div className="flex flex-col gap-2">
           <SectionTitle>Anexos</SectionTitle>
           {card.attachments.length === 0 ? (
@@ -1468,6 +1505,9 @@ function BoardCardItem({
                 <StatusBadge tone={card.channel === "planejamento" ? "info" : "neutral"}>
                   {CHANNEL_LABELS[card.channel]}
                 </StatusBadge>
+                {isReadyToPublish(card) ? (
+                  <StatusBadge tone="success">Pronto para publicar</StatusBadge>
+                ) : null}
                 {card.stage === "revisao_interna" ? (
                   hasChecklistTemplate ? (
                     <StatusBadge

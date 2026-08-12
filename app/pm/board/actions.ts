@@ -545,6 +545,10 @@ export async function updateCardDetails(
       media_assignee_id: parsed.data.mediaAssigneeId,
       channel: parsed.data.channel,
       due_date: parsed.data.dueDate,
+      // SCH-01: one more PM/Admin-writable column, gated by the SAME
+      // assertPmOrAdminCaller check above -- no new authorization boundary
+      // (T-04-01c).
+      publish_at: parsed.data.publishAt,
       updated_at: new Date().toISOString(),
     })
     .eq("id", parsed.data.cardId);
