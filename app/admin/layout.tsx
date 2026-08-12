@@ -5,6 +5,7 @@ import {
   ListChecksIcon,
   KanbanIcon,
   BookOpenIcon,
+  LayoutDashboardIcon,
 } from "lucide-react";
 
 import { AppSidebar } from "@/components/layout/app-sidebar";
@@ -23,6 +24,7 @@ export default function AdminLayout({
       <AppSidebar
         items={[
           { href: "/admin/clients", label: "Clientes", icon: <UsersIcon /> },
+          { href: "/pm/board", label: "Produção", icon: <LayoutDashboardIcon /> },
           { href: "/admin/editors", label: "Editores", icon: <UserCogIcon /> },
           {
             href: "/admin/approvals",

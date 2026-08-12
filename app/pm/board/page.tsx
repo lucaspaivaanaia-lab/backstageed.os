@@ -107,7 +107,11 @@ export default async function PmBoardPage({
   const { client: clientId } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: clients }, { data: cards }, { data: activeClient }, pmRoster, editorRoster] =
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const [{ data: clients }, { data: cards }, { data: activeClient }, pmRoster, editorRoster, { data: profile }] =
     await Promise.all([
       supabase
         .from("clients")
@@ -136,7 +140,12 @@ export default async function PmBoardPage({
         ? listClientPmRoster(clientId)
         : Promise.resolve([] as BoardPmRosterEntry[]),
       listEditorRoster(),
+      user
+        ? supabase.from("profiles").select("role").eq("id", user.id).single()
+        : Promise.resolve({ data: null as { role: string } | null }),
     ]);
+
+  const viewerIsAdmin = profile?.role === "admin";
 
   const mediaAssigneeRoster: BoardPmRosterEntry[] = [...pmRoster, ...editorRoster];
 
@@ -269,6 +278,7 @@ export default async function PmBoardPage({
       pmRoster={pmRoster}
       mediaAssigneeRoster={mediaAssigneeRoster}
       hasChecklistTemplate={Boolean(activeClient?.checklist_template_id)}
+      viewerIsAdmin={viewerIsAdmin}
     />
   );
 }

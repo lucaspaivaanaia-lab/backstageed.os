@@ -172,6 +172,11 @@ type BoardPanelProps = {
   // the "Nenhum checklist configurado" informational notice — never used
   // to disable "Avançar" (that stays gated by isGateBlocked alone).
   hasChecklistTemplate: boolean;
+  // Resolvido server-side (page.tsx) via profiles.role -- usado SOMENTE pra
+  // escolher entre /admin/clients e /pm/clients nos dois fallbacks de
+  // navegação abaixo (quick task 260812-k6c). Nunca usado pra alterar
+  // visibilidade de dados, que continua inteiramente dirigida por RLS.
+  viewerIsAdmin: boolean;
 };
 
 const CARD_CREATED_TOAST = "Card criado.";
@@ -1802,6 +1807,7 @@ export function BoardPanel({
   pmRoster,
   mediaAssigneeRoster,
   hasChecklistTemplate,
+  viewerIsAdmin,
 }: BoardPanelProps) {
   const router = useRouter();
 
@@ -1984,8 +1990,8 @@ export function BoardPanel({
       router.replace(`/pm/board?client=${lastId}`);
       return;
     }
-    router.replace("/pm/clients");
-  }, [activeClientId, clients, router]);
+    router.replace(viewerIsAdmin ? "/admin/clients" : "/pm/clients");
+  }, [activeClientId, clients, router, viewerIsAdmin]);
 
   return (
     <PageShell width="wide">
@@ -2051,7 +2057,13 @@ export function BoardPanel({
               </Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href={`/pm/clients/${activeClient.id}`}>
+              <Link
+                href={
+                  viewerIsAdmin
+                    ? `/admin/clients/${activeClient.id}`
+                    : `/pm/clients/${activeClient.id}`
+                }
+              >
                 <FileEditIcon className="size-4" />
                 Editar briefing
               </Link>

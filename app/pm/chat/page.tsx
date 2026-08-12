@@ -16,7 +16,11 @@ import { ChatPanel } from "./chat-panel";
 export default async function PmChatPage() {
   const supabase = await createClient();
 
-  const [{ data: clients }, { data: fileRows }] = await Promise.all([
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const [{ data: clients }, { data: fileRows }, { data: profile }] = await Promise.all([
     supabase
       .from("clients")
       .select("id, name")
@@ -25,7 +29,12 @@ export default async function PmChatPage() {
       .is("archived_at", null)
       .order("name", { ascending: true }),
     supabase.from("client_files").select("client_id"),
+    user
+      ? supabase.from("profiles").select("role").eq("id", user.id).single()
+      : Promise.resolve({ data: null as { role: string } | null }),
   ]);
+
+  const viewerIsAdmin = profile?.role === "admin";
 
   const clientIdsWithFiles = new Set((fileRows ?? []).map((f) => f.client_id));
 
@@ -35,5 +44,5 @@ export default async function PmChatPage() {
     hasRag: clientIdsWithFiles.has(c.id),
   }));
 
-  return <ChatPanel clients={roster} />;
+  return <ChatPanel clients={roster} viewerIsAdmin={viewerIsAdmin} />;
 }

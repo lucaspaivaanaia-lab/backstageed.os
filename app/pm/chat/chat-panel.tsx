@@ -58,6 +58,11 @@ type ChatMessage = {
 
 type ChatPanelProps = {
   clients: ClientOption[];
+  // Resolvido server-side (page.tsx) via profiles.role -- usado SOMENTE pra
+  // escolher entre /admin/clients e /pm/clients no fallback de navegação
+  // abaixo (quick task 260812-k6c). Nunca usado pra alterar visibilidade de
+  // dados, que continua inteiramente dirigida por RLS.
+  viewerIsAdmin: boolean;
 };
 
 const SEND_ERROR =
@@ -87,7 +92,7 @@ const SEND_TO_KANBAN_ERROR =
  * previously-selected client can never be appended to the new client's
  * thread.
  */
-export function ChatPanel({ clients }: ChatPanelProps) {
+export function ChatPanel({ clients, viewerIsAdmin }: ChatPanelProps) {
   const router = useRouter();
 
   // P2 pivot 2026-08-04: `manualClientId` is only set when the PM
@@ -159,9 +164,9 @@ export function ChatPanel({ clients }: ChatPanelProps) {
     const freshIdInRoster =
       freshId && clients.some((c) => c.id === freshId) ? freshId : null;
     if (!freshIdInRoster) {
-      router.push("/pm/clients");
+      router.push(viewerIsAdmin ? "/admin/clients" : "/pm/clients");
     }
-  }, [activeClientId, clients, router]);
+  }, [activeClientId, clients, router, viewerIsAdmin]);
 
   const activeClient = clients.find((c) => c.id === activeClientId) ?? null;
 
