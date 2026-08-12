@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { STAGE_LABELS, type CardStage } from "@/lib/cards/stages";
+import type { CardStage } from "@/lib/cards/stages";
 import { resolvePmNames } from "@/lib/actions/clients";
 import { EditorQueuePanel } from "./editor-queue-panel";
 
