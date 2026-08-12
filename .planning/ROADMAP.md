@@ -166,7 +166,7 @@ Plans:
 
 **Goal**: Client can review their own content board and approve or send it back for adjustment, and once approved the PM locks in a publish date — closing the loop from production to "ready to publish"
 **Mode:** mvp
-**Deadline:** 2026-08-07
+**Deadline:** 2026-08-07 *(already past as of planning on 2026-08-12 — flagged the same way Phase 3's own past deadline was flagged; not silently ignored, just not re-negotiated as part of this planning pass)*
 **Depends on**: Phase 3
 **Requirements**: KAN-04, APR-01, APR-02, APR-03, APR-04, SCH-01, SCH-02
 **Success Criteria** (what must be TRUE):
@@ -178,7 +178,21 @@ Plans:
   5. Once a card is approved by the client, PM can register the agreed publish date/time on the card
   6. A card with a registered publish date/time shows a final status of "Pronto para publicar"
 
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 04-01-PLAN.md — Migration 0032 (Client RLS branch + client_adjustment_comment/publish_at columns) + pgTAP scoping test + pure payload/publish-status modules + validation schemas (KAN-04, APR-01, APR-02, APR-03, SCH-01, SCH-02)
+
+**Wave 2** *(blocked on Wave 1, no file overlap between the two)*
+
+- [ ] 04-02-PLAN.md — Client-facing slice: `/client` board (queue + history tabs), approveCard/requestAdjustment Server Actions (APR-01, APR-02, APR-03, KAN-04)
+- [ ] 04-03-PLAN.md — PM-facing slice: publish-date field, adjustment-comment display, "Pronto para publicar" badge on the existing PM board (APR-04, SCH-01, SCH-02)
+
+**Wave 3** *(phase gate, blocked on Wave 2)*
+
+- [ ] 04-04-PLAN.md — Full automated-suite pre-flight + 12-step live checkpoint across Client and PM sessions (KAN-04, APR-01, APR-02, APR-03, APR-04, SCH-01, SCH-02)
 
 ### Phase 5: Access & Roles
 
@@ -235,7 +249,7 @@ Plans:
 | 1. Client Records & Isolated RAG Setup | 2026-07-11 | 4/4 | Complete   | 2026-07-13 |
 | 2. Client-Isolated AI Chat | 2026-07-18 | 6/6 | Complete   | 2026-08-05 |
 | 3. Content Production Kanban | 2026-08-05 | 9/9 | Complete   | 2026-08-08 |
-| 4. Client Approval & Scheduling | 2026-08-07 | 0/? | Not started | - |
+| 4. Client Approval & Scheduling | 2026-08-07 | 0/4 | Not started | - |
 | 5. Access & Roles | 2026-08-12 | 6/6 | Complete   | 2026-07-16 |
 | 6. Admin Oversight Dashboard | 2026-08-15 | 0/? | Not started | - |
 
