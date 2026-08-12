@@ -25,6 +25,8 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ErrorBox } from "@/components/ui/error-box";
 import { DataCard } from "@/components/ui/data-card";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { cn } from "@/lib/utils";
 import {
   Form,
   FormField,
@@ -316,6 +318,11 @@ export function ClientDetailForm({
       <DataCard
         title="Briefing estratégico"
         description="Alimenta o contexto da IA deste cliente em todas as conversas do chat."
+        badge={
+          form.formState.isDirty && !isBriefingPending ? (
+            <StatusBadge tone="warning">Alterações não salvas</StatusBadge>
+          ) : null
+        }
       >
         <Form {...form}>
           <form
@@ -333,7 +340,11 @@ export function ClientDetailForm({
                       {...field}
                       value={field.value ?? ""}
                       disabled={isBriefingPending}
-                      className="min-h-[400px]"
+                      className={cn(
+                        "min-h-[400px]",
+                        form.formState.isDirty &&
+                          "border-warning ring-1 ring-warning/40"
+                      )}
                       placeholder="Escreva o briefing estratégico deste cliente em Markdown -- objetivo, tom de voz, público-alvo, pilares de conteúdo, ou qualquer outra estrutura que fizer sentido."
                     />
                   </FormControl>
