@@ -101,6 +101,26 @@ export async function listPmRoster(): Promise<{ id: string; email: string }[]> {
 }
 
 /**
+ * Read-only roster of approved Editors, cross-client by construction
+ * (Editor accounts have no client_id, item 3 260811-oe0-CONTEXT.md) --
+ * mirrors listPmRoster()'s exact shape/privileged-read pattern. Used by
+ * app/pm/board/page.tsx to extend the Designer/Mídia picker beyond the
+ * client-scoped PM roster (listClientPmRoster) -- an Editor is a valid
+ * Designer/Mídia value on ANY client's card, per the extended
+ * enforce_card_assignee_membership() trigger (migration 0031).
+ */
+export async function listEditorRoster(): Promise<{ id: string; email: string }[]> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("profiles")
+    .select("id, email")
+    .eq("role", "editor")
+    .eq("status", "approved");
+
+  return (data ?? []).map((row) => ({ id: row.id, email: row.email ?? "" }));
+}
+
+/**
  * Read-only resolution of PM ids -> display email, used by the list pages
  * (Task 2) to render PM names on clients the viewer is already
  * RLS-authorized to see via `clients_select_scoped`. Closes the

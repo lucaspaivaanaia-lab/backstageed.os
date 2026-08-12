@@ -33,11 +33,13 @@ import {
   type ProposePackagePiecesInput,
   type PackagePieceProposal,
 } from "@/lib/validation/cards";
+import { isBoardWriteAuthorized } from "@/lib/security/board-write-authz";
 
 const CARD_CREATE_ERROR = "Não foi possível criar o card. Tente novamente.";
 const CARD_NOT_FOUND_ERROR = "Card não encontrado.";
 const LAST_STAGE_ERROR = "Este card já está na última etapa.";
 const NOT_AUTHENTICATED_ERROR = "Não autenticado.";
+const PM_ADMIN_ONLY_ERROR = "Apenas PM ou Admin pode realizar esta ação.";
 const MOVE_FAILED_ERROR = "Não foi possível mover o card. Tente novamente.";
 const ASSIGNEE_NOT_ON_CLIENT_ERROR =
   "Este PM não está atribuído a este cliente.";
@@ -75,6 +77,35 @@ function isAssigneeMembershipError(error: { message?: string } | null): boolean 
  */
 function isMediaAssigneeMembershipError(error: { message?: string } | null): boolean {
   return Boolean(error?.message?.includes("media_assignee_not_on_roster"));
+}
+
+/**
+ * App-layer authorization — the PRIMARY boundary for updateCardDetails,
+ * advanceStage, and moveCard below (checker revision, closes T-oe0-10).
+ * Re-reads the caller's own profiles row and delegates to
+ * isBoardWriteAuthorized (lib/security/board-write-authz.ts) -- mirrors
+ * forceAdvanceOverride's re-read-the-profile pattern
+ * (lib/actions/card-overrides.ts, admin-only) and createClientRecord's
+ * identical "approved && role in (admin, pm)" check
+ * (lib/actions/clients.ts) exactly. cards_update_scoped (migration 0031)
+ * is defense in depth here, never the primary gate -- its
+ * media_assignee_id branch legitimately covers
+ * updateCardDescriptionAsEditor (app/editor/actions.ts), a DIFFERENT
+ * action with a DIFFERENT, narrower column-restricted payload. Fails
+ * closed: any error reading the profile (including "no row") is treated
+ * as unauthorized.
+ */
+async function assertPmOrAdminCaller(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string
+): Promise<boolean> {
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("role, status")
+    .eq("id", userId)
+    .single();
+  if (error) return false;
+  return isBoardWriteAuthorized(profile);
 }
 
 export type CreateCardResult =
@@ -217,6 +248,25 @@ export async function advanceStage(
 
   const supabase = await createClient();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: NOT_AUTHENTICATED_ERROR };
+
+  // App-layer authorization — the PRIMARY boundary (checker revision,
+  // 260811-oe0, closes T-oe0-10). cards_update_scoped alone can no
+  // longer gate this write: its media_assignee_id branch (migration
+  // 0031) legitimately covers an Editor's own assigned cards for
+  // updateCardDescriptionAsEditor (app/editor/actions.ts) — without
+  // this check here, the same RLS branch would let an Editor invoke
+  // advanceStage directly (Server Actions are resolved by their
+  // Next-Action reference, not by which page rendered them) and
+  // advance stage on any card they are media_assignee_id for. See
+  // assertPmOrAdminCaller above.
+  if (!(await assertPmOrAdminCaller(supabase, user.id))) {
+    return { error: PM_ADMIN_ONLY_ERROR };
+  }
+
   const { data: card } = await supabase
     .from("cards")
     .select("id, client_id, stage, card_type")
@@ -350,6 +400,25 @@ export async function moveCard(input: MoveCardInput): Promise<MoveCardResult> {
 
   const supabase = await createClient();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: NOT_AUTHENTICATED_ERROR };
+
+  // App-layer authorization — the PRIMARY boundary (checker revision,
+  // 260811-oe0, closes T-oe0-10). cards_update_scoped alone can no
+  // longer gate this write: its media_assignee_id branch (migration
+  // 0031) legitimately covers an Editor's own assigned cards for
+  // updateCardDescriptionAsEditor (app/editor/actions.ts) — without
+  // this check here, the same RLS branch would let an Editor invoke
+  // advanceStage directly (Server Actions are resolved by their
+  // Next-Action reference, not by which page rendered them) and
+  // advance stage on any card they are media_assignee_id for. See
+  // assertPmOrAdminCaller above.
+  if (!(await assertPmOrAdminCaller(supabase, user.id))) {
+    return { error: PM_ADMIN_ONLY_ERROR };
+  }
+
   const { data: card } = await supabase
     .from("cards")
     .select("id, client_id, stage, card_type")
@@ -438,6 +507,15 @@ export async function updateCardDetails(
   } = await supabase.auth.getUser();
   if (!user) return { error: NOT_AUTHENTICATED_ERROR };
 
+  // App-layer authorization — the PRIMARY boundary (checker revision,
+  // 260811-oe0, closes T-oe0-10). See assertPmOrAdminCaller's doc
+  // comment above: cards_update_scoped alone can no longer gate this
+  // write now that its media_assignee_id branch (migration 0031)
+  // legitimately covers an Editor's own assigned cards.
+  if (!(await assertPmOrAdminCaller(supabase, user.id))) {
+    return { error: PM_ADMIN_ONLY_ERROR };
+  }
+
   // Re-read the card through RLS — never trust that cardId belongs to a
   // client the caller can reach; cards_update_scoped is the real boundary.
   const { data: card } = await supabase
@@ -457,6 +535,7 @@ export async function updateCardDetails(
       assignee_id: parsed.data.assigneeId,
       media_assignee_id: parsed.data.mediaAssigneeId,
       channel: parsed.data.channel,
+      due_date: parsed.data.dueDate,
       updated_at: new Date().toISOString(),
     })
     .eq("id", parsed.data.cardId);

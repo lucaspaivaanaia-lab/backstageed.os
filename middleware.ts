@@ -65,6 +65,7 @@ export async function middleware(request: NextRequest) {
     admin: "/admin",
     pm: "/pm",
     client: "/client",
+    editor: "/editor",
   };
   const ownRoot = roleRoot[profile.role];
 
