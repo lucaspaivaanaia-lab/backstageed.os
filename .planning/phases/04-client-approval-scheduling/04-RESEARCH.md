@@ -353,9 +353,11 @@ export function isBoardWriteAuthorized(
 ```
 A caller with `role === 'client'` returns `false` here regardless of what RLS's `cards_update_scoped` policy would otherwise permit. `updateCardDetails`, `advanceStage`, and `moveCard` all call this guard as their FIRST authorization step, before any read or write — so adding a Client OR-branch to `cards_update_scoped` in this phase does **not** reopen the `260811-oe0` class of gap for these three actions.
 
-**Why it happens (generalized lesson for THIS phase's new code):** The gap only exists for actions that (a) touch a table whose RLS policy gets widened, AND (b) have no role check of their own. `toggleChecklistItem`, `addAttachment`, `removeAttachment`, `createCard`, `createPiece`, `removePiece`, `proposePackagePieces` all fit (b) — but none of them touch a policy this phase widens (`cards_select_scoped`/`cards_update_scoped`/`card_attachments_select_scoped` only), so none are newly exposed. **Verify this explicitly during planning/execution**, the same way this research did — do not assume based on this document alone; re-run the check if the plan ends up touching any additional policy.
+**AMENDMENT (post-planning revision, does not modify the paragraphs above):** The generalized claim below this line — "none of them touch a policy this phase widens... so none are newly exposed" — was **INCORRECT** for `toggleChecklistItem`, `addAttachment`, `removeAttachment`, `validateCardAgainstChecklist`, `createPiece`, and `removePiece`. A plan-checker pass on `04-01-PLAN.md` found that all 6 re-read or write through `cards`/`card_attachments` (whose RLS this phase DOES widen) with zero app-layer role check of their own, and `removePiece` specifically returns a misleading `{}` success to a Client caller (silent zero-row no-op) rather than a rejection. `04-01-PLAN.md`'s Task 4 (added in that same revision) closes all 6 with the identical `assertPmOrAdminCaller` gate, landing in the SAME wave as migration `0032`. Treat the paragraph immediately below as historical/superseded reasoning, kept for context, not as this phase's final security posture.
 
-**How to avoid:** Keep the new Client-only actions (`approveCard`/`requestAdjustment`) in their own file with their own hardcoded payload builders (Pattern 2) — never let them, or any future action, call `updateCardDetails`/`advanceStage`/`moveCard` internally, and never widen `cards_update_scoped` further than the two columns (`stage`, `client_adjustment_comment`) this phase actually needs a Client to write.
+**Why it happens (generalized lesson for THIS phase's new code, SUPERSEDED — see amendment above):** The gap only exists for actions that (a) touch a table whose RLS policy gets widened, AND (b) have no role check of their own. `toggleChecklistItem`, `addAttachment`, `removeAttachment`, `createCard`, `createPiece`, `removePiece`, `proposePackagePieces` all fit (b) — but none of them touch a policy this phase widens (`cards_select_scoped`/`cards_update_scoped`/`card_attachments_select_scoped` only), so none are newly exposed. **Verify this explicitly during planning/execution**, the same way this research did — do not assume based on this document alone; re-run the check if the plan ends up touching any additional policy.
+
+**How to avoid:** Keep the new Client-only actions (`approveCard`/`requestAdjustment`) in their own file with their own hardcoded payload builders (Pattern 2) — never let them, or any future action, call `updateCardDetails`/`advanceStage`/`moveCard` internally, and never widen `cards_update_scoped` further than the two columns (`stage`, `client_adjustment_comment`) this phase actually needs a Client to write. AND (per the amendment above) apply `assertPmOrAdminCaller` to every existing PM/Admin-only action that reads/writes `cards`/`card_attachments`, not only the 3 actions the `260811-oe0` postmortem happened to name.
 
 **Warning signs:** Any new Server Action added to `app/pm/board/actions.ts` or `app/client/actions.ts` that writes to `cards` without either (a) an explicit role/status check, or (b) being scoped to a single hardcoded, narrow payload.
 
@@ -456,14 +458,15 @@ Not applicable — this phase uses no external library or framework whose "state
 
 **If this table is empty:** N/A — see above, both entries are low-risk naming/hardening choices, not unverified factual claims. No claim in this research about existing code behavior is tagged `[ASSUMED]` — every RLS predicate, authorization guard, and idempotency claim was read directly from the current repository state.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should the ROADMAP.md Phase 4 deadline (`2026-08-07`, already past) be flagged during `/gsd:plan-phase 4`?**
    - What we know: CONTEXT.md's `<specifics>` section explicitly calls this out, referencing the same pattern already used for Phase 3's own past deadline.
    - What's unclear: Nothing — this is a planning-process note, not a research gap.
-   - Recommendation: The planner should surface this the same way Phase 3's was surfaced; no research action needed.
+   - RESOLVED: The planner surfaced this the same way Phase 3's was surfaced; no research action needed.
 
 2. **Exact UI copy/flow for the approve vs. adjust action (one-click vs. confirm dialog)** — explicitly left to the planner's discretion by CONTEXT.md; no research-level ambiguity, just an implementation choice.
+   - RESOLVED: settled by `04-UI-SPEC.md` and `04-02-PLAN.md` (always-visible comment field, no confirm dialog, per UI-SPEC's Copywriting Contract).
 
 ## Validation Architecture
 
@@ -486,7 +489,7 @@ Not applicable — this phase uses no external library or framework whose "state
 | APR-04 | Comment visible to PM (existing read path) | manual/live-verify (UI rendering) | N/A — covered by checkpoint | — |
 | SCH-01 | PM can register `publish_at`, only after approval | unit (schema) | `node --test` (extend existing `lib/validation/cards.ts` coverage if any exists, else manual/live-verify) | ❌ Wave 0 (if adding schema-level unit coverage) |
 | SCH-02 | "Pronto para publicar" badge computed correctly | unit | `node --test lib/cards/publish-status.test.ts` (or wherever the pure function lands) | ❌ Wave 0 |
-| Security (260811-oe0 class regression) | A Client caller invoking `updateCardDetails`/`advanceStage`/`moveCard` directly is still rejected after this phase's RLS widening | unit/pgTAP | Extend `board-write-authz.test.ts` with a `role: 'client'` case (cheap, high-value regression guard) | ❌ Wave 0 |
+| Security (260811-oe0 class regression) | A Client caller invoking any of the 9 PM/Admin-only Server Actions in `app/pm/board/actions.ts` directly is still rejected after this phase's RLS widening (`updateCardDetails`/`advanceStage`/`moveCard` plus `toggleChecklistItem`/`addAttachment`/`removeAttachment`/`validateCardAgainstChecklist`/`createPiece`/`removePiece`) | unit/pgTAP | Extend `board-write-authz.test.ts` with a `role: 'client'` case (cheap, high-value regression guard) — 04-01-PLAN.md Task 4 | ❌ Wave 0 |
 
 ### Sampling Rate
 - **Per task commit:** `npm test`
@@ -496,8 +499,8 @@ Not applicable — this phase uses no external library or framework whose "state
 ### Wave 0 Gaps
 - [ ] `lib/security/client-card-write-scope.test.ts` — covers APR-02/APR-03 (pure payload-shape assertions, mirrors `editor-card-write-scope.test.ts`)
 - [ ] `supabase/tests/0018_rls_client_card_scoping_test.sql` — covers APR-01/APR-02/APR-03/KAN-04 (RLS row/stage scoping), reuses `rls_helpers.sql`'s existing `client_a_user` fixture (already has `role='client'`, `client_id=client_a`, `status='approved'`) — no new fixture actor needed
-- [ ] A `role: 'client'` regression case added to `lib/security/board-write-authz.test.ts` — proves the 260811-oe0 fix generalizes (Pitfall 1)
 - [ ] `lib/cards/publish-status.test.ts` (or equivalent) — covers SCH-02's pure computation
+- [ ] `assertPmOrAdminCaller` extended to `toggleChecklistItem`/`addAttachment`/`removeAttachment`/`validateCardAgainstChecklist`/`createPiece`/`removePiece` in `app/pm/board/actions.ts` — 04-01-PLAN.md Task 4, closes the gap this document's Pitfall 1 amendment describes
 
 ## Security Domain
 
@@ -515,7 +518,7 @@ Not applicable — this phase uses no external library or framework whose "state
 
 | Pattern | STRIDE | Standard Mitigation |
 |---------|--------|---------------------|
-| RLS-widening silently re-authorizing an unrelated existing action (the `260811-oe0` class of bug) | Elevation of Privilege | Verify EVERY existing action touching `cards`/`card_attachments` still has an independent role check OR is unaffected by the new policy branches (Pitfall 1) — done for this phase, must be re-verified at plan-check/execution time if scope changes |
+| RLS-widening silently re-authorizing an unrelated existing action (the `260811-oe0` class of bug) | Elevation of Privilege | Verify EVERY existing action touching `cards`/`card_attachments` still has an independent role check OR is unaffected by the new policy branches (Pitfall 1) — this phase's own planning missed 6 of the 9 affected actions on the first pass; closed by 04-01-PLAN.md's Task 4 (see Pitfall 1 amendment) |
 | Client caller bypassing the stage gate by calling `requestAdjustment`/`approveCard` on a card not in `aprovacao_cliente` | Tampering | Server-side re-read + explicit stage check BEFORE any write (Pattern 2) — never trust a stage claim from the browser, same discipline as `advanceStage`'s own `nextStage(card.stage)` re-derivation |
 | Cross-client data leak via the new Client RLS branch (e.g. predicate typo matching all clients) | Information Disclosure | pgTAP test with TWO client fixtures (`client_a_user`, and a second Client-role actor scoped to `client_b`) proving cross-client isolation — `rls_helpers.sql` currently only has one Client actor; the new pgTAP file should add a `client_b_user` fixture row (or a local one scoped to the test file) to prove the negative case, matching `0002_rls_client_scoping_test.sql`'s own cross-client isolation pattern for `clients` |
 | A deactivated Client's still-valid session reaching a Client-only action | Elevation of Privilege | Covered by `middleware.ts` (primary gate) + the new actions' own explicit `status === 'approved'` re-check (Pattern 2, mirrors `0021`'s defense-in-depth philosophy) |
@@ -545,7 +548,8 @@ None.
 **Confidence breakdown:**
 - Standard stack: HIGH — no new libraries; every pattern cited was read from this exact codebase's current files
 - Architecture: HIGH — every RLS predicate, payload builder, and stage-machine claim was verified against current migrations/source, not inferred from training knowledge
-- Pitfalls: HIGH — Pitfall 1 (the highest-stakes one) was verified by reading `assertPmOrAdminCaller`'s actual implementation and confirming it rejects `role='client'`, not assumed from the Editor precedent alone
+- Pitfalls: HIGH — Pitfall 1's core claim (the highest-stakes one, `updateCardDetails`/`advanceStage`/`moveCard` already safe) was verified by reading `assertPmOrAdminCaller`'s actual implementation; its GENERALIZATION to the other 6 actions was initially wrong and is corrected in the Pitfall 1 amendment above, closed by 04-01-PLAN.md's Task 4
 
 **Research date:** 2026-08-12
 **Valid until:** Effectively indefinite for the architectural claims (internal code, doesn't drift like an external library) — re-verify only if `app/pm/board/actions.ts`'s authorization guards or `cards_update_scoped`/`cards_select_scoped` change again before this phase is planned/executed.
+</content>
