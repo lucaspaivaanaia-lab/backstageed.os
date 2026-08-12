@@ -158,3 +158,9 @@ None — no external service configuration required. Migration `0032` was applie
 ---
 *Phase: 04-client-approval-scheduling*
 *Completed: 2026-08-12*
+
+## Self-Check: PASSED
+
+- All 9 created/output files confirmed present on disk (migration, pgTAP test, 6 new lib files, SUMMARY.md itself)
+- All 7 referenced commit hashes confirmed present in `git log` (559b00a, 47a1508, b306c53, ad94b38, 2af9262, de27e32, 4d78021)
+- `npm test` (147/147), `npx tsc --noEmit` (clean), `npx supabase test db` (18/18 numbered files, 107 assertions, zero regression) all re-verified green as the final step before this summary was written
