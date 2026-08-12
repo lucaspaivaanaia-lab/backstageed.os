@@ -187,8 +187,8 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1, no file overlap between the two)*
 
-- [ ] 04-02-PLAN.md — Client-facing slice: `/client` board (queue + history tabs), approveCard/requestAdjustment Server Actions (APR-01, APR-02, APR-03, KAN-04)
-- [ ] 04-03-PLAN.md — PM-facing slice: publish-date field, adjustment-comment display, "Pronto para publicar" badge on the existing PM board (APR-04, SCH-01, SCH-02)
+- [x] 04-02-PLAN.md — Client-facing slice: `/client` board (queue + history tabs), approveCard/requestAdjustment Server Actions (APR-01, APR-02, APR-03, KAN-04)
+- [x] 04-03-PLAN.md — PM-facing slice: publish-date field, adjustment-comment display, "Pronto para publicar" badge on the existing PM board (APR-04, SCH-01, SCH-02)
 
 **Wave 3** *(phase gate, blocked on Wave 2)*
 
@@ -249,7 +249,7 @@ Plans:
 | 1. Client Records & Isolated RAG Setup | 2026-07-11 | 4/4 | Complete   | 2026-07-13 |
 | 2. Client-Isolated AI Chat | 2026-07-18 | 6/6 | Complete   | 2026-08-05 |
 | 3. Content Production Kanban | 2026-08-05 | 9/9 | Complete   | 2026-08-08 |
-| 4. Client Approval & Scheduling | 2026-08-07 | 1/4 | In Progress|  |
+| 4. Client Approval & Scheduling | 2026-08-07 | 3/4 | In Progress|  |
 | 5. Access & Roles | 2026-08-12 | 6/6 | Complete   | 2026-07-16 |
 | 6. Admin Oversight Dashboard | 2026-08-15 | 0/? | Not started | - |
 
