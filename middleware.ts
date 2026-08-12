@@ -67,13 +67,30 @@ export async function middleware(request: NextRequest) {
     client: "/client",
     editor: "/editor",
   };
+
+  // Allow-list aditivo, fechado e explicito -- NAO um segundo roleRoot. Cada
+  // prefixo aqui e uma sub-arvore de rota completa (proprio page.tsx + proprias
+  // actions.ts), nunca um prefixo parcial/ambiguo (ex.: nunca "/pm/c", que
+  // tambem bateria em "/pm/clients"). Quick task 260812-k6c: Admin ganha
+  // acesso as MESMAS telas de Produção/Chat que o PM ja tem, sem abrir
+  // /pm/clients nem /pm/editors (Admin ja tem /admin/clients, /admin/editors
+  // proprios).
+  const extraAllowedPrefixes: Record<string, string[]> = {
+    admin: ["/pm/board", "/pm/chat"],
+  };
+
   const ownRoot = roleRoot[profile.role];
 
   if (ownRoot) {
     const otherRoots = Object.values(roleRoot).filter((r) => r !== ownRoot);
+    const allowedExtras = extraAllowedPrefixes[profile.role] ?? [];
+    const isAllowedExtra = allowedExtras.some(
+      (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+    );
     if (
-      pathname === "/" ||
-      otherRoots.some((root) => pathname === root || pathname.startsWith(`${root}/`))
+      !isAllowedExtra &&
+      (pathname === "/" ||
+        otherRoots.some((root) => pathname === root || pathname.startsWith(`${root}/`)))
     ) {
       return NextResponse.redirect(new URL(ownRoot, request.url));
     }
