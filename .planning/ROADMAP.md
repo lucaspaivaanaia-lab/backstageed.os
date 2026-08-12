@@ -183,7 +183,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 04-01-PLAN.md — Migration 0032 (Client RLS branch + client_adjustment_comment/publish_at columns) + pgTAP scoping test + pure payload/publish-status modules + validation schemas (KAN-04, APR-01, APR-02, APR-03, SCH-01, SCH-02)
+- [x] 04-01-PLAN.md — Migration 0032 (Client RLS branch + client_adjustment_comment/publish_at columns) + pgTAP scoping test + pure payload/publish-status modules + validation schemas (KAN-04, APR-01, APR-02, APR-03, SCH-01, SCH-02)
 
 **Wave 2** *(blocked on Wave 1, no file overlap between the two)*
 
@@ -249,7 +249,7 @@ Plans:
 | 1. Client Records & Isolated RAG Setup | 2026-07-11 | 4/4 | Complete   | 2026-07-13 |
 | 2. Client-Isolated AI Chat | 2026-07-18 | 6/6 | Complete   | 2026-08-05 |
 | 3. Content Production Kanban | 2026-08-05 | 9/9 | Complete   | 2026-08-08 |
-| 4. Client Approval & Scheduling | 2026-08-07 | 0/4 | Not started | - |
+| 4. Client Approval & Scheduling | 2026-08-07 | 1/4 | In Progress|  |
 | 5. Access & Roles | 2026-08-12 | 6/6 | Complete   | 2026-07-16 |
 | 6. Admin Oversight Dashboard | 2026-08-15 | 0/? | Not started | - |
 
