@@ -240,7 +240,20 @@ Plans:
   2. Admin can visually distinguish cards that are stalled/overdue from cards that are on track, without opening each one individually
   3. Admin can drill from the consolidated view into any specific client's or PM's cards to see full detail
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 06-01-PLAN.md — Pure staleness module + `/admin` consolidated cross-client table (5 columns, stalled-first, tone-coded badge, whole-row drill-down to `/pm/board?client=`), sidebar entry point + loading skeleton (ADM-01, ADM-02, ADM-03)
+
+**Wave 2** *(blocked on Wave 1 — same two files)*
+
+- [ ] 06-02-PLAN.md — Injection-safe `?client=`/`?pm=` filters (person matched on both `assignee_id` and `media_assignee_id`) + "Carga de trabalho" workload panel with per-stage breakdown (ADM-01, ADM-03)
+
+**Wave 3** *(phase gate, blocked on Wave 2)*
+
+- [ ] 06-03-PLAN.md — Full automated pre-flight + 12-step live Admin checkpoint (ADM-01, ADM-02, ADM-03)
 
 ## Progress
 
@@ -251,7 +264,7 @@ Plans:
 | 3. Content Production Kanban | 2026-08-05 | 9/9 | Complete   | 2026-08-08 |
 | 4. Client Approval & Scheduling | 2026-08-07 | 4/4 | Complete   | 2026-08-13 |
 | 5. Access & Roles | 2026-08-12 | 6/6 | Complete   | 2026-07-16 |
-| 6. Admin Oversight Dashboard | 2026-08-15 | 0/? | Not started | - |
+| 6. Admin Oversight Dashboard | 2026-08-15 | 0/3 | Planned | - |
 
 ---
 *Roadmap created: 2026-07-01*
