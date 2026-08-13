@@ -245,7 +245,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 06-01-PLAN.md — Pure staleness module + `/admin` consolidated cross-client table (5 columns, stalled-first, tone-coded badge, whole-row drill-down to `/pm/board?client=`), sidebar entry point + loading skeleton (ADM-01, ADM-02, ADM-03)
+- [x] 06-01-PLAN.md — Pure staleness module + `/admin` consolidated cross-client table (5 columns, stalled-first, tone-coded badge, whole-row drill-down to `/pm/board?client=`), sidebar entry point + loading skeleton (ADM-01, ADM-02, ADM-03)
 
 **Wave 2** *(blocked on Wave 1 — same two files)*
 
@@ -264,7 +264,7 @@ Plans:
 | 3. Content Production Kanban | 2026-08-05 | 9/9 | Complete   | 2026-08-08 |
 | 4. Client Approval & Scheduling | 2026-08-07 | 4/4 | Complete   | 2026-08-13 |
 | 5. Access & Roles | 2026-08-12 | 6/6 | Complete   | 2026-07-16 |
-| 6. Admin Oversight Dashboard | 2026-08-15 | 0/3 | Planned | - |
+| 6. Admin Oversight Dashboard | 2026-08-15 | 1/3 | In Progress|  |
 
 ---
 *Roadmap created: 2026-07-01*
