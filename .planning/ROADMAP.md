@@ -192,7 +192,7 @@ Plans:
 
 **Wave 3** *(phase gate, blocked on Wave 2)*
 
-- [ ] 04-04-PLAN.md — Full automated-suite pre-flight + 12-step live checkpoint across Client and PM sessions (KAN-04, APR-01, APR-02, APR-03, APR-04, SCH-01, SCH-02)
+- [x] 04-04-PLAN.md — Full automated-suite pre-flight + 12-step live checkpoint across Client and PM sessions (KAN-04, APR-01, APR-02, APR-03, APR-04, SCH-01, SCH-02)
 
 ### Phase 5: Access & Roles
 
@@ -249,7 +249,7 @@ Plans:
 | 1. Client Records & Isolated RAG Setup | 2026-07-11 | 4/4 | Complete   | 2026-07-13 |
 | 2. Client-Isolated AI Chat | 2026-07-18 | 6/6 | Complete   | 2026-08-05 |
 | 3. Content Production Kanban | 2026-08-05 | 9/9 | Complete   | 2026-08-08 |
-| 4. Client Approval & Scheduling | 2026-08-07 | 3/4 | In Progress|  |
+| 4. Client Approval & Scheduling | 2026-08-07 | 4/4 | Complete   | 2026-08-13 |
 | 5. Access & Roles | 2026-08-12 | 6/6 | Complete   | 2026-07-16 |
 | 6. Admin Oversight Dashboard | 2026-08-15 | 0/? | Not started | - |
 

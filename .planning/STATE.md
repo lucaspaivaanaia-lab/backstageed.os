@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Phase 4 UI-SPEC approved
-last_updated: "2026-08-12T15:10:54.617Z"
-last_activity: 2026-08-12 -- Phase 04 execution started
+status: ready_to_plan
+stopped_at: "Phase 04 (Client Approval & Scheduling) complete (4/4), verified 6/6 success criteria. Phases 1/2/3/4/5 are now all complete -- only Phase 6 (Admin Oversight Dashboard) remains unplanned. Note: the phase.complete tool naively advanced 'next phase' to 05, which was already closed since 2026-07-16 (phases were renumbered early in the project, 5 executed before 4) -- corrected by hand to point at Phase 6."
+last_updated: 2026-08-13T13:33:42.864Z
+last_activity: 2026-08-13 -- Phase 04 execution complete, verified, and closed (6/6 success criteria)
 progress:
   total_phases: 6
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 29
-  completed_plans: 25
-  percent: 67
+  completed_plans: 29
+  percent: 83
 ---
 
 # Project State
@@ -21,22 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-08)
 
 **Core value:** Um PM consegue produzir conteúdo para um cliente específico com IA que só conhece aquele cliente (RAG isolado, zero vazamento de contexto), levar esse conteúdo do briefing até a aprovação do cliente dentro da própria plataforma, e o Juliano consegue ver o status real de qualquer card, de qualquer cliente, a qualquer momento.
-**Current focus:** Phase 04 — client-approval-scheduling
+**Current focus:** Phase 06 — Admin Oversight Dashboard (the only phase left unplanned; Phases 1-5 are all complete)
 
 ## Current Position
 
-Phase: 04 (client-approval-scheduling) — EXECUTING
-Plan: 1 of 4
-Status: Executing Phase 04
-Last activity: 2026-08-12 -- Phase 04 execution started
+Phase: 06 (client-approval-scheduling's phase.complete tool advanced this to 05 by default, but Phase 5 has been complete since 2026-07-16 -- corrected by hand)
+Plan: Not started
+Status: Ready to discuss/plan Phase 6
+Last activity: 2026-08-13 -- Phase 4 closed (4/4 plans, 6/6 success criteria verified)
 
-Progress: [██████████] 100% (plans this phase) — 9/9 plans complete, Phase 3 fully closed
+Progress: [██████████] 100% (plans this phase) — Phase 4 fully closed (4/4 plans, verified)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 5 (05-01, formerly 01-01)
+- Total plans completed: 9 (05-01, formerly 01-01)
 - Average duration: ~2h
 - Total execution time: ~2 hours
 
@@ -46,6 +46,7 @@ Progress: [██████████] 100% (plans this phase) — 9/9 plans
 |-------|-------|-------|----------|
 | 5. Access & Roles | 1/4 | ~2h | ~2h |
 | 01 | 4 | - | - |
+| 04 | 4 | - | - |
 
 **Recent Trend:**
 
