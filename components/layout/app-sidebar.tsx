@@ -32,6 +32,12 @@ export type SidebarNavItem = {
   // requiresActiveClient (no point rendering it with no client to point
   // at) — set both on the item.
   linksToActiveClientDetail?: boolean;
+  // Phase 6 addition: use when an item's `href` is a prefix of its own
+  // sibling routes, so prefix matching would light up two items at once
+  // (e.g. "/admin" is a strict prefix of "/admin/clients"). No existing
+  // item sets this, so every current PM/Admin/Editor/Client nav item keeps
+  // byte-identical highlighting behaviour.
+  exact?: boolean;
 };
 
 type AppSidebarProps = {
@@ -78,8 +84,9 @@ export function AppSidebar({ items }: AppSidebarProps) {
             item.linksToActiveClientDetail && activeClientId
               ? `/pm/clients/${activeClientId}`
               : item.href;
-          const isActive =
-            pathname === href || pathname.startsWith(`${href}/`);
+          const isActive = item.exact
+            ? pathname === href
+            : pathname === href || pathname.startsWith(`${href}/`);
           return (
             <Link
               key={item.label}
