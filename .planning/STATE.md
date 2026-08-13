@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: ready_to_plan
-stopped_at: "Phase 6 (Admin Oversight Dashboard) context gathered via /gsd-discuss-phase 6 -- 4 decisions locked (D-01 cross-client table, D-02 updated_at staleness, D-03 reuse /pm/board drill-down, D-04 workload panel in scope). Ready for /gsd-plan-phase 6."
-last_updated: "2026-08-13T14:01:48.504Z"
-last_activity: 2026-08-13 -- Phase 6 context gathered (06-CONTEXT.md + 06-DISCUSSION-LOG.md)
+stopped_at: "Phase 6 (Admin Oversight Dashboard) UI-SPEC approved (6/6 dimensions, no revisions needed). Ready for /gsd-plan-phase 6."
+last_updated: "2026-08-13T14:09:47.428Z"
+last_activity: 2026-08-13 -- Phase 6 UI-SPEC approved (06-UI-SPEC.md)
 progress:
   total_phases: 6
   completed_phases: 5
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-07-08)
 
 Phase: 06 (client-approval-scheduling's phase.complete tool advanced this to 05 by default, but Phase 5 has been complete since 2026-07-16 -- corrected by hand)
 Plan: Not started
-Status: Context gathered, ready to plan (/gsd-plan-phase 6)
-Last activity: 2026-08-13 -- Phase 6 context gathered (4 decisions locked, see 06-CONTEXT.md)
+Status: UI-SPEC approved, ready to plan (/gsd-plan-phase 6)
+Last activity: 2026-08-13 -- Phase 6 UI-SPEC approved (6/6 dimensions, see 06-UI-SPEC.md)
 
 Progress: [░░░░░░░░░░] 0% (plans this phase) — Phase 6 not yet planned
 
@@ -157,6 +157,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-13T14:01:48.495Z
-Stopped at: Phase 6 context gathered
-Resume file: .planning/phases/06-admin-oversight-dashboard/06-CONTEXT.md
+Last session: 2026-08-13T14:09:47.419Z
+Stopped at: Phase 6 UI-SPEC approved
+Resume file: .planning/phases/06-admin-oversight-dashboard/06-UI-SPEC.md
