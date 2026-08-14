@@ -18,10 +18,10 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-08)
+See: .planning/PROJECT.md (updated 2026-08-14 after v1.0 close)
 
 **Core value:** Um PM consegue produzir conteúdo para um cliente específico com IA que só conhece aquele cliente (RAG isolado, zero vazamento de contexto), levar esse conteúdo do briefing até a aprovação do cliente dentro da própria plataforma, e o Juliano consegue ver o status real de qualquer card, de qualquer cliente, a qualquer momento.
-**Current focus:** Milestone complete
+**Current focus:** Planning next milestone (v1.1) — run `/gsd:new-milestone`
 
 ## Current Position
 
@@ -160,10 +160,10 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-13T14:09:47.419Z
-Stopped at: Phase 6 UI-SPEC approved
-Resume file: .planning/phases/06-admin-oversight-dashboard/06-UI-SPEC.md
+Last session: 2026-08-14T18:12:38.049Z
+Stopped at: v1.0 milestone closed and archived
+Resume file: .planning/milestones/v1.0-phases/06-admin-oversight-dashboard/06-UI-SPEC.md (for historical reference only — phase directories archived at milestone close)
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Start the next milestone with /gsd:new-milestone
