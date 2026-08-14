@@ -24,7 +24,7 @@ Um PM consegue produzir conteúdo para um cliente específico com IA que só con
 - [x] **Phase 3: Content Production Kanban** *(deadline: 2026-07-28)* - PM can create a content card, attach Drive media, and move it through briefing → produção → revisão interna, gated by a per-client checklist (completed 2026-08-08 — see 03-06-SUMMARY.md)
 - [ ] **Phase 4: Client Approval & Scheduling** *(deadline: 2026-08-07)* - Client can review, approve, or request adjustments on their content board, and once approved the PM registers the publish date
 - [x] **Phase 5: Access & Roles** *(deadline: 2026-08-12)* - PM signs up and gets approved by admin; Client accounts are provisioned by PM (no self-signup); both land in a role-scoped platform where PM/Client/Admin each see only what they're allowed to (gaps found 2026-07-14 — see 05-VERIFICATION.md; closed 2026-07-16 — AUTH-06/07/08 all runtime-verified locally after quick tasks 260716-au8/b8w/bjk added the missing `public.clients`/`profiles`/`pm_clients` GRANTs and fixed an AUTH-08 fixture-count test bug; **confirmed 2026-07-16 by direct query against the hosted project that this GRANT gap was local-dev/CI-only and production was never affected** — see 05-06-SUMMARY.md and STATE.md's Quick Tasks Completed table) (completed 2026-07-16)
-- [ ] **Phase 6: Admin Oversight Dashboard** *(deadline: 2026-08-15)* - Admin can see a consolidated, real-time status view across all clients, PMs, and cards, and drill into any of them
+- [x] **Phase 6: Admin Oversight Dashboard** *(deadline: 2026-08-15)* - Admin can see a consolidated, real-time status view across all clients, PMs, and cards, and drill into any of them (completed 2026-08-14)
 
 ## Phase Details
 
@@ -253,7 +253,7 @@ Plans:
 
 **Wave 3** *(phase gate, blocked on Wave 2)*
 
-- [ ] 06-03-PLAN.md — Full automated pre-flight + 12-step live Admin checkpoint (ADM-01, ADM-02, ADM-03)
+- [x] 06-03-PLAN.md — Full automated pre-flight + 12-step live Admin checkpoint (ADM-01, ADM-02, ADM-03)
 
 ## Progress
 
@@ -264,7 +264,7 @@ Plans:
 | 3. Content Production Kanban | 2026-08-05 | 9/9 | Complete   | 2026-08-08 |
 | 4. Client Approval & Scheduling | 2026-08-07 | 4/4 | Complete   | 2026-08-13 |
 | 5. Access & Roles | 2026-08-12 | 6/6 | Complete   | 2026-07-16 |
-| 6. Admin Oversight Dashboard | 2026-08-15 | 2/3 | In Progress|  |
+| 6. Admin Oversight Dashboard | 2026-08-15 | 3/3 | Complete   | 2026-08-14 |
 
 ---
 *Roadmap created: 2026-07-01*
