@@ -249,7 +249,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 — same two files)*
 
-- [ ] 06-02-PLAN.md — Injection-safe `?client=`/`?pm=` filters (person matched on both `assignee_id` and `media_assignee_id`) + "Carga de trabalho" workload panel with per-stage breakdown (ADM-01, ADM-03)
+- [x] 06-02-PLAN.md — Injection-safe `?client=`/`?pm=` filters (person matched on both `assignee_id` and `media_assignee_id`) + "Carga de trabalho" workload panel with per-stage breakdown (ADM-01, ADM-03)
 
 **Wave 3** *(phase gate, blocked on Wave 2)*
 
@@ -264,7 +264,7 @@ Plans:
 | 3. Content Production Kanban | 2026-08-05 | 9/9 | Complete   | 2026-08-08 |
 | 4. Client Approval & Scheduling | 2026-08-07 | 4/4 | Complete   | 2026-08-13 |
 | 5. Access & Roles | 2026-08-12 | 6/6 | Complete   | 2026-07-16 |
-| 6. Admin Oversight Dashboard | 2026-08-15 | 1/3 | In Progress|  |
+| 6. Admin Oversight Dashboard | 2026-08-15 | 2/3 | In Progress|  |
 
 ---
 *Roadmap created: 2026-07-01*
