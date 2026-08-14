@@ -1,10 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
-import { resolvePmNames } from "@/lib/actions/clients";
+import { resolvePmNames, listPmRoster, listEditorRoster } from "@/lib/actions/clients";
 import type { CardStage } from "@/lib/cards/stages";
 import { daysSinceUpdate } from "@/lib/cards/staleness";
+import { parseOversightFilters } from "@/lib/cards/oversight-filters";
 import { OversightPanel } from "./oversight-panel";
 
 export type OversightClient = { id: string; name: string };
+
+export type OversightPerson = { id: string; email: string; role: "pm" | "editor" };
 
 export type OversightCard = {
   id: string;
@@ -40,23 +43,59 @@ type RawCardRow = {
  * for the whole page means two rows updated in the same second can never
  * disagree.
  */
-export default async function AdminPage() {
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ client?: string; pm?: string }>;
+}) {
+  const { client: clientParam, pm: pmParam } = await searchParams;
+  const { clientId, pmId, hasActiveFilter } = parseOversightFilters({
+    client: clientParam,
+    pm: pmParam,
+  });
+
   const supabase = await createClient();
 
-  const [{ data: clients }, { data: cards, error: cardsError }] = await Promise.all([
-    supabase
-      .from("clients")
-      .select("id, name")
-      .is("archived_at", null)
-      .order("name", { ascending: true }),
-    supabase
-      .from("cards")
-      .select("id, client_id, title, stage, assignee_id, updated_at")
-      .in("card_type", ["single", "piece"])
-      .order("updated_at", { ascending: true }),
-  ]);
+  const [{ data: clients }, { data: cards, error: cardsError }, [pmRoster, editorRoster]] =
+    await Promise.all([
+      supabase
+        .from("clients")
+        .select("id, name")
+        .is("archived_at", null)
+        .order("name", { ascending: true }),
+      (() => {
+        let query = supabase
+          .from("cards")
+          .select("id, client_id, title, stage, assignee_id, updated_at")
+          .in("card_type", ["single", "piece"])
+          .order("updated_at", { ascending: true });
+        if (clientId) {
+          query = query.eq("client_id", clientId);
+        }
+        if (pmId) {
+          // `pmId` reaching this template literal is already UUID-validated
+          // by `parseOversightFilters` (T-06-06) -- both columns are
+          // checked because a person can hold a card either as Responsável
+          // (`assignee_id`) or as Designer/Mídia (`media_assignee_id`,
+          // migration 0029); filtering only the first would hide an
+          // Editor's entire queue.
+          query = query.or(
+            `assignee_id.eq.${pmId},media_assignee_id.eq.${pmId}`
+          );
+        }
+        return query;
+      })(),
+      Promise.all([listPmRoster(), listEditorRoster()]),
+    ]);
 
   const loadError = Boolean(cardsError);
+
+  // Single combined roster feeds both the PM filter's Select options here
+  // and the workload panel (06-02 Task 2) -- loaded exactly once.
+  const people: OversightPerson[] = [
+    ...pmRoster.map((p) => ({ ...p, role: "pm" as const })),
+    ...editorRoster.map((p) => ({ ...p, role: "editor" as const })),
+  ].sort((a, b) => a.email.localeCompare(b.email));
 
   // Cards belonging to a soft-archived client (clients.archived_at,
   // migration 0019) are operational noise on a triage screen, so they are
@@ -96,6 +135,10 @@ export default async function AdminPage() {
       cards={oversightCards}
       pmNames={pmNames}
       loadError={loadError}
+      people={people}
+      activeClientId={clientId}
+      activePersonId={pmId}
+      hasActiveFilter={hasActiveFilter}
     />
   );
 }
