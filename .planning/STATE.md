@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: milestone_complete
-stopped_at: Milestone complete (Phase 06 was final phase)
-last_updated: 2026-08-14T18:07:55.965Z
-last_activity: 2026-08-13 -- Phase 06 execution started
+status: Awaiting next milestone
+stopped_at: Phase 6 UI-SPEC approved
+last_updated: "2026-08-14T18:12:38.049Z"
+last_activity: 2026-08-14 — Milestone v1.0 completed and archived
 progress:
   total_phases: 6
   completed_phases: 6
@@ -25,12 +25,10 @@ See: .planning/PROJECT.md (updated 2026-07-08)
 
 ## Current Position
 
-Phase: 06
-Plan: Not started
-Status: Milestone complete
-Last activity: 2026-08-14
-
-Progress: [░░░░░░░░░░] 0% (plans this phase) — Phase 6 not yet planned
+Phase: Milestone v1.0 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-08-14 — Milestone v1.0 completed and archived
 
 ## Performance Metrics
 
@@ -155,9 +153,17 @@ Items acknowledged and carried forward from previous milestone close:
 | Notifications | Email notifications (approval, adjustment, preferences) | Deferred to v2 | Project init |
 | AI/UX | Meeting-transcript → base-file update flow (paste transcript, AI diffs against existing client_files base, updates it, discards transcript) | Deferred past 2026-08-05 test | 2026-08-04 |
 | UX | Chat/Produção remembering last-selected client (shared state/URL, no route restructuring) | Deferred past 2026-08-05 test | 2026-08-04 |
+| Tooling (v1.0 close audit) | `gsd-sdk audit-open` flagged 36 quick tasks as "missing" | False positive — spot-checked 5 across the date range, all have `SUMMARY.md` with `status: complete` (or equivalent completion evidence); already documented in the Quick Tasks Completed table above. Audit tool's status-parsing has a bug, not a real gap. | v1.0 close, 2026-08-14 |
+| Tooling (v1.0 close audit) | `gsd-sdk audit-open` flagged debug session "knowledge-base" as open | False positive — `.planning/debug/knowledge-base.md` is the resolved-sessions index file itself, not a live session. The one real resolved session (`card-dialog-trava-nao-rola`) is filed correctly under `.planning/debug/resolved/`. | v1.0 close, 2026-08-14 |
+| Verification (v1.0 close audit) | 05-VERIFICATION.md still shows `status: gaps_found` (4/7 must-haves, CR-01/CR-02 IDOR gap on `createClientLogin`/`deactivateClientAccess`) | Stale, not open — ROADMAP.md documents the gap was closed 2026-07-16 via quick tasks 260716-au8/b8w/bjk (missing GRANTs on `clients`/`profiles`/`pm_clients` + an AUTH-08 fixture-count test bug), with production independently confirmed unaffected (local-dev/CI-only gap). The verification doc itself was never re-run to flip its frontmatter status. | v1.0 close, 2026-08-14 |
+| Seed (v1.0 close audit) | SEED-001 — RAG catalog/llms.txt indirection for `client_files` | Legitimately dormant, not a gap — trigger condition (>~3 files/client) not yet met. Will resurface via `/gsd:new-milestone` scope matching. | v1.0 close, 2026-08-14 |
 
 ## Session Continuity
 
 Last session: 2026-08-13T14:09:47.419Z
 Stopped at: Phase 6 UI-SPEC approved
 Resume file: .planning/phases/06-admin-oversight-dashboard/06-UI-SPEC.md
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone

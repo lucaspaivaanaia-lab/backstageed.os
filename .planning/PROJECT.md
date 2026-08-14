@@ -12,24 +12,25 @@ Um PM consegue produzir conteúdo para um cliente específico com IA que só con
 
 ### Validated
 
-- [x] PM consegue preencher a base estratégica do cliente em formato estruturado (objetivo, tom de voz, público-alvo, pilares de conteúdo, etc.) — Validated in Phase 1 (2026-07-13)
+- [x] PM consegue preencher a base estratégica do cliente — Validated in Phase 1 (2026-07-13). Mecanismo mudou depois (quick task 260811-kl3, 2026-08-11): campos estruturados (objetivo/tom/público/pilares) foram abandonados em favor de um único campo `briefing` de texto livre extraído pela IA — a intenção do requisito (PM consegue registrar e editar a base estratégica) não mudou, só a forma
 - [x] Juliano tem uma visão macro: todos os clientes, todos os PMs, status consolidado de cada card — Validated in Phase 6 (2026-08-14)
+- [x] PM consegue conversar com IA sobre um cliente específico, com contexto isolado daquele cliente — Validated in Phase 2 (2026-08-05, live-verified end-to-end against production). Mecanismo: `public.client_files`, RLS-scoped por `client_id`, injeção direta do conteúdo completo no prompt (migrado de Tropicalia em 2026-07-22 — ver Key Decisions)
+- [x] PM controla manualmente o que vira conhecimento permanente do cliente (curadoria explícita, nada salvo automaticamente) — Validated in Phase 2 (2026-08-05)
+- [x] PM consegue criar um card de conteúdo que percorre o fluxo: briefing → produção → revisão interna → aprovação do cliente → agendamento — Validated in Phase 3/Phase 4 (2026-08-08 / 2026-08-13)
+- [x] Um card pode representar um pacote de conteúdo (múltiplas peças relacionadas, cada uma avançando independentemente) — Validated in Phase 3 (2026-08-08), entregue via re-scope de execução em 2026-07-31 (waves 7-9), não no plano original da fase
+- [x] PM consegue anexar mídia pesada a um card via link do Google Drive — Validated in Phase 3 (2026-08-05)
+- [x] Juliano consegue configurar um checklist de revisão interna por cliente — Validated in Phase 3 (2026-08-05)
+- [x] Cada item do checklist é auditável — Validated in Phase 3 (2026-08-05), incluindo trilha de auditoria para avanço forçado pelo Admin (`card_checklist_overrides`)
+- [x] Cliente acessa a plataforma e vê os conteúdos preparados para ele organizados como um quadro — Validated in Phase 4 (2026-08-13)
+- [x] Cliente aprova ou pede ajuste item a item, com comentário — Validated in Phase 4 (2026-08-13)
+- [x] Pedido de ajuste do cliente fica registrado e conectado ao card original, card volta para produção — Validated in Phase 4 (2026-08-13)
+- [x] Ao ser aprovado, o card registra data/hora de publicação e fica "pronto para publicar" — Validated in Phase 4 (2026-08-13)
+- [x] PM acessa via self-signup com aprovação do admin; Cliente NÃO se auto-cadastra (PM cria o login) — Validated in Phase 5 (2026-07-16)
+- [x] Multi-tenancy via RLS no Supabase (PM/cliente/admin com escopos distintos) — Validated in Phase 5 (2026-07-16). Uma lacuna real de controle de acesso (IDOR em `createClientLogin`/`deactivateClientAccess`, sem verificação de escopo do chamador) foi encontrada em verificação e fechada antes do fechamento da fase (plano 05-05, CR-01/CR-02)
 
 ### Active
 
-- [ ] PM consegue conversar com IA sobre um cliente específico, com contexto isolado daquele cliente (arquivos do cliente em `public.client_files`, RLS-scoped por client_id, injeção direta no prompt — migrado de Tropicalia em 2026-07-22)
-- [ ] PM controla manualmente o que vira conhecimento permanente do cliente (curadoria explícita — nada é salvo automaticamente no RAG)
-- [ ] PM consegue criar um card de conteúdo que percorre o fluxo: briefing → produção → revisão interna → aprovação do cliente → agendamento
-- [ ] Um card pode representar um pacote de conteúdo (ex: campanha com múltiplas peças relacionadas), não só um post isolado
-- [ ] PM consegue anexar mídia pesada (imagem, vídeo, PDF) a um card via link do Google Drive, sem precisar abrir o Drive manualmente
-- [ ] Juliano consegue configurar um checklist de revisão interna, que pode variar por cliente, com itens que o PM precisa cumprir antes de enviar ao cliente
-- [ ] Cada item do checklist é auditável — Juliano consegue ver se um PM pulou etapas
-- [ ] Cliente acessa a plataforma e vê os conteúdos preparados para ele organizados como um quadro
-- [ ] Cliente aprova ou pede ajuste item a item, com comentário
-- [ ] Pedido de ajuste do cliente fica registrado e conectado ao card original, e o card volta para a etapa de produção (passando de novo pela revisão interna antes de retornar ao cliente)
-- [ ] Ao ser aprovado, o card registra a data/hora combinada de publicação e fica marcado como "pronto para publicar" (PM ainda posta manualmente no Mlabs — sem integração de publicação automática na v1)
-- [ ] PM acessa a plataforma via self-signup com aprovação do admin. Cliente NÃO se auto-cadastra: o PM cria o login do cliente diretamente (email + senha provisória, vinculado a um registro de cliente já existente), e o cliente troca a senha no primeiro acesso
-- [ ] Multi-tenancy via RLS no Supabase: PM só acessa clientes que gerencia, cliente só acessa os próprios conteúdos, admin acessa tudo
+*(none — all v1.0 requirements shipped; next milestone requirements not yet defined, see `/gsd:new-milestone`)*
 
 ### Out of Scope
 
@@ -39,14 +40,20 @@ Um PM consegue produzir conteúdo para um cliente específico com IA que só con
 - Notificações por email — v1 é só in-app; PM e cliente veem mudanças de status ao acessar a plataforma
 - Self-signup sem aprovação (PM) — cadastro de PM sempre passa por aprovação do admin antes de ter acesso
 - Self-signup de Cliente — decidido na discussão da Phase 5 (Access & Roles, originalmente Phase 1) que Cliente não se auto-cadastra; PM cria o login do cliente diretamente
-- Múltiplos logins por cliente — v1 é 1 login por empresa-cliente; mais de uma pessoa por cliente fica para v2
+- Múltiplos logins por cliente — v1 é 1 login por empresa-cliente; mais de uma pessoa por cliente fica para v2 (o papel "Editor", adicionado em 2026-08-12, é um colaborador interno com acesso restrito por card atribuído — não é um segundo login de cliente, continua fora deste escopo)
 
 ## Context
 
 - Operação estruturada como agência: Juliano (dono) gerencia PMs, cada PM gerencia um conjunto de clientes.
 - Escala inicial é pequena (poucos PMs, até ~10 clientes) — v1 não precisa otimizar para navegação/filtro em grande escala, mas a arquitetura (RLS multi-tenant) já suporta crescimento.
-- O processo atual está espalhado em ChatGPT (com uma única conta compartilhada entre a equipe, o que gera vazamento de contexto entre clientes), Google Drive, Google Docs, WhatsApp e Mlabs.
-- Cada cliente tem sua própria "base de conhecimento" que hoje vive de forma inconsistente entre PMs — a padronização do briefing em campos estruturados é uma resposta direta a isso.
+- O processo atual estava espalhado em ChatGPT (com uma única conta compartilhada entre a equipe, o que gerava vazamento de contexto entre clientes), Google Drive, Google Docs, WhatsApp e Mlabs — v1.0 substitui esse processo pela plataforma.
+- Cada cliente tem sua própria "base de conhecimento", hoje um campo de briefing de texto livre extraído por IA a partir de arquivos enviados (`client_files`), mais uma base de conhecimento compartilhada entre todos os clientes (`shared_knowledge_files`, estruturalmente pronta mas ainda vazia — aguardando o primeiro documento real do Juliano).
+
+**Estado atual (v1.0 shipped, 2026-08-14):**
+- 6 fases, 32 planos, 44 dias (2026-07-01 → 2026-08-14), 538 commits, ~20,7 mil linhas de TypeScript.
+- Stack: Next.js 16 (App Router) + Supabase (Postgres/Auth/RLS) + Claude API (`@anthropic-ai/sdk`, modelo Sonnet centralizado) + Vercel. Em produção desde 2026-08-05: https://backstageed-os.vercel.app (protegido por login + RLS; `noindex` até sair do estágio "em construção").
+- Papéis de acesso: Admin, PM, Client, e Editor (adicionado 2026-08-12 — colaborador interno de mídia, visibilidade restrita a cards com `media_assignee_id` próprio).
+- Débito técnico conhecido (não bloqueia v1.0): (1) crash intermitente do stream de chat só em `npm run dev`/Turbopack local, nunca visto em produção; (2) sem UI de "restaurar" um cliente arquivado (reversão hoje é manual via `archived_at = null`); (3) base de conhecimento compartilhada estruturalmente pronta mas sem conteúdo real ainda.
 
 ## Constraints
 
@@ -62,16 +69,20 @@ Um PM consegue produzir conteúdo para um cliente específico com IA que só con
 |----------|-----------|---------|
 | RAG isolado por cliente via project separado na Tropicalia (não filtro) | Vazamento de contexto entre clientes no ChatGPT compartilhado é uma das três dores centrais motivadoras do projeto — precisa ser estruturalmente impossível | Superseded 2026-07-22 (ver linha abaixo) — provisioning chegou a ser wired end-to-end em Phase 1 (POST /v1/projects on client creation, `public_id` stored as `tropicalia_project_id`), mas nunca chegou a rodar com uma key real de produção antes da migração |
 | Migração do RAG de Tropicalia para armazenamento direto em Supabase (`client_files`), com injeção completa de conteúdo no prompt, sem embeddings/vetor | Mudança de modelo de negócio da Tropicalia confirmada em reunião com o fundador; volume real por cliente é baixo (~3 arquivos), tornando embeddings desnecessários; simplicidade operacional e ausência de latência de indexação assíncrona superam o retrieval vetorial para esse volume. O isolamento estrutural (requisito não-negociável) é preservado via RLS scoping de `client_files` por `client_id`, no lugar de um project separado por cliente | 2026-07-22 |
-| Curadoria manual de memória (PM gera .md e faz upload manual pro RAG) | Evita que erros de conversa virem memória permanente sem controle | — Pending |
-| Supabase RLS para multi-tenancy | PM/cliente/admin com escopos de acesso diferentes, sem lógica de autorização duplicada na aplicação | — Pending |
-| Google Drive como storage de mídia, Supabase como fonte de dados estruturados | Evita duplicar armazenamento de arquivos pesados; mantém histórico/estado estruturado consultável | — Pending |
-| Claude API com prompt montado no servidor (client_files só fornece o contexto injetado) | Controle total de tom, instrução de sistema e personalização por cliente, fora da camada de armazenamento de contexto | — Pending |
-| Card pode representar pacote de conteúdo, não só post único | Reflete como PMs realmente trabalham (campanhas com múltiplas peças relacionadas avançando juntas) | — Pending |
-| Agendamento v1 = registro de data/hora + status "pronto para publicar", sem integração de publicação | Publicação automática via API de redes sociais é integração futura mapeada, não bloqueia o processo central | — Pending |
-| Self-signup com aprovação do admin (PM apenas) | Evita que Juliano precise criar manualmente cada conta de PM, mas mantém controle de quem entra | — Pending |
-| Sem notificações por email na v1 | Reduz escopo/dependências da v1; in-app é suficiente para o volume inicial pequeno | — Pending |
-| Cliente não se auto-cadastra — PM cria o login do cliente (email + senha provisória, troca obrigatória no 1º acesso) vinculado a um registro de cliente existente | Revisado na discussão da Phase 5 (Access & Roles, originalmente Phase 1): o cliente é uma conta "provisionada" pela agência, não um usuário que decide se cadastrar sozinho — reflete como PMs onboardam clientes na prática | — Pending |
-| Reordenação de fases: Client Records & RAG Setup vira Phase 1 (era Phase 2); Access & Roles vira Phase 5 (era Phase 1) | Decisão do Juliano em reunião de stakeholder — prioriza validar o cadastro de cliente + RAG isolado antes do fluxo completo de login/aprovação; o scaffold técnico da Phase 5 (05-01) já está pronto e serve de base | 2026-07-08 |
+| Curadoria manual de memória (PM gera .md e faz upload manual pro RAG) | Evita que erros de conversa virem memória permanente sem controle | ✓ Good — shipped Phase 2, live-verified round-trip 2026-08-05 |
+| Supabase RLS para multi-tenancy | PM/cliente/admin com escopos de acesso diferentes, sem lógica de autorização duplicada na aplicação | ✓ Good — shipped Phase 5; um gap real de app-layer (IDOR em `createClientLogin`/`deactivateClientAccess`) mostrou que RLS sozinho não bastava para toda superfície — Server Actions que usam o cliente service-role precisam do próprio check de escopo, fechado no plano 05-05 |
+| Google Drive como storage de mídia, Supabase como fonte de dados estruturados | Evita duplicar armazenamento de arquivos pesados; mantém histórico/estado estruturado consultável | ✓ Good — shipped Phase 3 (KAN-05, links validados client+server) |
+| Claude API com prompt montado no servidor (client_files só fornece o contexto injetado) | Controle total de tom, instrução de sistema e personalização por cliente, fora da camada de armazenamento de contexto | ✓ Good — shipped Phase 2; modelo (Sonnet) depois centralizado num único módulo (quick task 260811-p2c) |
+| Card pode representar pacote de conteúdo, não só post único | Reflete como PMs realmente trabalham (campanhas com múltiplas peças relacionadas avançando juntas) | ✓ Good — shipped Phase 3 via re-scope de execução (waves 7-9, 2026-08-08), cada peça com seu próprio gate de checklist e um badge de rollup calculado em render-time |
+| Agendamento v1 = registro de data/hora + status "pronto para publicar", sem integração de publicação | Publicação automática via API de redes sociais é integração futura mapeada, não bloqueia o processo central | ✓ Good — shipped Phase 4 (SCH-01/02) |
+| Self-signup com aprovação do admin (PM apenas) | Evita que Juliano precise criar manualmente cada conta de PM, mas mantém controle de quem entra | ✓ Good — shipped Phase 5 (2026-07-16) |
+| Sem notificações por email na v1 | Reduz escopo/dependências da v1; in-app é suficiente para o volume inicial pequeno | ✓ Good — nenhum pedido de reversão durante a v1.0 |
+| Cliente não se auto-cadastra — PM cria o login do cliente (email + senha provisória, troca obrigatória no 1º acesso) vinculado a um registro de cliente existente | Revisado na discussão da Phase 5 (Access & Roles, originalmente Phase 1): o cliente é uma conta "provisionada" pela agência, não um usuário que decide se cadastrar sozinho — reflete como PMs onboardam clientes na prática | ✓ Good — shipped Phase 5 (AUTH-09/10/11) |
+| Reordenação de fases: Client Records & RAG Setup vira Phase 1 (era Phase 2); Access & Roles vira Phase 5 (era Phase 1) | Decisão do Juliano em reunião de stakeholder — prioriza validar o cadastro de cliente + RAG isolado antes do fluxo completo de login/aprovação; o scaffold técnico da Phase 5 (05-01) já está pronto e serve de base | ✓ Good — 2026-07-08, permitiu Sub-phase 1A entregar cedo sem esperar o fluxo de login completo |
+| Abandonar campos estruturados de briefing (objetivo/tom/público/pilares) por um único campo de texto livre extraído pela IA | O usuário assumiu a decisão pessoalmente (quick task 260811-kl3): campos fixos limitavam como a IA podia estruturar o contexto real de cada cliente; texto livre deixa a IA escolher sua própria estrutura por caso | ✓ Good — 2026-08-11, sem backfill (dados de teste), sem mudança de RLS |
+| Tag curta por cliente como chave de referência no prompt de IA, em vez do nome completo | Achado de produção: a IA misturou conteúdo de dois clientes por nome ambíguo dentro de um arquivo — correção de segurança real, não só qualidade | ✓ Good — 2026-08-10, os 4 call-sites de extração estruturada atualizados, testes de leakage-guard adicionados |
+| Papel "Editor" (colaborador interno de mídia): visibilidade e escrita restritas a cards com `media_assignee_id` próprio | Item 3 do plano de ação de 2026-08-05 (P3) — precisava de acesso interno mais granular que PM/Admin sem virar um segundo login de cliente | ✓ Good — 2026-08-12, mas o item mais sensível em segurança da sessão: o plan-checker encontrou e fechou um bloqueador real (3 Server Actions PM/Admin que confiavam só em RLS, sem checagem de papel própria, ficariam abertas ao Editor) antes do merge |
+| Soft delete/archive de cliente (`archived_at`), não hard delete | Um cliente real estava prestes a entrar em produção quando o pedido de exclusão surgiu — reversibilidade importava mais que limpeza | ✓ Good — 2026-08-04; sem UI de restore ainda, reversão manual via `archived_at = null` (débito técnico conhecido, ver Context) |
 
 ## Evolution
 
@@ -91,4 +102,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-14 after Phase 6 (Admin Oversight Dashboard) completion — all 6 v1.0 roadmap phases now complete*
+*Last updated: 2026-08-14 after v1.0 milestone close — all 38 v1 requirements shipped and validated across 6 phases; see .planning/milestones/v1.0-ROADMAP.md and v1.0-REQUIREMENTS.md for the full archive*
