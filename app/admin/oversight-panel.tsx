@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { STAGE_LABELS } from "@/lib/cards/stages";
 import { stalenessTier, stalenessBadgeCopy, stalenessTone } from "@/lib/cards/staleness";
 import { buildOversightHref } from "@/lib/cards/oversight-filters";
+import type { WorkloadRow } from "@/lib/cards/workload";
 import type { OversightClient, OversightCard, OversightPerson } from "./page";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ErrorBox } from "@/components/ui/error-box";
@@ -23,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { PageShell, PageTitle, EmptyState } from "@/components/layout/page-shell";
+import { PageShell, PageTitle, SectionTitle, EmptyState } from "@/components/layout/page-shell";
 
 const ALL_VALUE = "all";
 
@@ -39,6 +40,7 @@ type OversightPanelProps = {
   activeClientId: string | null;
   activePersonId: string | null;
   hasActiveFilter: boolean;
+  workloadRows: WorkloadRow[];
 };
 
 /**
@@ -58,6 +60,7 @@ export function OversightPanel({
   activeClientId,
   activePersonId,
   hasActiveFilter,
+  workloadRows,
 }: OversightPanelProps) {
   const router = useRouter();
   const clientNames = new Map(clients.map((c) => [c.id, c.name]));
@@ -164,6 +167,43 @@ export function OversightPanel({
           </TableBody>
         </Table>
       )}
+
+      <div className="mt-6">
+        <SectionTitle>Carga de trabalho</SectionTitle>
+        {workloadRows.length === 0 ? (
+          <EmptyState
+            title="Nenhuma atribuição ainda"
+            description="Nenhum PM ou editor tem cards ativos no momento."
+          />
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Pessoa</TableHead>
+                <TableHead>Cards ativos</TableHead>
+                <TableHead>Distribuição por etapa</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {workloadRows.map((row) => (
+                <TableRow key={row.id}>
+                  <TableCell>{row.email}</TableCell>
+                  <TableCell>{row.total}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap items-center gap-1">
+                      {row.byStage.map((entry) => (
+                        <StatusBadge key={entry.stage} tone="neutral">
+                          {STAGE_LABELS[entry.stage]} {entry.count}
+                        </StatusBadge>
+                      ))}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </div>
     </PageShell>
   );
 }
