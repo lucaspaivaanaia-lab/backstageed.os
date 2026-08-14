@@ -4,7 +4,9 @@ import { useRouter } from "next/navigation";
 
 import { STAGE_LABELS } from "@/lib/cards/stages";
 import { stalenessTier, stalenessBadgeCopy, stalenessTone } from "@/lib/cards/staleness";
-import type { OversightClient, OversightCard } from "./page";
+import { buildOversightHref } from "@/lib/cards/oversight-filters";
+import type { WorkloadRow } from "@/lib/cards/workload";
+import type { OversightClient, OversightCard, OversightPerson } from "./page";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ErrorBox } from "@/components/ui/error-box";
 import {
@@ -15,7 +17,16 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
-import { PageShell, PageTitle, EmptyState } from "@/components/layout/page-shell";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { PageShell, PageTitle, SectionTitle, EmptyState } from "@/components/layout/page-shell";
+
+const ALL_VALUE = "all";
 
 type OversightPanelProps = {
   clients: OversightClient[];
@@ -25,6 +36,11 @@ type OversightPanelProps = {
   // itself.
   pmNames: Record<string, string>;
   loadError: boolean;
+  people: OversightPerson[];
+  activeClientId: string | null;
+  activePersonId: string | null;
+  hasActiveFilter: boolean;
+  workloadRows: WorkloadRow[];
 };
 
 /**
@@ -40,8 +56,32 @@ export function OversightPanel({
   cards,
   pmNames,
   loadError,
+  people,
+  activeClientId,
+  activePersonId,
+  hasActiveFilter,
+  workloadRows,
 }: OversightPanelProps) {
+  const router = useRouter();
   const clientNames = new Map(clients.map((c) => [c.id, c.name]));
+
+  function handleClientFilterChange(value: string) {
+    router.push(
+      buildOversightHref({
+        clientId: value === ALL_VALUE ? null : value,
+        pmId: activePersonId,
+      })
+    );
+  }
+
+  function handlePersonFilterChange(value: string) {
+    router.push(
+      buildOversightHref({
+        clientId: activeClientId,
+        pmId: value === ALL_VALUE ? null : value,
+      })
+    );
+  }
 
   return (
     <PageShell width="wide">
@@ -56,11 +96,54 @@ export function OversightPanel({
         </div>
       )}
 
+      <div className="mb-4 flex items-center gap-4">
+        <Select
+          value={activeClientId ?? ALL_VALUE}
+          onValueChange={handleClientFilterChange}
+        >
+          <SelectTrigger className="w-full max-w-sm">
+            <SelectValue placeholder="Todos os clientes" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_VALUE}>Todos os clientes</SelectItem>
+            {clients.map((client) => (
+              <SelectItem key={client.id} value={client.id}>
+                {client.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={activePersonId ?? ALL_VALUE}
+          onValueChange={handlePersonFilterChange}
+        >
+          <SelectTrigger className="w-full max-w-sm">
+            <SelectValue placeholder="Todos os responsáveis" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_VALUE}>Todos os responsáveis</SelectItem>
+            {people.map((person) => (
+              <SelectItem key={person.id} value={person.id}>
+                {person.email}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       {cards.length === 0 ? (
-        <EmptyState
-          title="Nenhum card ainda"
-          description="Nenhum card foi criado ainda em nenhum cliente."
-        />
+        hasActiveFilter ? (
+          <EmptyState
+            title="Nenhum card encontrado"
+            description="Nenhum card corresponde aos filtros selecionados. Tente outro cliente ou responsável."
+          />
+        ) : (
+          <EmptyState
+            title="Nenhum card ainda"
+            description="Nenhum card foi criado ainda em nenhum cliente."
+          />
+        )
       ) : (
         <Table>
           <TableHeader>
@@ -84,6 +167,43 @@ export function OversightPanel({
           </TableBody>
         </Table>
       )}
+
+      <div className="mt-6">
+        <SectionTitle>Carga de trabalho</SectionTitle>
+        {workloadRows.length === 0 ? (
+          <EmptyState
+            title="Nenhuma atribuição ainda"
+            description="Nenhum PM ou editor tem cards ativos no momento."
+          />
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Pessoa</TableHead>
+                <TableHead>Cards ativos</TableHead>
+                <TableHead>Distribuição por etapa</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {workloadRows.map((row) => (
+                <TableRow key={row.id}>
+                  <TableCell>{row.email}</TableCell>
+                  <TableCell>{row.total}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap items-center gap-1">
+                      {row.byStage.map((entry) => (
+                        <StatusBadge key={entry.stage} tone="neutral">
+                          {STAGE_LABELS[entry.stage]} {entry.count}
+                        </StatusBadge>
+                      ))}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </div>
     </PageShell>
   );
 }
