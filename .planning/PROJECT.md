@@ -13,6 +13,7 @@ Um PM consegue produzir conteúdo para um cliente específico com IA que só con
 ### Validated
 
 - [x] PM consegue preencher a base estratégica do cliente em formato estruturado (objetivo, tom de voz, público-alvo, pilares de conteúdo, etc.) — Validated in Phase 1 (2026-07-13)
+- [x] Juliano tem uma visão macro: todos os clientes, todos os PMs, status consolidado de cada card — Validated in Phase 6 (2026-08-14)
 
 ### Active
 
@@ -27,7 +28,6 @@ Um PM consegue produzir conteúdo para um cliente específico com IA que só con
 - [ ] Cliente aprova ou pede ajuste item a item, com comentário
 - [ ] Pedido de ajuste do cliente fica registrado e conectado ao card original, e o card volta para a etapa de produção (passando de novo pela revisão interna antes de retornar ao cliente)
 - [ ] Ao ser aprovado, o card registra a data/hora combinada de publicação e fica marcado como "pronto para publicar" (PM ainda posta manualmente no Mlabs — sem integração de publicação automática na v1)
-- [ ] Juliano tem uma visão macro: todos os clientes, todos os PMs, status consolidado de cada card
 - [ ] PM acessa a plataforma via self-signup com aprovação do admin. Cliente NÃO se auto-cadastra: o PM cria o login do cliente diretamente (email + senha provisória, vinculado a um registro de cliente já existente), e o cliente troca a senha no primeiro acesso
 - [ ] Multi-tenancy via RLS no Supabase: PM só acessa clientes que gerencia, cliente só acessa os próprios conteúdos, admin acessa tudo
 
@@ -91,4 +91,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-22 after RAG migration from Tropicalia to Supabase client_files (quick task 260722-hnm)*
+*Last updated: 2026-08-14 after Phase 6 (Admin Oversight Dashboard) completion — all 6 v1.0 roadmap phases now complete*
