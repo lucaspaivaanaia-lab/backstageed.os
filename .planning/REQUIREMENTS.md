@@ -84,33 +84,33 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MODEL-01 | TBD | Pending |
-| MODEL-02 | TBD | Pending |
-| PMOP-01 | TBD | Pending |
-| PMOP-02 | TBD | Pending |
-| PMOP-03 | TBD | Pending |
-| PMOP-04 | TBD | Pending |
-| EDIT-01 | TBD | Pending |
-| EDIT-02 | TBD | Pending |
-| TOPIC-01 | TBD | Pending |
-| TOPIC-02 | TBD | Pending |
-| TOPIC-03 | TBD | Pending |
-| TOPIC-04 | TBD | Pending |
-| TOPIC-05 | TBD | Pending |
-| MEET-01 | TBD | Pending |
-| MEET-02 | TBD | Pending |
-| MEET-03 | TBD | Pending |
-| MEET-04 | TBD | Pending |
-| PDF-01 | TBD | Pending |
-| PDF-02 | TBD | Pending |
-| PDF-03 | TBD | Pending |
-| KNOW-01 | TBD | Pending |
+| MODEL-01 | Phase 7 | Pending |
+| MODEL-02 | Phase 7 | Pending |
+| PMOP-01 | Phase 8 | Pending |
+| PMOP-02 | Phase 8 | Pending |
+| PMOP-03 | Phase 8 | Pending |
+| PMOP-04 | Phase 8 | Pending |
+| EDIT-01 | Phase 9 | Pending |
+| EDIT-02 | Phase 9 | Pending |
+| TOPIC-01 | Phase 10 | Pending |
+| TOPIC-02 | Phase 10 | Pending |
+| TOPIC-03 | Phase 10 | Pending |
+| TOPIC-04 | Phase 10 | Pending |
+| TOPIC-05 | Phase 10 | Pending |
+| MEET-01 | Phase 11 | Pending |
+| MEET-02 | Phase 11 | Pending |
+| MEET-03 | Phase 11 | Pending |
+| MEET-04 | Phase 11 | Pending |
+| PDF-01 | Phase 12 | Pending |
+| PDF-02 | Phase 12 | Pending |
+| PDF-03 | Phase 12 | Pending |
+| KNOW-01 | Phase 8 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 21 total
-- Mapped to phases: 0 (populated by roadmapper)
-- Unmapped: 21 ⚠️ (expected — roadmap not yet created)
+- Mapped to phases: 21/21 ✓
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-08-16*
-*Last updated: 2026-08-16 after milestone v1.1 requirements definition, informed by 4-agent research (STACK/FEATURES/ARCHITECTURE/PITFALLS, see .planning/research/SUMMARY.md) and 4 confirmed product decisions*
+*Last updated: 2026-08-16 — roadmap created (6 phases, 7-12), all 21 v1.1 requirements mapped 1:1, no orphans*
