@@ -1,5 +1,20 @@
 # BackstageEd.OS
 
+## Current Milestone: v1.1 PM Operations & Content Automation
+
+**Goal:** Dar ao Admin visibilidade e controle sobre a operação dos PMs (substituindo a planilha manual da Laura), enquanto automatiza mais do pipeline de conteúdo (escolha de modelo de IA por área, geração de temas, reunião→briefing, exportação em PDF) e dá ao papel Editor seu próprio espaço de trabalho.
+
+**Target features:**
+- Painel de controle do Admin sobre POs/PMs (999.6) — clientes por PM, carga de trabalho, visão gráfica de progresso, espaço pra comentar
+- Confirmação de que `shared_knowledge_files` tem escrita restrita a Admin via RLS (999.9)
+- Seleção de modelo de IA por área da plataforma (999.1)
+- Área/Kanban própria do Editor (999.3)
+- Pipeline automático de geração de temas (999.4)
+- Integração de calendário/reunião → briefing do cliente, via Gemini (999.7)
+- Exportação automática em PDF de conteúdos aprovados (999.8)
+
+**Deliberately excluded from this milestone (still cost-blocked in the backlog):** upload de áudio com transcrição automática (999.2), verificação ortográfica via OCR em imagens (999.5) — ambos aguardando checagem de custo antes de entrar em qualquer milestone.
+
 ## What This Is
 
 BackstageEd.OS é a plataforma central de produção e gestão de conteúdo para redes sociais (LinkedIn, Instagram e outras) de uma operação de social media management que atende múltiplos clientes simultaneamente. Substitui um processo hoje fragmentado em 5+ ferramentas (ChatGPT, Google Drive, Google Docs, WhatsApp, Mlabs) por um único sistema onde PMs produzem, revisam e obtêm aprovação de conteúdo, o dono da operação (Juliano) acompanha tudo em tempo real, e cada cliente aprova seus próprios conteúdos numa área dedicada — sem contaminação de contexto de IA entre clientes.
@@ -30,7 +45,16 @@ Um PM consegue produzir conteúdo para um cliente específico com IA que só con
 
 ### Active
 
-*(none — all v1.0 requirements shipped; next milestone requirements not yet defined, see `/gsd:new-milestone`)*
+- [ ] Admin consegue ver clientes por PM, carga de trabalho, e progresso visual de cada PM — substituindo a planilha manual
+- [ ] Admin consegue deixar comentários sobre a gestão de um PM específico
+- [ ] `shared_knowledge_files` tem escrita (INSERT/UPDATE/DELETE) restrita a Admin, confirmado via RLS
+- [ ] PM/Admin consegue escolher/configurar qual modelo de IA é usado em cada ponto de geração da plataforma
+- [ ] Editor tem uma área própria (Kanban/fila) mostrando todos os cards atribuídos a ele via `media_assignee_id`, ordenados por `due_date`
+- [ ] Ao criar um cliente, ~10 temas de pauta são gerados automaticamente; volume de posts/semana é configurável por cliente; gatilho semanal propõe novos temas; aprovar um tema gera o post
+- [ ] Transcrições de reunião (Gemini) alimentam automaticamente o briefing do cliente, extraindo só o que for novo/relevante por reunião
+- [ ] PM/Admin consegue exportar um PDF único por cliente com todos os cards em "Aprovação do cliente" (data, título, texto, imagem), via template revisável
+
+*(REQ-IDs formalizados em REQUIREMENTS.md na próxima etapa)*
 
 ### Out of Scope
 
@@ -102,4 +126,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-14 after v1.0 milestone close — all 38 v1 requirements shipped and validated across 6 phases; see .planning/milestones/v1.0-ROADMAP.md and v1.0-REQUIREMENTS.md for the full archive*
+*Last updated: 2026-08-16 — v1.1 "PM Operations & Content Automation" started from backlog items 999.1, 999.3, 999.4, 999.6, 999.7, 999.8, 999.9*
